@@ -1,0 +1,52 @@
+// dtos/album.dto.js
+import { buildCdnUrl } from "../utils/cdn/cdn.js";
+
+export const shapeAlbumResponse = (album) => {
+  if (!album) return null;
+
+  return {
+    id: album._id,
+
+    // identity
+    title: album.title,
+    slug: album.slug,
+
+    // media
+    coverImage: album.coverImageKey
+      ? buildCdnUrl(album.coverImageKey)
+      : null,
+
+    // metadata
+    description: album.description || "",
+    releaseDate: album.releaseDate,
+    genre: album.genre || [],
+
+    // access & pricing
+    accessType: album.accessType,
+    basePrice: album.basePrice || null,
+    convertedPrices: Array.isArray(album.convertedPrices)
+      ? album.convertedPrices
+      : [],
+
+    // artist (optional populate / aggregation-safe)
+    artist: album.artist
+      ? {
+          id: album.artist._id || album.artist.id || album.artist,
+          name: album.artist.name,
+          slug: album.artist.slug,
+        }
+      : null,
+
+    // songs (ONLY if service populated them)
+    songs: Array.isArray(album.songs)
+      ? album.songs.map((song) => ({
+          id: song._id,
+          title: song.title,
+          duration: song.duration,
+        }))
+      : [],
+
+    createdAt: album.createdAt,
+    updatedAt: album.updatedAt,
+  };
+};
