@@ -6,7 +6,7 @@ export const shapeSongResponse = (
   streamUrl = null
 ) => {
   return {
-    id: song._id,
+    _id: song._id,
     title: song.title,
     slug: song.slug,
     duration: song.duration,

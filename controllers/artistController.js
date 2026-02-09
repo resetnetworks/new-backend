@@ -1,8 +1,4 @@
-import { Artist } from "../models/Artist.js";
-import { isAdmin } from "../utils/authHelper.js";
 import { StatusCodes } from "http-status-codes";
-import { BadRequestError, UnauthorizedError } from "../errors/index.js";
-import { cycleToInterval } from "../utils/cycleToInterval.js";
 import {
   updateArtistProfileService,
   getAllArtistsService,
@@ -12,11 +8,7 @@ import {
 } from "../services/index.js";
 import { shapeArtistResponse } from "../dto/artist.dto.js";
 import { getCached, setCached } from "../utils/redisClient.js";
-import mongoose from "mongoose";
-import { NotFoundError, ForbiddenError } from "../errors/index.js";
 import logger from "../utils/logger.js";
-import { Song } from "../models/song.model.js";
-import { Album } from "../models/album.model.js";
 
 
 export const updateArtistProfile = async (req, res) => {
@@ -34,44 +26,6 @@ export const updateArtistProfile = async (req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     data: shapeArtistResponse(updatedArtist),
-  });
-};
-
-export const deleteArtist = async (req, res) => {
-  if (!isAdmin(req.user)) {
-    throw new UnauthorizedError("Access denied. Admins only.");
-  }
-
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new BadRequestError("Invalid artist ID.");
-  }
-
-  // Hard delete (if you want cascade cleanup)
-  const artist = await Artist.findByIdAndDelete(id);
-  if (!artist) {
-    throw new NotFoundError("Artist not found.");
-  }
-
-  // TODO: Optional cascade cleanup
-  // await Song.deleteMany({ artist: id });
-  // await Album.deleteMany({ artist: id });
-  // await Subscription.deleteMany({ artist: id });
-  // await Transaction.updateMany({ artist: id }, { status: "cancelled" });
-
-  // TODO: Audit log (recommended for destructive ops)
-  // await AuditLog.create({
-  //   action: "delete_artist",
-  //   actor: req.user._id,
-  //   artistId: id,
-  //   timestamp: new Date(),
-  // });
-
-  res.status(StatusCodes.OK).json({
-    success: true,
-    message: "Artist deleted successfully",
-    artistId: id,
   });
 };
 

@@ -1,16 +1,8 @@
 import { Song } from "../models/song.model.js";
-import { uploadToS3 } from "../utils/s3Uploader.js";
 import { Album } from "../models/album.model.js";
-import { Artist } from "../models/Artist.js";
-import { Transaction } from "../models/Transaction.js"
-import { User } from "../models/User.js";
-import { hasAccessToSong } from "../utils/accessControl.js";
-import mongoose from "mongoose";
-import { BadRequestError, UnauthorizedError, NotFoundError } from "../errors/index.js";
+import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { StatusCodes } from 'http-status-codes';
-import { isAdmin } from "../utils/authHelper.js";
 import { shapeSongResponse } from "../dto/song.dto.js";
-import { streamSong } from "./streamController.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
 import {
   createSongService,

@@ -5,8 +5,31 @@ import { calculatePrice } from "../utils/pricing/calculatePrice.js";
 import { NotFoundError } from "../errors/index.js";
 import { hasAccessToSong } from "../utils/accessControl.js";
 import { shapeSongResponse } from "../dto/song.dto.js";
+import { User } from "../models/User.js";
+import { Artist } from "../models/Artist.js";
+
 // import { BadRequestError } from "../errors/index.js";
 // import { songDeletionQueue } from "../queue/songDeletionQueue.js";
+
+export const shapeSongsWithAccess = async ({
+  songs,
+  user,
+  streamUrlResolver = null,
+}) => {
+  return Promise.all(
+    songs.map(async (song) => {
+      const hasAccess = user
+        ? await hasAccessToSong(user, song)
+        : false;
+
+      const streamUrl = hasAccess && streamUrlResolver
+        ? await streamUrlResolver(song)
+        : null;
+
+      return shapeSongResponse(song, hasAccess, streamUrl);
+    })
+  );
+};
 
 
 export const createSongService = async ({
@@ -317,7 +340,7 @@ export const getSongsMatchingUserGenresService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     matchingGenres: genreArray,
@@ -350,7 +373,7 @@ export const getSongsByGenreService = async ({
       .lean()
   ]);
 
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     total,
@@ -394,7 +417,7 @@ export const getSongsByArtistService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     artist: {
@@ -446,7 +469,7 @@ export const getSinglesByArtistService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     artist: {
@@ -496,7 +519,7 @@ export const getSongsByAlbumService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     album: {
@@ -549,7 +572,7 @@ export const getPurchasedSongsService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     songs: shapedSongs,
@@ -577,7 +600,7 @@ export const getPremiumSongsService = async ({
       .lean()
   ]);
 
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     songs: shapedSongs,
@@ -624,7 +647,7 @@ export const getLikedSongsService = async ({
   ]);
 
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess(songs, user);
+  const shapedSongs = await shapeSongsWithAccess({songs, user});
 
   return {
     songs: shapedSongs,

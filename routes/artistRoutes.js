@@ -26,7 +26,6 @@ import {
   getAllArtistsWithoutPagination,
   getArtistById,
   getArtistProfile,
-  deleteArtist,
 } from "../controllers/artistController.js";
 
 const router = express.Router();
@@ -46,15 +45,7 @@ router.patch(
   updateArtistProfile
 );
 
-// Delete artist (admin only)
-router.delete(
-  "/:id",
-  authenticateUser,
-  isAdmin,
-  artistIdValidator,
-  validate,
-  deleteArtist
-);
+
 
 // Get logged-in artist profile
 router.get(

@@ -3,6 +3,7 @@ import slugify from "slugify";
 import { customAlphabet } from "nanoid";
 import { Artist } from "../../artist/models/artist.model.js";
 import {User} from "../../../models/User.js";
+import { ARTIST_SOCIAL_PROVIDERS } from "../../../constants/artistSocials.js";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
@@ -65,15 +66,6 @@ const artistApplicationSchema = new mongoose.Schema(
 
     // Contact & social links (applicant-provided)
     contact: { type: contactSchema, default: {} },
-    // socials: {
-    //   type: [
-    //     {
-    //       provider: { type: String, required: true }, // eg: "instagram", "youtube"
-    //       url: { type: String, required: true },
-    //     },
-    //   ],
-    //   default: [],
-    // },
 
     // Verification documents (S3/URL) user uploaded
     documents: {
@@ -93,15 +85,17 @@ const artistApplicationSchema = new mongoose.Schema(
       default: [],
     },
 
-    socials: {
-      type: [
-        {
-          provider: { type: String, required: true }, // eg: "instagram", "youtube"
-          url: { type: String, required: true },
-        },
-      ],
-      default: [],
+    socials:{
+      provider: {
+      type: String,
+      enum: ARTIST_SOCIAL_PROVIDERS,
     },
+      url: { type: String, },
+      label: {
+      type: String, // only required when provider === "custom"
+    }
+},
+
 
   
     // Application lifecycle fields
@@ -130,8 +124,6 @@ const artistApplicationSchema = new mongoose.Schema(
     ipAddress: { type: String },
     userAgent: { type: String },
 
-    // small flags for ops
-    isKycPassed: { type: Boolean, default: false, index: true },
     isDocsComplete: { type: Boolean, default: false },
 
     // Optionally, allow the request to propose a default uploadQuota (admin will confirm/change)
@@ -190,7 +182,6 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
           name: overrides.name || application.stageName,
           slug: overrides.slug || application.slug,
           bio: overrides.bio || application.bio,
-          image: overrides.image || null,
           location: application.contact?.location || "",
           createdBy: application.userId,
           accountType: "self",

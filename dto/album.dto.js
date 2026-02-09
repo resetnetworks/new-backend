@@ -5,7 +5,7 @@ export const shapeAlbumResponse = (album) => {
   if (!album) return null;
 
   return {
-    id: album._id,
+    _id: album._id,
 
     // identity
     title: album.title,

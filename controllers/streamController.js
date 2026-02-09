@@ -3,6 +3,7 @@ import { Album } from "../models/album.model.js";
 import { getSignedCloudFrontUrl as getSignedUrl } from "../utils/cloudfront.js";
 import { canStreamSong, canStreamAlbum } from "../helpers/accessControl.js";
 import { UnauthorizedError, NotFoundError, ForbiddenError } from "../errors/index.js";
+import { extractUuidFromKey } from "../utils/cdn/mediaKey.js";
 
 // ✅ Stream a single song
 export const streamSong = async (req, res) => {
@@ -21,8 +22,11 @@ export const streamSong = async (req, res) => {
 }
 
 
-  const signedUrl = await getSignedUrl(song.audioKey); // e.g., songs-hls/{key}.m3u8
-  res.json({ url: signedUrl });
+const songuuid = extractUuidFromKey(song.audioKey);
+
+
+  const signedUrl = await getSignedUrl(songuuid); // e.g., songs-hls/{key}.m3u8
+  res.json({ url: signedUrl, uuid: songuuid });
   console.log("Signed URL generated:", signedUrl);
 };
 

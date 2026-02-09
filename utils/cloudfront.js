@@ -18,6 +18,7 @@ export const getSignedCloudFrontUrl = (uuid, expiresInSeconds = 3600) => {
   const wildcardResource = `https://${domain}/${uuid}/*`;
 
   const expires = Math.floor(Date.now() / 1000) + expiresInSeconds;
+ 
 
   const policy = JSON.stringify({
     Statement: [

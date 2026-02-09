@@ -83,8 +83,6 @@ export const getUserPurchases = async (req, res) => {
 
 
 
-
-
 // ✅ GET /api/users/subscriptions
 export const getUserSubscriptions = async (req, res) => {
   const userId = req.user._id;
@@ -124,8 +122,6 @@ export const getUserSubscriptions = async (req, res) => {
     subscriptions: subscriptionsWithArtistInfo,
   });
 };
-
-
 
 
 

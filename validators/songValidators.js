@@ -92,12 +92,12 @@ export const createSongValidator = [
     .custom(v => Array.isArray(v) || typeof v === "string")
     .withMessage("Genre must be a string or array"),
 
-  body("isrc")
-    .optional()
-    .trim()
-    .toUpperCase()
-    .matches(ISRC_REGEX)
-    .withMessage("Invalid ISRC format"),
+body("isrc")
+  .optional({ checkFalsy: true })
+  .trim()
+  .toUpperCase()
+  .matches(ISRC_REGEX)
+  .withMessage("Invalid ISRC format"),
 
   /* -------------------- Cross-field rules -------------------- */
   body().custom((_, { req }) => {

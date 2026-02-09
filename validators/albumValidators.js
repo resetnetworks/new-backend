@@ -1,4 +1,5 @@
 import { body, param } from "express-validator";
+import mongoose from "mongoose";
 
 export const createAlbumValidator = [
   // Title
@@ -38,16 +39,6 @@ export const createAlbumValidator = [
     .isArray()
     .withMessage("Genre must be an array"),
 
-  body("genre.*")
-    .isString()
-    .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Each genre must be a valid string"),
-
-  // Songs (required)
-  body("songs")
-    .isArray({ min: 1 })
-    .withMessage("Album must contain at least one song"),
 
   body("songs.*")
     .custom((value) => mongoose.Types.ObjectId.isValid(value))
