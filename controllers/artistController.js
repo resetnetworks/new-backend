@@ -29,6 +29,7 @@ export const updateArtistProfile = async (req, res) => {
   });
 };
 
+
 export const getAllArtistsController = async (req, res) => {
   const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
   const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 10;
@@ -61,6 +62,7 @@ export const getAllArtistsController = async (req, res) => {
   res.status(StatusCodes.OK).json(response);
 };
 
+
 export const getArtistById = async (req, res) => {
   const identifier = req.params.id;
 
@@ -88,6 +90,7 @@ export const getArtistById = async (req, res) => {
   res.status(StatusCodes.OK).json(response);
 };
 
+
 export const getArtistProfile = async (req, res) => {
   const artistId = req.user.artistId;
   const userId = req.user._id;
@@ -102,13 +105,16 @@ export const getArtistProfile = async (req, res) => {
   });
 };
 
+
 export const getAllArtistsWithoutPagination = async (req, res) => {
   logger.info("Get all artists without pagination");
 
   const artists = await getAllArtistsWithoutPaginationService();
 
+  const shapedArtists = artists.map(shapeArtistResponse);
+
   res.status(StatusCodes.OK).json({
     success: true,
-    data: artists.map(shapeArtistResponse),
+    data: shapedArtists,
   });
 };

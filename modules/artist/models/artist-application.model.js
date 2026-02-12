@@ -187,7 +187,7 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
           accountType: "self",
           approvalStatus: "approved",
           uploadVersion: 2,
-          socials: application.socials || [],
+          socials:  [],
           country: application.country || null,
           email: application.contact?.email || null,
           website: application.contact?.website || null,
@@ -217,9 +217,12 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
       {
         artistId: artist[0]._id,
         role: "artist",
+        
       },
       { new: true, session }
     );
+    user.roleVersion += 1; // bump roleVersion to invalidate existing tokens
+    await user.save();
 
     console.log("Updated user to artist role:", user);
 

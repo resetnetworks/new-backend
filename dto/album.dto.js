@@ -31,7 +31,7 @@ export const shapeAlbumResponse = (album) => {
     // artist (optional populate / aggregation-safe)
     artist: album.artist
       ? {
-          id: album.artist._id || album.artist.id || album.artist,
+          _id: album.artist._id || album.artist.id || album.artist,
           name: album.artist.name,
           slug: album.artist.slug,
         }
@@ -40,7 +40,7 @@ export const shapeAlbumResponse = (album) => {
     // songs (ONLY if service populated them)
     songs: Array.isArray(album.songs)
       ? album.songs.map((song) => ({
-          id: song._id,
+          _id: song._id,
           title: song.title,
           duration: song.duration,
         }))

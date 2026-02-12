@@ -51,6 +51,11 @@ const schema = new mongoose.Schema(
       default: "user",
     },
 
+    roleVersion: {
+    type: Number,
+    default: 1,
+  },
+
     likedsong: [
       {
         type: mongoose.Schema.Types.ObjectId,

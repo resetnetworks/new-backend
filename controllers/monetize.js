@@ -12,7 +12,7 @@ import mongoose from "mongoose";
 
 
 export const monetizeArtist = async (req, res) => {
-//   if (!isAdmin(req.user)) throw new UnauthorizedError("Access denied. Admins only.");
+
 
   const { subscriptionPrice, cycle } = req.body;
   if (!cycle) throw new BadRequestError("Subscription cycle is required (1m, 3m, 6m, 12m).");

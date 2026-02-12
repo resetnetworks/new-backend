@@ -1,23 +1,19 @@
 import { UnauthorizedError } from "../errors";
-import { Song } from "../models/Song"
+import { Song } from "../models/song.model.js";
+import { Album } from "../models/album.model.js";
 import { StatusCodes } from "http-status-codes";
+import { shapeSongResponse } from "../dto/artist.dto";
 
 
 // ==================== Get Artist Dashboard Songs ====================
 
 export const getArtistDashboardSongs = async (req, res) => {
+  
+
   const artistId = req.user.artistId;
 
   if (!artistId) {
     throw new UnauthorizedError("Artist profile not found");
-  }
-
-  if (req.query.type === "single") {
-  query.album = null;
-  }
-
-  if (req.query.type === "album") {
-  query.album = { $ne: null };
   }
 
   // Pagination
@@ -25,20 +21,40 @@ export const getArtistDashboardSongs = async (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const skip = (page - 1) * limit;
 
-  const query = { artist: artistId };
+  // Base query
+  const query = {
+    artist: artistId,
+    isDeleted: false,
+  };
+
+  // Type filters
+  if (req.query.type === "single") {
+    query.album = null;
+  }
+
+  if (req.query.type === "album") {
+    query.album = { $ne: null };
+  }
 
   const [songs, total] = await Promise.all([
     Song.find(query)
       .select(`
         title
-        coverImage
+        slug
         duration
+        genre
+        releaseDate
+        coverImageKey
         accessType
+        albumOnly
+        hlsReady
         basePrice
+        artist
         album
-        isPublished
         createdAt
       `)
+      .populate("artist", "name slug")
+      .populate("album", "title slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -47,22 +63,17 @@ export const getArtistDashboardSongs = async (req, res) => {
     Song.countDocuments(query),
   ]);
 
-  res.status(200).json({
-    success: true,
-    data: songs,
-    meta: {
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-    },
-  });
+
+
+  res.json({ success: true, data: "hello" });
+
+  
 };
-
-
 
 
 export const getArtistDashboardAlbums = async (req, res) => {
   const artistId = req.user.artistId;
+ 
 
   if (!artistId) {
     throw new UnauthorizedError("Artist profile not found");
@@ -106,6 +117,7 @@ export const getArtistDashboardAlbums = async (req, res) => {
 
 
 export const getArtistDashboardStats = async (req, res) => {
+
   const artistId = req.user.artistId;
 
   if (!artistId) {

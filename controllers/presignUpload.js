@@ -3,7 +3,29 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
 import { s3 } from "../utils/s3.js";
 import { BadRequestError } from "../errors/index.js";
+const ALLOWED_IMAGE_MIME_TYPES = [
+  // Most common (keep these first)
+  "image/jpeg",     // .jpg, .jpeg
+  "image/png",      // .png
+  "image/webp",     // .webp
 
+  // Modern high-efficiency format
+  "image/avif",     // .avif
+
+  // Vector format
+  "image/svg+xml",  // .svg
+
+  // Apple format (optional)
+  "image/heic",     // .heic
+  "image/heif",     // .heif
+
+  // GIF (optional - careful with size)
+  "image/gif",      // .gif
+
+  // Legacy formats (usually unnecessary)
+  "image/bmp",      // .bmp
+  "image/tiff"      // .tiff
+]
 
 export const presignSongUpload = async (req, res) => {
   const { fileName, mimeType } = req.body;
@@ -30,11 +52,7 @@ export const presignSongUpload = async (req, res) => {
 };
 
 
-const ALLOWED_IMAGE_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp"
-];
+;
 
 export const presignCoverImageUpload = async (req, res) => {
   const { fileName, mimeType } = req.body;

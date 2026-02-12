@@ -3,6 +3,8 @@ import { UnauthorizedError } from "../errors/index.js";
 import { Song } from "../models/song.model.js";
 import { StatusCodes } from "http-status-codes";
 import { Album } from "../models/album.model.js";
+import { shapeSongResponse } from "../dto/song.dto.js";
+import { shapeAlbumResponse } from "../dto/album.dto.js";
 
 
 
@@ -36,13 +38,16 @@ export const getArtistDashboardSongs = async (req, res) => {
     Song.find(query)
       .select(`
         title
-        coverImage
+        slug,
+        coverImageKey
         duration
         accessType
         basePrice
         album
         isPublished
-        createdAt
+        releaseDate
+        accessType
+        basePrice
       `)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -51,10 +56,12 @@ export const getArtistDashboardSongs = async (req, res) => {
 
     Song.countDocuments(query),
   ]);
+  
+  const shapedSongs = songs.map(shapeSongResponse);
 
   res.status(200).json({
     success: true,
-    data: songs,
+    data: shapedSongs,
     meta: {
       total,
       page,
@@ -83,7 +90,7 @@ export const getArtistDashboardAlbums = async (req, res) => {
     Album.find(query)
       .select(`
         title
-        coverImage
+        coverImageKey
         releaseDate
         accessType
         basePrice
@@ -97,10 +104,11 @@ export const getArtistDashboardAlbums = async (req, res) => {
 
     Album.countDocuments(query),
   ]);
+   const shapedAlbums = albums.map(shapeAlbumResponse);
 
   res.status(200).json({
     success: true,
-    data: albums,
+    data: shapedAlbums,
     meta: {
       total,
       page,

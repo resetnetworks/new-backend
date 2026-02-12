@@ -319,6 +319,8 @@ export const getSongsMatchingUserGenresService = async ({
 
   const genreArray = [...genreSet];
 
+
+
   if (genreArray.length === 0) {
     return {
       matchingGenres: [],
@@ -326,6 +328,7 @@ export const getSongsMatchingUserGenresService = async ({
       total: 0
     };
   }
+  
 
   /* -------------------- Fetch matching songs -------------------- */
   const [total, songs] = await Promise.all([
@@ -339,9 +342,18 @@ export const getSongsMatchingUserGenresService = async ({
       .lean()
   ]);
 
-  /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess({songs, user});
+ 
 
+  /* -------------------- Access + DTO -------------------- */
+  const shapedSongs = await Promise.all(
+    songs.map(async (song) => {
+      const hasAccess = user ? await hasAccessToSong(user, song) : false;
+      return shapeSongResponse(song, hasAccess);
+    })
+  );
+
+  
+ 
   return {
     matchingGenres: genreArray,
     songs: shapedSongs,
@@ -362,6 +374,7 @@ export const getSongsByGenreService = async ({
     ? { genre: { $regex: new RegExp(`^${genre}$`, "i") } }
     : {};
 
+    
   const [total, songs] = await Promise.all([
     Song.countDocuments(query),
     Song.find(query)

@@ -6,6 +6,7 @@ const generateToken = (user, res) => {
       id: user._id,
       role: user.role,
       artistId: user.artistId || null,
+      roleVersion: user.roleVersion,
     },
     process.env.jwt_secret,
     { expiresIn: "15d" }

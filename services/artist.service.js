@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import {Song} from "../models/song.model.js";
 import { Album } from "../models/album.model.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
+
+
 export const createArtistService = async ({ name, bio, location, imageUrl, basePrice, cycle, createdBy }) => {
   // Initialize artist object but do not save yet
   const artist = new Artist({ name, bio, location, image: imageUrl, subscriptionPlans: [], createdBy });
@@ -29,6 +31,9 @@ export const createArtistService = async ({ name, bio, location, imageUrl, baseP
   await artist.save();
   return shapeArtistResponse(artist.toObject());
 };
+
+
+
 /**
  * Artist self-service profile update
  */

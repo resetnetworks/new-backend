@@ -23,7 +23,7 @@ export const shapeArtistResponse = (artist) => {
     : [];
 
   return {
-    id: artist._id, // safe: DTO boundary
+    _id: artist._id, // safe: DTO boundary
 
     // identity
     name: artist.name,

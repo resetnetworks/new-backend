@@ -7,80 +7,69 @@ import { shapeSongResponse } from "../dto/song.dto.js";
 
 
 export const getRandomArtistWithSongs = async (req, res) => {
-  // 1️⃣ Count only valid artists
-  const totalArtists = await Artist.countDocuments({
-    isMonetizationComplete: true
-  });
-
-  if (!totalArtists) {
+  const totalArtists = await Artist.countDocuments();
+  if (totalArtists === 0) {
     return res.status(StatusCodes.NOT_FOUND).json({
       success: false,
       message: "No artists found"
     });
   }
 
-  // 2️⃣ Pick random artist
+  // Pick a random artist
   const randomIndex = Math.floor(Math.random() * totalArtists);
-
-  const artist = await Artist.findOne({ isMonetizationComplete: true })
-    .skip(randomIndex)
-    .lean();
+  const artist = await Artist.findOne({isMonetizationComplete: true}).skip(randomIndex).lean();
 
   if (!artist) {
     return res.status(StatusCodes.NOT_FOUND).json({
       success: false,
-      message: "Artist not found"
+      message: "Random artist not found"
     });
   }
 
-  // 3️⃣ Pagination (for singles only)
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+  // Pagination params
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
   const skip = (page - 1) * limit;
 
-  // 4️⃣ Fetch Singles (album = null)
-  const singleFilter = {
-    artist: artist._id,
-    album: null
-  };
+  // Get total songs by the artist
+  const totalSongs = await Song.countDocuments({ artist: artist._id });
 
-  const [totalSingles, singles] = await Promise.all([
-    Song.countDocuments(singleFilter),
-    Song.find(singleFilter)
-      .select("_id title coverImage duration")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
-  ]);
-
-  // 5️⃣ Fetch Albums (separate)
-  const albums = await Album.find({ artist: artist._id })
-    .select("_id title coverImage releaseDate")
+  // Get paginated songs
+  const songs = await Song.find({ artist: artist._id })
+    .select("_id title coverImageKey duration")
     .sort({ createdAt: -1 })
-    .lean();
+    .skip(skip)
+    .limit(limit);
 
-  // 6️⃣ Final Response
+      const shapedSongs = await Promise.all(
+        songs.map(async (song) => {
+          
+  
+          return shapeSongResponse(song);
+        })
+      );
+
+  
+
   res.status(StatusCodes.OK).json({
     success: true,
     artist: {
       _id: artist._id,
       name: artist.name,
       slug: artist.slug,
-      profileImage: artist.profileImage
+      profileImage: artist.profileImage,
+    
     },
-    singles,
-    albums,
+    songs,
     pagination: {
-      singles: {
-        total: totalSingles,
-        page,
-        limit,
-        totalPages: Math.ceil(totalSingles / limit)
-      }
+      total: totalSongs,
+      page,
+      limit,
+      totalPages: Math.ceil(totalSongs / limit)
     }
   });
 };
+
 
 export const getExploreFeed = async (req, res) => {
   try {

@@ -41,10 +41,11 @@ const songSchema = new mongoose.Schema(
        CLASSIFICATION & METADATA
        ====================================================== */
 
-    genre: {
-      type: [String],
-      default: [],
-    },
+    genre: [{
+    type: String,
+    lowercase: true,
+    trim: true
+  }],
 
     isrc: {
       type: String,

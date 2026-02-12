@@ -39,14 +39,7 @@ export const registerUser = async (req, res) => {
     password: hashedPassword,
   });
 
-  // :4️⃣ Cleanup expired sessions just in case
-  // await Session.deleteMany({ userId: user._id, expiresAt: { $lt: new Date() } });
 
-  // :5️⃣ Enforce max active sessions (same rule as login)
-  // const activeSessions = await Session.countDocuments({ userId: user._id });
-  // if (activeSessions >= 50) {
-  //   throw new BadRequestError("Maximum 2 active logins allowed");
-  // }
 
   // :6️⃣ Generate JWT (same as login)
   const rawToken = generateToken(user, res);
@@ -54,14 +47,7 @@ export const registerUser = async (req, res) => {
   // :7️⃣ Hash token before storing in session collection
   const hashedToken = await bcrypt.hash(rawToken, 10);
 
-  // :8️⃣ Save session
-  // await Session.create({
-  //   userId: user._id,
-  //   token: hashedToken,
-  //   expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 7 days
-  //   userAgent: req.headers["user-agent"],
-  //   ip: req.headers["x-forwarded-for"] || req.ip,
-  // });
+
 
   // :9️⃣ Shape user response (remove sensitive data)
   const shapedUser = shapeUserResponse(user.toObject());

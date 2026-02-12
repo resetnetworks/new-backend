@@ -25,7 +25,7 @@ export const shapeSongResponse = (
     artist:
       typeof song.artist === "object"
         ? {
-            id: song.artist._id,
+            _id: song.artist._id,
             name: song.artist.name,
             slug: song.artist.slug
           }
@@ -35,7 +35,7 @@ export const shapeSongResponse = (
     album: song.album
       ? typeof song.album === "object"
         ? {
-            id: song.album._id,
+            _id: song.album._id,
             title: song.album.title,
             slug: song.album.slug
           }
@@ -46,6 +46,11 @@ export const shapeSongResponse = (
     price:
       song.accessType === "purchase-only"
         ? song.basePrice
+        : null,
+
+    convertedPrices:
+      song.accessType === "purchase-only"
+        ? song.convertedPrices
         : null,
 
     // 🔐 Streaming URL (only if access allowed)
