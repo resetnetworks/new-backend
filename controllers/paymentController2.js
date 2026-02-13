@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { Transaction } from "../models/Transaction.js";
-import { Song } from "../models/Song.js";
+import { Song } from "../models/song.model.js";
 import { Album } from "../models/Album.js";
 import { createStripePaymentIntent } from "../utils/stripe.js";
 import { createRazorpayOrder as createRazorpayOrderUtil } from "../utils/razorpay.js";

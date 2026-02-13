@@ -45,6 +45,7 @@ import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
+import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 
 // --------------------
 // API V2 Routes
@@ -143,6 +144,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/uploads", uploadRoutes2);
+app.use("/api/admin/dashboard", adminDashboardRoutes);
 
 // --------------------
 // API V2 Routes

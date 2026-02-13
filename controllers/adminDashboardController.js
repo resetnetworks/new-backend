@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { Transaction } from "../models/Transaction.js";
-import { Song } from "../models/Song.js";
-import { Album } from "../models/Album.js";
+import { Song } from "../models/song.model.js";
+import { Album } from "../models/album.model.js";
 import { Subscription } from "../models/Subscription.js";
 import { Artist } from "../models/Artist.js";
 import { BadRequestError, NotFoundError } from "../errors/index.js";

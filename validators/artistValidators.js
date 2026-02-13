@@ -59,22 +59,22 @@ export const updateArtistValidator = [
     .isArray({ max: 10 })
     .withMessage("Socials must be an array"),
 
-  body("socials.*.platform")
-    .if(body("socials").exists())
-    .exists()
-    .withMessage("Social platform is required")
-    .isString()
-    .trim()
-    .toLowerCase()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Social platform must be 2–50 characters"),
+  // body("socials.*.platform")
+  //   .if(body("socials").exists())
+  //   .exists()
+  //   .withMessage("Social platform is required")
+  //   .isString()
+  //   .trim()
+  //   .toLowerCase()
+  //   .isLength({ min: 2, max: 50 })
+  //   .withMessage("Social platform must be 2–50 characters"),
 
-  body("socials.*.url")
-    .if(body("socials").exists())
-    .exists()
-    .withMessage("Social URL is required")
-    .isURL({ require_protocol: true })
-    .withMessage("Social URL must be a valid URL"),
+  // body("socials.*.url")
+  //   .if(body("socials").exists())
+  //   .exists()
+  //   .withMessage("Social URL is required")
+  //   .isURL({ require_protocol: true })
+  //   .withMessage("Social URL must be a valid URL"),
 
   // Prevent empty PATCH
   body()

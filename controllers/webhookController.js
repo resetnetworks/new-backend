@@ -160,14 +160,9 @@ await WebhookEventLog.create({
   res.status(200).json({ received: true });
 };
 
-
 // ---------------------------
 // ✅ RAZORPAY WEBHOOK HANDLER
 // ---------------------------
-
-
-
-
 
 export const razorpayWebhook = async (req, res) => {
   try {

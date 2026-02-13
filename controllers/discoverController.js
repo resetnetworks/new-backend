@@ -60,7 +60,7 @@ export const getRandomArtistWithSongs = async (req, res) => {
       profileImage: artist.profileImage,
     
     },
-    songs,
+    songs:shapedSongs,
     pagination: {
       total: totalSongs,
       page,

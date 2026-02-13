@@ -10,9 +10,9 @@ export const createSongValidator = [
     .notEmpty()
     .withMessage("Title is required"),
 
-  body("duration")
-    .isInt({ gt: 0 })
-    .withMessage("Duration must be a positive integer"),
+  // body("duration")
+  //   .isInt({ gt: 0 })
+  //   .withMessage("Duration must be a positive integer"),
 
   body("audioKey")
   .isString()
