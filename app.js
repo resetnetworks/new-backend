@@ -39,7 +39,7 @@ import playlistRoutes from "./routes/playlistRoutes.js";
 import adminplaylistRoutes from "./routes/adminPlaylist.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js";
+// import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
@@ -57,6 +57,7 @@ import monetizeRoutes from "./routes/monetizeRoutes.js";
 import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoutes.js";
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
+import paymentRoutes from "./modules/payments-v2/modules/payments-v2/payment.routes.js";
 
 // --------------------
 // App setup
