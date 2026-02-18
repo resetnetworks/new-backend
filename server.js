@@ -1,5 +1,4 @@
 // server.js
-import 'newrelic'; 
 import dotenv from 'dotenv';
 dotenv.config();
 
