@@ -12,7 +12,7 @@ export const createAlbumService = async ({ artistId, payload }) => {
     releaseDate,
     accessType = "subscription",
     basePrice,
-    coverImageKey = null,
+    coverImageKey,
     songs,
   } = payload;
 
@@ -48,6 +48,10 @@ export const createAlbumService = async ({ artistId, payload }) => {
       throw new BadRequestError("One or more songs are invalid");
     }
   }
+
+  if (coverImageKey && typeof coverImageKey !== "string") {
+      throw new BadRequestError("Image is required");
+    }
 
   // --- Persist ---
   const album = await Album.create({
@@ -208,7 +212,7 @@ export const getAlbumByIdService = async (identifier, user) => {
     .populate("artist", "name slug profileImageKey")
     .populate(
       "songs",
-      "_id title duration accessType artist coverImageKey audioKey"
+      "_id title duration accessType artist coverImageKey"
     )
     .lean();
 
@@ -235,6 +239,7 @@ export const getAlbumByIdService = async (identifier, user) => {
   );
 
   return {
+    
     ...album,
     songs,
   };

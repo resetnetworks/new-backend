@@ -1,5 +1,5 @@
 import { uploadToS3 } from "../utils/s3Uploader.js";
-import { Album } from "../models/Album.js";
+import { Album } from "../models/album.model.js";
 
 export const uploadAudioFile = async (audioFile) => {
   if (!audioFile) throw new Error("Audio file required");

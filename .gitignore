@@ -22,9 +22,9 @@ pnpm-debug.log*
 # ======================================
 # 🐳 DOCKER
 # ======================================
-.dockerignore
 docker-compose.override.yml
 docker-compose.dev.yml
+docker-compose.prod.yml
 .docker/
 *.pid
 *.bak

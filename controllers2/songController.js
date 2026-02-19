@@ -114,6 +114,10 @@ export const createSongController = async (req, res) => {
     throw new BadRequestError("Invalid audio key");
   }
 
+  if (coverImageKey && typeof coverImageKey !== "string") {
+    throw new BadRequestError("Image is required");
+  }
+
   if (coverImageKey && !coverImageKey.startsWith("covers/")) {
     throw new BadRequestError("Invalid cover image key");
   }

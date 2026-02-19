@@ -21,9 +21,7 @@ import {
   getAlbumByIdService,
   getAllAlbumsWithoutPaginationService,
 } from "../services/index.js";
-import { buildCdnUrl } from "../utils/cdn/cdn.js";
 import logger from "../utils/logger.js";
-
 
 
 
@@ -149,7 +147,7 @@ export const getAlbumsByArtistController = async (req, res) => {
       .sort({ releaseDate: -1 })
       .skip(skip)
       .limit(limit)
-      .select("title slug coverImageKey releaseDate accessType basePrice convertedPrices")
+      .select("title slug coverImage releaseDate accessType basePrice convertedPrices")
       .lean(),
     Album.countDocuments({ artist: artist._id }),
   ]);
@@ -170,7 +168,7 @@ export const getAlbumsByArtistController = async (req, res) => {
       id: artist._id,
       name: artist.name,
       slug: artist.slug,
-      image: buildCdnUrl(artist.image),
+      image: artist.image,
       subscriptionPrice: artist.subscriptionPrice,
     },
     albums: shapedAlbums,

@@ -39,9 +39,9 @@ export const getAllArtistsController = async (req, res) => {
   logger.info("Get all artists", { page, limit });
 
   const cached = await getCached(cacheKey);
-  // if (cached) {
-  //   return res.status(StatusCodes.OK).json(cached);
-  // }
+  if (cached) {
+    return res.status(StatusCodes.OK).json(cached);
+  }
 
   const { artists, total } = await getAllArtistsService({ page, limit });
 
@@ -56,7 +56,7 @@ export const getAllArtistsController = async (req, res) => {
     },
   };
 
-console.log(response)
+
   await setCached(cacheKey, response, 600); // 10 min
 
   res.status(StatusCodes.OK).json(response);
@@ -72,9 +72,9 @@ export const getArtistById = async (req, res) => {
 
   // 1. Cache first
   const cached = await getCached(cacheKey);
-  // if (cached) {
-  //   return res.status(StatusCodes.OK).json(cached);
-  // }
+  if (cached) {
+    return res.status(StatusCodes.OK).json(cached);
+  }
 
   // 2. Service
   const artist = await getArtistByIdService(identifier);
