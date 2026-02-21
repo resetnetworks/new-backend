@@ -70,7 +70,7 @@ export const canStreamSong = async (userId, songId) => {
         userId,
         album: album._id,
         itemType: "album",
-        status: "success",
+        status: "paid",
       });
 
       return !!albumPurchased;

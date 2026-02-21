@@ -59,6 +59,7 @@ import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 import paymentRoutes from "./modules/payments-v2/modules/payments-v2/payment.routes.js";
 
+
 // --------------------
 // App setup
 // --------------------
@@ -106,13 +107,13 @@ app.use(httpLogger);
 app.post(
   "/api/webhooks/razorpay",
   express.raw({ type: "application/json" }),
-  razorpayWebhook
+  paymentRoutes
 );
 
 app.post(
   "/api/webhooks/paypal",
   express.raw({ type: "application/json" }),
-  paypalWebhook
+  paypalWebhook,
 );
 
 // --------------------
@@ -146,6 +147,7 @@ app.use("/api/stream", streamRoutes);
 app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/uploads", uploadRoutes2);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/user/dashboard", userDashboardRoutes);
 
 // --------------------
 // API V2 Routes

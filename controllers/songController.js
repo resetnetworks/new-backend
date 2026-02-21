@@ -20,6 +20,7 @@ import {
   getLikedSongsService
 } from "../services/index.js";
 
+import { ForbiddenError } from "../errors/index.js";
 
 
 const ALLOWED_ACCESS_TYPES = ["free", "subscription", "purchase-only"];
@@ -165,6 +166,11 @@ export const createSongController = async (req, res) => {
       ? genre
       : genre.split(",").map((g) => g.trim())
     : [];
+
+    console.log("-------------Resolved genres:", genreArray);
+    console.log("-------------Genre string:", genre);
+    console.log("------------typegenres:", typeof genre);
+
 
   /* -------------------- Pricing rules -------------------- */
   const isPurchaseOnly = accessType === "purchase-only";

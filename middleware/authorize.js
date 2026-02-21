@@ -1,7 +1,8 @@
+import { ForbiddenError, UnauthenticatedError } from "../errors/index.js";
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user?.role) {
-      return next(new UnauthorizedError("Authentication required"));
+      return next(new UnauthenticatedError("Authentication required"));
     }
 
     const userRoles = Array.isArray(req.user.role)
