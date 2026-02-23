@@ -15,6 +15,8 @@ import { convertCurrencies } from "../utils/convertCurrencies.js";
 import { ForbiddenError } from "../errors/index.js";
 import * as albumService from "../services/album.service.js";
 
+import logger from "../utils/logger.js";
+import { getAllAlbumsService } from "../services/album.service.js";
 
 const ALLOWED_ACCESS_TYPES = ["free", "subscription", "purchase-only"];
 

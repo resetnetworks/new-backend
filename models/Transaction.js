@@ -64,6 +64,9 @@ const transactionSchema = new mongoose.Schema(
     stripeSubscriptionId: String, // Stripe recurring
     paypalOrderId: String,
 
+    stripeSessionId: String,     // required for payments from stripe
+    stripeInvoiceId: String,     // required for payments from stripe
+
     invoiceNumber: String,
 
     metadata: { type: Object, default: {} },
@@ -94,7 +97,11 @@ transactionSchema.index({ stripeSubscriptionId: 1 }, { sparse: true });
 transactionSchema.index({ status: 1, createdAt: -1 });
 
 // 🔹 Invoice / accounting audits
-transactionSchema.index({ invoiceNumber: 1 }, { sparse: true });
+transactionSchema.index({ invoiceNumber: 1 }, { unique: true, sparse: true });
+
+// 🔹 Stripe-specific lookups for sessions & invoices
+transactionSchema.index({ stripeSessionId: 1 }, { sparse: true });
+transactionSchema.index({ stripeInvoiceId: 1 }, { sparse: true });
 
 export const Transaction = mongoose.model(
   "Transaction",

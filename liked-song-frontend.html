@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auth API Tester (v2)</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    header {
+      padding: 15px 20px;
+      background: #020617;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .refresh-btn {
+      background: #16a34a;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      height: calc(100vh - 60px);
+    }
+
+    .left {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .right {
+      border-left: 1px solid #334155;
+      padding: 20px;
+      background: #020617;
+      position: sticky;
+      top: 0;
+    }
+
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 4px;
+    }
+
+    textarea {
+      width: 360px;
+      height: 110px;
+      resize: vertical;
+      padding: 8px;
+      margin: 6px 0;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    input {
+      width: 360px;
+      padding: 8px;
+      margin: 6px 0;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      border-radius: 4px;
+    }
+
+    button {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 8px 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    pre {
+      background: #020617;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 4px;
+      height: calc(100vh - 160px);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 13px;
+    }
+
+    .route {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔐 Auth API Tester (v2)</h1>
+  <button class="refresh-btn" onclick="refreshToken()">🔁 Refresh Token</button>
+</header>
+
+<div class="container">
+
+  <!-- ================= LEFT PANEL ================= -->
+  <div class="left">
+
+    <div class="route">POST /api/v2/auth/register</div>
+    <h2>Register</h2>
+    <textarea id="registerBody">
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "dob": "1999-01-01"
+}
+    </textarea>
+    <br />
+    <button onclick="callApi('/register','POST','registerBody')">Register</button>
+
+    <div class="route">POST /api/v2/auth/login</div>
+    <h2>Login</h2>
+    <textarea id="loginBody">
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+    </textarea>
+    <br />
+    <button onclick="callApi('/login','POST','loginBody')">Login</button>
+
+    <div class="route">POST /api/v2/auth/logout</div>
+    <h2>Logout</h2>
+    <button onclick="callApi('/logout','POST')">Logout</button>
+
+    <div class="route">POST /api/v2/auth/forgot-password</div>
+    <h2>Forgot Password</h2>
+    <textarea id="forgotBody">
+{
+  "email": "john@example.com"
+}
+    </textarea>
+    <br />
+    <button onclick="callApi('/forgot-password','POST','forgotBody')">
+      Send Reset Link
+    </button>
+
+    <div class="route">PUT /api/v2/auth/reset-password/:token</div>
+    <h2>Reset Password</h2>
+    <input id="resetToken" placeholder="Reset token from email" />
+    <textarea id="resetBody">
+{
+  "password": "newpassword123"
+}
+    </textarea>
+    <br />
+    <button onclick="resetPassword()">Reset Password</button>
+
+    <div class="route">PUT /api/v2/auth/change-password</div>
+    <h2>Change Password</h2>
+    <textarea id="changeBody">
+{
+  "oldPassword": "password123",
+  "newPassword": "newpassword123"
+}
+    </textarea>
+    <br />
+    <button onclick="callApi('/change-password','PUT','changeBody')">
+      Change Password
+    </button>
+
+  </div>
+
+  <!-- ================= RIGHT PANEL ================= -->
+  <div class="right">
+    <h2>📤 Response</h2>
+    <pre id="response">No request yet</pre>
+  </div>
+
+</div>
+
+<script>
+  const BASE_URL = "http://localhost:5000/api/v2/auth";
+
+  async function callApi(path, method, bodyId) {
+    try {
+      const body = bodyId
+        ? JSON.parse(document.getElementById(bodyId).value)
+        : null;
+
+      const res = await fetch(BASE_URL + path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : null,
+        credentials: "include"
+      });
+
+      const data = await res.json();
+      showResponse(res.status, data);
+    } catch (err) {
+      showResponse("ERROR", err.message);
+    }
+  }
+
+  async function resetPassword() {
+    const token = document.getElementById("resetToken").value;
+    await callApi(`/reset-password/${token}`, "PUT", "resetBody");
+  }
+
+  async function refreshToken() {
+    await callApi("/refresh-token", "POST");
+  }
+
+  function showResponse(status, data) {
+    document.getElementById("response").textContent =
+      `STATUS: ${status}\n\n` + JSON.stringify(data, null, 2);
+  }
+</script>
+
+</body>
+</html>

@@ -33,6 +33,16 @@ const schema = new mongoose.Schema(
       type: String,
     },
 
+    // 🔁 Refresh token auth
+    refreshToken: {
+      type: String,
+      select: false,
+    },
+
+    refreshTokenExpire: {
+      type: Date,
+    },
+
     resetPasswordToken: {
       type: String,
     },
@@ -51,12 +61,12 @@ const schema = new mongoose.Schema(
       default: "user",
     },
 
-    likedsong: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Song",
-      },
-    ],
+    // likedsong: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "LikedSong",
+    //   },
+    // ],
 
     profileImage: {
       type: String,
@@ -75,6 +85,23 @@ const schema = new mongoose.Schema(
       ref: "Artist",
       default: null,
     },
+    
+    purchaseHistory: [
+      {
+        _id: false,
+        transactionId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Transaction",
+          required: true,
+        },
+        itemType: {
+          type: String,
+          enum: ["song", "album", "artist-subscription"],
+          required: true,
+        },
+      },
+    ],
+
   },
   { timestamps: true }
 );
@@ -87,6 +114,10 @@ const schema = new mongoose.Schema(
 schema.index({ email: 1 }, { unique: true });
 schema.index({ googleId: 1 }, { sparse: true });
 
+// 🔁 Refresh token flow
+schema.index({ refreshToken: 1 }, { sparse: true });
+schema.index({ refreshTokenExpire: 1 });
+
 // 🔑 Password reset flow
 schema.index({ resetPasswordToken: 1 }, { sparse: true });
 schema.index({ resetPasswordExpire: 1 });
@@ -98,7 +129,7 @@ schema.index({ role: 1 });
 schema.index({ artistId: 1 }, { sparse: true });
 
 // ❤️ Liked songs reverse lookup (analytics / artist insights)
-schema.index({ likedsong: 1 });
+// schema.index({ likedsong: 1 });  -- removed this cause of new LikedSong model + unbouned Array problem
 
 // 🎵 Recommendation & discovery
 schema.index({ preferredGenres: 1 });

@@ -99,10 +99,18 @@ export const markTransactionPaid = async ({
   // ----------------------------
   // Build gateway-specific query
   // ----------------------------
+  // if (gateway === "stripe") {
+  //   query = stripeSubscriptionId
+  //     ? { stripeSubscriptionId }
+  //     : { paymentIntentId };
+  // }
+
   if (gateway === "stripe") {
-    query = stripeSubscriptionId
-      ? { stripeSubscriptionId }
-      : { paymentIntentId };
+    if (stripeSubscriptionId) {
+      query = { stripeSubscriptionId };
+    } else if (paymentIntentId) {
+      query = { paymentIntentId };
+    }
   }
 
   if (gateway === "razorpay") {
@@ -196,28 +204,46 @@ await transaction.save({ session });
 export const updateUserAfterPurchase = async (transaction, paymentId) => {
   const updateOps = {};
 
+  console.log("🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  Updating user after purchase - transaction:", transaction);
+
   // ✅ Push purchaseHistory entry (no duplicates)
+  // updateOps.$push = {
+  //   purchaseHistory: {
+  //     itemType: transaction.itemType,
+  //     itemId: transaction.itemId,
+  //     price: transaction.amount,
+  //     amount: transaction.amount,
+  //     currency: transaction.currency,
+  //     paymentId,
+  //   },
+  // };
+
+   // ✅ Store transaction reference only
   updateOps.$push = {
     purchaseHistory: {
+      transactionId: transaction._id,
       itemType: transaction.itemType,
-      itemId: transaction.itemId,
-      price: transaction.amount,
-      amount: transaction.amount,
-      currency: transaction.currency,
-      paymentId,
     },
   };
 
-  switch (transaction.itemType) {
+
+  switch(transaction.itemType) {
     case "song":
-      updateOps.$addToSet = { purchasedSongs: transaction.itemId };
+      updateOps.$addToSet = {
+        ...updateOps.$addToSet,
+        purchasedSongs: transaction.itemId,
+      };
       break;
 
     case "album":
-      updateOps.$addToSet = { purchasedAlbums: transaction.itemId };
+      updateOps.$addToSet = {
+        ...updateOps.$addToSet,
+        purchasedAlbums: transaction.itemId,
+      };
       break;
 
     case "artist-subscription": {
+      console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Processing artist subscription transaction:", transaction);
       const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
       let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
 
@@ -262,9 +288,67 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
 
     default:
       console.warn("⚠️ Unknown itemType:", transaction.itemType);
+
   }
 
+  // switch (transaction.itemType) {
+  //   case "song":
+  //     updateOps.$addToSet = { purchasedSongs: transaction.itemId };
+  //     break;
+
+  //   case "album":
+  //     updateOps.$addToSet = { purchasedAlbums: transaction.itemId };
+  //     break;
+
+  //   case "artist-subscription": {
+  //     const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
+  //     let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+
+  //     const fallbackExternalId =
+  //       transaction.metadata?.externalSubscriptionId ??
+  //       transaction.metadata?.razorpaySubscriptionId ??
+  //       transaction.metadata?.paypalSubscriptionId ??
+  //       transaction.stripeSubscriptionId ??
+  //       transaction.paymentIntentId ??
+  //       transaction.razorpayOrderId ??
+  //       "unknown";
+
+  //     // 🧠 Optionally enrich with Stripe’s actual period
+  //     if (transaction.stripeSubscriptionId) {
+  //       try {
+  //         const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
+  //         const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
+  //         if (stripeSub?.current_period_end) {
+  //           validUntil = new Date(stripeSub.current_period_end * 1000);
+  //         }
+  //       } catch (err) {
+  //         console.warn("⚠️ Failed to fetch Stripe period:", err.message);
+  //       }
+  //     }
+
+  //     // ✅ Upsert subscription
+  //     await Subscription.findOneAndUpdate(
+  //       { userId: transaction.userId, artistId: transaction.artistId },
+  //       {
+  //         status: "active",
+  //         validUntil,
+  //         gateway: transaction.gateway,
+  //         externalSubscriptionId: fallbackExternalId,
+  //         transactionId: transaction._id,
+  //       },
+  //       { upsert: true, new: true, setDefaultsOnInsert: true }
+  //     );
+
+  //     console.log("✅ Subscription created/updated for artist:", transaction.artistId);
+  //     break;
+  //   }
+
+  //   default:
+  //     console.warn("⚠️ Unknown itemType:", transaction.itemType);
+  // }
+
   // ✅ Atomic update instead of load+save
+  
   const user = await User.findByIdAndUpdate(transaction.userId, updateOps, { new: true });
   if (!user) {
     console.warn("❌ User not found for transaction:", transaction._id);

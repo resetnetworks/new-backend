@@ -3,6 +3,8 @@ import { Song } from "../models/song.model.js";
 import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
 
+import mongoose from "mongoose";
+
 export const createAlbumService = async ({ artistId, payload }) => {
   const {
     title,

@@ -49,6 +49,15 @@ import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
 
+// auth routes
+import authRoutes from "./modules/auth/routes/auth.routes.js";
+
+import likedSongsRoutes from "./routes/likedsongs.routes.js";
+
+// stripe route
+import webhookRoutesv2 from "./modules/payment/routes/webhook.routes.js";
+import stripePayment from "./modules/payment/routes/payment.routes.js";
+
 
 // Middleware
 import passport from "./middleware/passport.js";
@@ -101,6 +110,11 @@ app.post(
   express.raw({ type: "application/json" }), // ✅ this is what Razorpay needs
   paypalWebhook
 );
+
+// Stripe webhook moved to v2 for better modularity
+app.use("/api/v2/webhooks", webhookRoutesv2);
+
+
 app.use(cookieParser());
 app.use(express.json());
 
@@ -141,6 +155,13 @@ app.use("/api/v2/artist", artistPayoutRoutes);
 app.use("/api/v2/admin", adminPayoutRoutes);
 app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 app.use("/api/uploads", uploadRoutes2);
+
+// Auth Routes v2.0.0
+app.use("/api/v2/auth", authRoutes);
+app.use("/api/v2/user", likedSongsRoutes);
+
+// STRIPE ROUTE
+app.use("/api/v2/payment", stripePayment);
 
 
 

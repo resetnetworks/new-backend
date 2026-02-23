@@ -5,6 +5,7 @@ import { calculatePrice } from "../utils/pricing/calculatePrice.js";
 import { NotFoundError } from "../errors/index.js";
 import { hasAccessToSong } from "../utils/accessControl.js";
 import { shapeSongResponse } from "../dto/song.dto.js";
+import { User } from "../models/User.js";
 // import { BadRequestError } from "../errors/index.js";
 // import { songDeletionQueue } from "../queue/songDeletionQueue.js";
 

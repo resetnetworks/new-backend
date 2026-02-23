@@ -37,11 +37,15 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     // IMPORTANT FIX HERE 
-    req.user = {
-      ...user.toObject(),
-      role: decodedData.role,
-      artistId: decodedData.artistId,
-    };
+    // req.user = {
+    //   ...user.toObject(),
+    //   role: decodedData.role,
+    //   artistId: decodedData.artistId,
+    // };
+
+    req.user = user;
+    req.user.role = user.role;
+    req.user.artistId = user.artistId;
 
     next();
   } catch (error) {
