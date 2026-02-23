@@ -387,6 +387,7 @@ export const getSongsByGenreService = async ({
   ]);
 
   const shapedSongs = await shapeSongsWithAccess({songs, user});
+  
 
   return {
     total,

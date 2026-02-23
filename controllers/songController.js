@@ -576,6 +576,7 @@ export const getSongsMatchingUserGenresController = async (req, res) => {
 // @access  Public
 // ===================================================================
 export const getSongsByGenreController = async (req, res) => {
+  
   const user = req.user;
   const { genre } = req.params;
 

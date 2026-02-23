@@ -8,6 +8,7 @@ import { NotFoundError } from "../errors/index.js";
 import { Subscription } from "../models/Subscription.js";
 import { Artist } from "../models/Artist.js";
 import { Transaction } from "../models/Transaction.js";
+import { getUserPurchasesService } from "../services/purchasegHistory.service.js";
 
 /**
  * @desc Fetch user purchases: songs, albums, and purchase history
@@ -24,60 +25,11 @@ export const getUserPurchases = async (req, res) => {
     });
   }
 
-  // 1️⃣ Fetch successful single-purchase transactions
-  const transactions = await Transaction.find({
-    userId,
-    status: "paid",
-    itemType: { $in: ["song", "album"] },
-  })
-    .select("itemType itemId createdAt amount currency")
-    .lean();
-
-  if (!transactions.length) {
-    return res.status(StatusCodes.OK).json({
-      success: true,
-      songs: [],
-      albums: [],
-      history: [],
-    });
-  }
-
-  // 2️⃣ Split IDs by type
-  const songIds = [];
-  const albumIds = [];
-
-  for (const tx of transactions) {
-    if (tx.itemType === "song") songIds.push(tx.itemId);
-    if (tx.itemType === "album") albumIds.push(tx.itemId);
-  }
-
-  // 3️⃣ Fetch entities
-  const [songs, albums] = await Promise.all([
-    Song.find({ _id: { $in: songIds } })
-      .select("title duration coverImage artist")
-      .populate("artist", "name")
-      .lean(),
-
-    Album.find({ _id: { $in: albumIds } })
-      .select("title coverImage artist slug")
-      .populate("artist", "name")
-      .lean(),
-  ]);
-
-  // 4️⃣ Build history (payment-level, not entity-level)
-  const history = transactions.map((tx) => ({
-    itemType: tx.itemType,
-    itemId: tx.itemId,
-    amount: tx.amount,
-    currency: tx.currency,
-    purchasedAt: tx.createdAt,
-  }));
+  const data = await getUserPurchasesService(userId);
 
   return res.status(StatusCodes.OK).json({
     success: true,
-    songs,
-    albums,
-    history,
+    ...data,
   });
 };
 
