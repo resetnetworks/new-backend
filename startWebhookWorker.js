@@ -1,8 +1,14 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
+
 import "./modules/payments-v2/queue/webhook.worker.js";
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URL)
   .then(() => {
-    console.log("Webhook worker connected to MongoDB");
+    console.log("✅ Webhook worker connected to MongoDB");
   })
-  .catch(console.error);
+  .catch((err) => {
+    console.error("❌ Worker Mongo connection failed:", err);
+  });

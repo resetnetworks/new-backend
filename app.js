@@ -57,7 +57,7 @@ import monetizeRoutes from "./routes/monetizeRoutes.js";
 import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoutes.js";
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
-import paymentRoutes from "./modules/payments-v2/modules/payments-v2/payment.routes.js";
+import paymentRoutes from "./modules/payments-v2/payment.routes.js";
 
 
 // --------------------

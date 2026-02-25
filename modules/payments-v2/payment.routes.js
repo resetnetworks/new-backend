@@ -1,7 +1,7 @@
 import express from "express";
 import { createPaymentIntent } from "./payment.controller.js";
 import { handleWebhook } from "./webhook.controller.js";
-import { authenticateUser } from "../../../../middleware/authenticate.js"; 
+import { authenticateUser } from "../../middleware/authenticate.js"; 
 // adjust path based on your project
 
 const router = express.Router();

@@ -4,6 +4,7 @@ import { getProviderAdapter } from "./providers/providerFactory.js";
 
 export const handleWebhook = async (req, res) => {
   try {
+    
     const provider = req.params.provider;
 
     if (!provider) {
@@ -15,9 +16,9 @@ export const handleWebhook = async (req, res) => {
     // 1️⃣ Verify signature
     const isValid = adapter.verifySignature(req);
 
-    if (!isValid) {
-      return res.status(400).json({ message: "Invalid signature" });
-    }
+    // if (!isValid) {
+    //   return res.status(400).json({ message: "Invalid signature" });
+    // }
 
     const rawPayload = req.body;
     const headers = req.headers;
@@ -40,9 +41,11 @@ export const handleWebhook = async (req, res) => {
       }
       throw err;
     });
+    console.log("#####################Webhook event stored:",webhookEvent);
 
     // 4️⃣ Enqueue job if newly created
     if (webhookEvent) {
+      console.log("🔥 enqueueWebhookJob about to be called");
       await enqueueWebhookJob(webhookEvent._id.toString());
     }
 

@@ -62,7 +62,7 @@ export class PaymentEngine {
 
       // 7️⃣ Create immutable ledger entry
       const ledger = new PaymentLedger({
-        paymentIntentId: intent.id,
+        paymentIntentId: intentDoc._id ,
         provider,
         providerTransactionId,
         type: LedgerType.CAPTURE,
@@ -76,7 +76,7 @@ export class PaymentEngine {
 
       // 8️⃣ Persist changes atomically
       await PaymentIntentModel.updateOne(
-        { _id: intent.id },
+        { _id: intentDoc._id },
         {
           status: intent.status,
           updatedAt: new Date(),
@@ -84,7 +84,16 @@ export class PaymentEngine {
         { session }
       );
 
-      await PaymentLedgerModel.create([ledger], { session });
+    try {
+  await PaymentLedgerModel.create([ledger], { session });
+} catch (err) {
+  if (err.code === 11000) {
+    // Duplicate providerTransactionId → already processed
+    await session.abortTransaction();
+    return { alreadyProcessed: true };
+  }
+  throw err;
+}
 
       await session.commitTransaction();
 
