@@ -90,6 +90,7 @@ export const markTransactionPaid = async ({
   razorpayOrderId,
   paymentIntentId,
   stripeSubscriptionId,
+  stripeInvoiceId,
   subscriptionId,
 }) => {
   if (!gateway) return null;
@@ -106,10 +107,12 @@ export const markTransactionPaid = async ({
   // }
 
   if (gateway === "stripe") {
-    if (stripeSubscriptionId) {
-      query = { stripeSubscriptionId };
+    if (stripeInvoiceId) {
+      query = { stripeInvoiceId };
     } else if (paymentIntentId) {
       query = { paymentIntentId };
+    } else if (stripeSubscriptionId) {
+      query = { stripeSubscriptionId };
     }
   }
 
@@ -157,7 +160,7 @@ if (transaction.status === "paid") {
 // ----------------------------
 transaction.status = "paid";
 transaction.invoiceNumber = await getNextInvoiceNumber();
-const rate = EXCHANGE_RATES[transaction.currency];
+const rate = EXCHANGE_RATES[transaction.currency.toUpperCase()];
 
 if (!rate) {
   throw new Error(`Unsupported currency: ${transaction.currency}`);
@@ -244,8 +247,32 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
 
     case "artist-subscription": {
       console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Processing artist subscription transaction:", transaction);
-      const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
-      let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+      // const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
+      // let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+
+      // 🔥 Get existing subscription
+      const existingSub = await Subscription.findOne({
+        userId: transaction.userId,
+        artistId: transaction.artistId,
+      });
+
+      console.log("🔍 🔍 🔍 🔍 🔍 🔍 🔍 🔍 🔍 🔍 🔍 Existing subscription found:", existingSub);
+
+      // Determine cycle (prefer DB cycle if stored)
+      const cycle = existingSub?.cycle || transaction.metadata?.cycle;
+      const daysToAdd = subscriptionDuration[cycle] || 30;
+
+      // Determine base date
+      const now = new Date();
+      const baseDate =
+        existingSub && existingSub.validUntil > now
+          ? existingSub.validUntil
+          : now;
+
+      // Extend from base date
+      let validUntil = new Date(
+        baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000
+      );
 
       const fallbackExternalId =
         transaction.metadata?.externalSubscriptionId ??
@@ -261,7 +288,9 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         try {
           const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
           const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
-          if (stripeSub?.current_period_end) {
+          console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Stripe subscription details:", stripeSub);
+
+          if (!existingSub && stripeSub?.current_period_end) {
             validUntil = new Date(stripeSub.current_period_end * 1000);
           }
         } catch (err) {
@@ -275,6 +304,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         {
           status: "active",
           validUntil,
+          isRecurring: true,
           gateway: transaction.gateway,
           externalSubscriptionId: fallbackExternalId,
           transactionId: transaction._id,

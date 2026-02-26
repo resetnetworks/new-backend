@@ -645,7 +645,9 @@ export const handleStripeWebhook = async (req, res) => {
         // ✅ 2️⃣ Mark transaction paid using existing service
         const paidTransaction = await markTransactionPaid({
           gateway: "stripe",
-          stripeSubscriptionId,
+          // stripeSubscriptionId,
+          // paymentIntentId: invoice.payment_intent, // 🔥 Use payment_intent for better reliability
+          stripeInvoiceId: invoice.id,
         });
 
         if (!paidTransaction){
@@ -786,7 +788,7 @@ export const handleStripeWebhook = async (req, res) => {
 
         const subscriptionData = await Subscription.findOneAndUpdate(
           { externalSubscriptionId: subscription.id },
-          { status: "cancelled" },
+          { status: "cancelled", isRecurring: false },
           { new: true }
         );
 
