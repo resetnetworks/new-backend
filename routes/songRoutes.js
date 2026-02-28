@@ -51,37 +51,37 @@ router.get(
    ====================================================== */
 router.get(
   "/",
-  authenticateUser,
+  // authenticateUser,
   getAllSongsController
 );
 
 router.get(
   "/singles",
-  authenticateUser,
+  // authenticateUser,
   getAllSinglesController
 );
 
 router.get(
   "/genre/:genre",
-  authenticateUser,
+  // authenticateUser,
   getSongsByGenreController
 );
 
 router.get(
   "/album/:albumId",
-  authenticateUser,
+  // authenticateUser,
   getSongsByAlbumController
 );
 
 router.get(
   "/artist/:artistId",
-  authenticateUser,
+  // authenticateUser,
   getSongsByArtistController
 );
 
 router.get(
   "/singles/artist/:artistId",
-  authenticateUser,
+  // authenticateUser,
   getSinglesByArtistController
 );
 
@@ -120,7 +120,7 @@ router.delete(
    ====================================================== */
 router.get(
   "/:id",
-  authenticateUser,
+  // authenticateUser,
   getSongByIdController
 );
 

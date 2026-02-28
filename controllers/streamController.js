@@ -7,27 +7,38 @@ import { extractUuidFromKey } from "../utils/cdn/mediaKey.js";
 
 // ✅ Stream a single song
 export const streamSong = async (req, res) => {
-
   const { id: songId } = req.params;
   const userId = req.user._id;
 
-  const allowed = await canStreamSong(userId, songId);
-  if (!allowed) throw new ForbiddenError("You do not have access to stream this song.");
+  const song = await Song.findById(songId)
+    .select("audioKey isDeleted accessType artist albumOnly albumId")
+    .lean();
 
-  const song = await Song.findById(songId).lean();
-  if (!song || !song.audioKey) throw new NotFoundError("Song not found or missing audio key.");
+  if (!song || !song.audioKey)
+    throw new NotFoundError("Song not found or missing audio key.");
 
-  if (song.isDeleted) {
-  throw new ForbiddenError("This song is no longer available");
-}
+  if (song.isDeleted)
+    throw new ForbiddenError("This song is no longer available");
 
+  const songuuid = extractUuidFromKey(song.audioKey);
 
-const songuuid = extractUuidFromKey(song.audioKey);
+  const allowed = await canStreamSong(userId, song);
 
+  if (!allowed) {
+    return res.json({
+      url: `https://${process.env.CLOUDFRONT_DOMAIN}/songs-preview/${songuuid}/${songuuid}_preview.m3u8`,
+      uuid: songuuid,
+      isPreview: true,
+    });
+  }
 
-  const signedUrl = await getSignedUrl(songuuid); // e.g., songs-hls/{key}.m3u8
-  res.json({ url: signedUrl, uuid: songuuid });
-  console.log("Signed URL generated:", signedUrl);
+  const signedUrl = await getSignedUrl(songuuid);
+
+  return res.json({
+    url: signedUrl,
+    uuid: songuuid,
+    isPreview: false,
+  });
 };
 
 // ✅ Stream all songs in an album

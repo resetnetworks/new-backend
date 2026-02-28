@@ -56,12 +56,12 @@ router.get(
 );
 
 // Get all artists (paginated)
-router.get("/", authenticateUser, getAllArtistsController);
+router.get("/", getAllArtistsController);
 
 // Get all artists (no pagination)
-router.get("/all", authenticateUser, getAllArtistsWithoutPagination);
+router.get("/all",  getAllArtistsWithoutPagination);
 
 // Get artist by ID or slug
-router.get("/:id", authenticateUser, getArtistById);
+router.get("/:id",  getArtistById);
 
 export default router;

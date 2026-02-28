@@ -56,8 +56,14 @@ export const getUserSubscriptions = async (req, res) => {
   // 2. Fetch artist info for each subscription
   const artistIds = subscriptions.map((sub) => sub.artistId);
   const artists = await Artist.find({ _id: { $in: artistIds } })
-    .select("name image genre slug")
+    .select("name profileImageKey genre slug")
     .lean();
+
+    artists.forEach((artist) => {
+      artist.profileImage = artist.profileImageKey
+        ? `${process.env.CLOUDFRONT_DOMAIN_FULL}/${artist.profileImageKey}`
+        : null;
+    });
 
   // 3. Merge artist info with subscription data
   const subscriptionsWithArtistInfo = subscriptions.map((sub) => {

@@ -43,7 +43,7 @@ export const shapeSongResponse = (
       : null,
 
     // 💰 Price (public contract, not internals)
-    price:
+    basePrice:
       song.accessType === "purchase-only"
         ? song.basePrice
         : null,
