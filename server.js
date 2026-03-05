@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+
 import mongoose from 'mongoose';
 import connectDb from './database/db.js';
 import app from './app.js';
