@@ -8,20 +8,26 @@ import { extractUuidFromKey } from "../utils/cdn/mediaKey.js";
 // ✅ Stream a single song
 export const streamSong = async (req, res) => {
   const { id: songId } = req.params;
-  const userId = req.user._id;
-
+  
   const song = await Song.findById(songId)
-    .select("audioKey isDeleted accessType artist albumOnly albumId")
-    .lean();
-
+  .select("audioKey isDeleted accessType artist albumOnly albumId")
+  .lean();
+  
   if (!song || !song.audioKey)
     throw new NotFoundError("Song not found or missing audio key.");
-
+  
   if (song.isDeleted)
     throw new ForbiddenError("This song is no longer available");
-
+  
   const songuuid = extractUuidFromKey(song.audioKey);
-
+    if(req.user == null) {
+    return res.json({
+      url: `https://${process.env.CLOUDFRONT_DOMAIN}/songs-preview/${songuuid}/${songuuid}_preview.m3u8`,
+      uuid: songuuid,
+      isPreview: true,
+    });}
+  
+  const userId = req.user._id;
   const allowed = await canStreamSong(userId, song);
 
   if (!allowed) {

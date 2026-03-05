@@ -9,18 +9,16 @@ export const authenticateUser = async (req, res, next) => {
       req.header("Authorization")?.replace("Bearer ", "") || req.cookies.token;
 
     if (!token) {
-      return res.status(401).json({
-        message: "Authentication token missing. Please login.",
-      });
+      req.user = null;
+      return next(); // Allow unauthenticated access, controllers will handle it
     }
 
     let decodedData;
     try {
       decodedData = jwt.verify(token, process.env.jwt_secret);
     } catch (err) {
-      return res.status(401).json({
-        message: "Invalid or expired token. Please login again.",
-      });
+      req.user = null;
+      return next(); // Invalid token, treat as unauthenticated
     }
 
  
@@ -53,7 +51,7 @@ export const authenticateUser = async (req, res, next) => {
       ...user.toObject(),
       role: decodedData.role,
       artistId: decodedData.artistId,
-    };
+    } || null;
 
     next();
   } catch (error) {

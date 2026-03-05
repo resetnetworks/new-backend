@@ -6,7 +6,8 @@ npm-debug.log
 .gitignore
 tests
 uploads
-
+cloudfront-private.pem
+docker-compose.prod.yml
 
 
 
