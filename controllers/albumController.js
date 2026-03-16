@@ -59,6 +59,7 @@ export const createAlbumController = async (req, res) => {
   const artistId = req.user.artistId;
 
   logger.info("Create album", { artistId });
+  console.log(req.body.genre)
 
   const album = await createAlbumService({
     artistId,

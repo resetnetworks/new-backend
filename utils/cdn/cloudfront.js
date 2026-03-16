@@ -33,11 +33,15 @@ export const getSignedCloudFrontUrl = (uuid, expiresInSeconds = 3600) => {
     ],
   });
 
-  return getSignedUrl({
-    url: m3u8Url,
-    keyPairId,
-    privateKey,
-    policy,
-  });
+  return (
+     m3u8Url
+  )
+
+  // return getSignedUrl({
+  //   url: m3u8Url,
+  //   keyPairId,
+  //   privateKey,
+  //   policy,
+  // });
 };
 

@@ -41,7 +41,8 @@ import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-import streamRoutes from "./routes/streamRoutes.js";
+// import streamRoutes from "./routes/streamRoutes.js";
+import streamRoutes from "./modules/stream/stream.routes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
@@ -57,6 +58,7 @@ import monetizeRoutes from "./routes/monetizeRoutes.js";
 import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoutes.js";
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
+import playbackRoutes from "./modules/playback/playback.routes.js";
 
 // --------------------
 // App setup
@@ -158,6 +160,8 @@ app.use("/api/v2/monetize", monetizeRoutes);
 app.use("/api/v2/artist", artistPayoutRoutes);
 app.use("/api/v2/admin", adminPayoutRoutes);
 app.use("/api/v2/artist", artistRevenueDashboardRoutes);
+
+app.use("/api/events", playbackRoutes);
 
 // --------------------
 // 404 & Error handling

@@ -44,6 +44,7 @@ export const shapeAlbumResponse = (album) => {
           title: song.title,
           duration: song.duration,
           accessType: song.accessType,
+          slug: song.slug,
           coverImage: song.coverImageKey
             ? buildCdnUrl(song.coverImageKey)
             : null,

@@ -10,6 +10,8 @@ import Session from "../models/Session.js";
 import { log } from "console";
 import { Subscription } from "../models/Subscription.js";
 
+import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
+
 
 
 
@@ -371,4 +373,18 @@ export const googleAuthCallback = (req, res) => {
   } catch (error) {
     res.redirect(`${process.env.CLIENT_URL}/login?error=callback_failed`);
   }
+};
+
+
+export const getRecentlyPlayed = async (req, res) => {
+
+  const userId = req.user._id;
+
+  const data = await RecentlyPlayed.findOne({ userId })
+    .populate("songs.songId")
+    .lean();
+
+  res.json({
+    songs: data?.songs || []
+  });
 };

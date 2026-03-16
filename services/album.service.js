@@ -8,7 +8,7 @@ export const createAlbumService = async ({ artistId, payload }) => {
   const {
     title,
     description = "",
-    genre = [],
+    genre,
     releaseDate,
     accessType = "subscription",
     basePrice,
@@ -49,12 +49,17 @@ export const createAlbumService = async ({ artistId, payload }) => {
     }
   }
 
+    /* -------------------- Genre resolution -------------------- */
+  const genreArray =  Array.isArray(genre)
+      ? genre
+      : genre.split(",").map((g) => g.trim());
+
   // --- Persist ---
   const album = await Album.create({
     title,
     description,
     artist: artistId,
-    genre,
+    genre:genreArray,
     releaseDate,
     accessType,
     basePrice: isPurchaseOnly
@@ -208,7 +213,7 @@ export const getAlbumByIdService = async (identifier, user) => {
     .populate("artist", "name slug profileImageKey")
     .populate(
       "songs",
-      "_id title duration accessType artist coverImageKey audioKey"
+      "_id title duration accessType artist coverImageKey audioKey slug"
     )
     .lean();
 
@@ -222,14 +227,17 @@ export const getAlbumByIdService = async (identifier, user) => {
       const hasAccess = user
         ? await hasAccessToSong(user, song)
         : false;
-
+ 
+       
       return {
         _id: song._id,
         title: song.title,
         duration: song.duration,
         accessType: song.accessType,
         coverImageKey: song.coverImageKey,
+        slug: song.slug,
         audioKey: hasAccess ? song.audioKey : null,
+        
       };
     })
   );

@@ -3,6 +3,7 @@ import passport from "../middleware/passport.js";
 import { authenticateUser } from "../middleware/authenticate.js";
 import validate from "../middleware/validate.js";
 
+
 import {
   registerUser,
   loginUser,
@@ -13,6 +14,7 @@ import {
   forgotPassword,
   resetPassword,
   googleAuthCallback,
+  getRecentlyPlayed
 
 } from "../controllers/userControllers.js";
 
@@ -69,6 +71,8 @@ router.get(
   passport.authenticate("google", { session: false, failureRedirect: "/login" }),
   googleAuthCallback
 );
+
+router.get("/recently-played", authenticateUser, getRecentlyPlayed);
 
 
 

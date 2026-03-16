@@ -1,3 +1,7 @@
+import { UnauthorizedError } from "../errors/index.js";
+import {ForbiddenError} from "../errors/index.js";
+
+
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user?.role) {
