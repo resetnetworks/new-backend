@@ -4,6 +4,7 @@ import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { StatusCodes } from 'http-status-codes';
 import { shapeSongResponse } from "../dto/song.dto.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
+import { Workspace } from "../modules/workspace/workspace.model.js";
 import {
   createSongService,
   updateSongService,
@@ -82,10 +83,11 @@ export const extractSongIdFromKey = (key) => {
 // ===================================================================
 export const createSongController = async (req, res) => {
   /* -------------------- Auth / Artist check -------------------- */
-  const artistId = req.user?.artistId;
-  if (!artistId) {
-    throw new ForbiddenError("Artist profile not linked to user");
-  }
+  // const artistId = req.user?.artistId;
+  // if (!artistId) {
+  //   throw new ForbiddenError("Artist profile not linked to user");
+  // }
+const artistId = req.workspace.artistId;
 
   /* -------------------- Input extraction -------------------- */
   const {
@@ -167,10 +169,7 @@ export const createSongController = async (req, res) => {
       : genre.split(",").map((g) => g.trim())
     : [];
 
-    console.log("-------------Resolved genres:", genreArray);
-    console.log("-------------Genre string:", genre);
-    console.log("------------typegenres:", typeof genre);
-
+  
 
   /* -------------------- Pricing rules -------------------- */
   const isPurchaseOnly = accessType === "purchase-only";
@@ -264,6 +263,7 @@ export const createSongController = async (req, res) => {
       isrc,
       coverImageKey: finalCoverImageKey || null,
       audioKey,
+      createdBy: req.user_id
     },
     
    
@@ -276,7 +276,8 @@ export const createSongController = async (req, res) => {
       songId: song._id,
       artistId,
       albumId: song.album || null,
-      accessType: song.accessType
+      accessType: song.accessType,
+      createdBy: req.user._id,
     },
     "Song created"
   );

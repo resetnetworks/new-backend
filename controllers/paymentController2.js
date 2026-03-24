@@ -62,9 +62,6 @@ clientSecret: stripePayment.client_secret,
 });
 };
 
-
-
-// ✅ Razorpay One-Time Payment (Song/Album)
 export const createRazorpayOrder = async (req, res) => {
   const { itemType, itemId, amount, currency = "INR" } = req.body;
   const userId = req.user._id;
@@ -113,8 +110,6 @@ const razorpayOrder = await createRazorpayOrderUtil(amount, userId, itemType, it
   
   return res.status(201).json({ success: true, order: razorpayOrder });
 };
-
-
 
 export const createPaypalOrder = async (req, res) => {
   const { itemType, itemId, price } = req.body;
@@ -169,6 +164,7 @@ export const createPaypalOrder = async (req, res) => {
 
   return res.status(201).json({ success: true, id: order.result.id, links: order.result.links });
 };
+
 export const capturePaypalOrder = async (req, res) => {
   try {
     const { orderId } = req.body;

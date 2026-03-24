@@ -275,6 +275,12 @@ const artistSchema = new mongoose.Schema(
       index: true,
     },
 
+    workspaceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Workspace",
+    index: true
+    },
+
     deletedAt: {
       type: Date,
       default: null,

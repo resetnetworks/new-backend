@@ -57,7 +57,8 @@ export const createSongService = async ({
           albumOnly: data.albumOnly || false,
           isrc: data.isrc || null,
           audioKey: data.audioKey,
-          convertedPrices: data.convertedPrices || []
+          convertedPrices: data.convertedPrices || [],
+          createdBy: data.createdBy
         }
       ],
       { session }

@@ -125,6 +125,11 @@ const songSchema = new mongoose.Schema(
         amount: { type: Number },
       },
     ],
+    artist: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     /* ======================================================
        LIFECYCLE / PIPELINE STATUS

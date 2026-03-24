@@ -59,6 +59,11 @@ import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 import paymentRoutes from "./modules/payments-v2/payment.routes.js";
 
+import workspaceRoutes from "./modules/workspace/workspace.routes.js"
+// import testQueue from "./routes/testQueue.js";
+import couponRoutes from "./modules/coupon/coupon.routes.js"
+
+
 
 // --------------------
 // App setup
@@ -160,6 +165,10 @@ app.use("/api/v2/monetize", monetizeRoutes);
 app.use("/api/v2/artist", artistPayoutRoutes);
 app.use("/api/v2/admin", adminPayoutRoutes);
 app.use("/api/v2/artist", artistRevenueDashboardRoutes);
+
+app.use("/api/workspaces", workspaceRoutes);
+// app.use("api/test", testQueue )
+app.use("/api/coupons", couponRoutes);
 
 // --------------------
 // 404 & Error handling

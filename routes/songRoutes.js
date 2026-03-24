@@ -5,6 +5,7 @@ import { authenticateUser } from "../middleware/authenticate.js";
 import { authorizeRoles } from "../middleware/authorize.js";
 import { isArtistMonetized } from "../middleware/isMonetized.js";
 import validate from "../middleware/validate.js";
+import { requireWorkspacePermission } from "../middleware/requireWorkspacePermission.js";
 
 /* ===================== Controllers ===================== */
 import {
@@ -89,10 +90,11 @@ router.get(
    CRUD (ARTIST)
    ====================================================== */
 router.post(
-  "/",
+  "/workspaces/:workspaceId",
   authenticateUser,
-  authorizeRoles("artist"),
-  isArtistMonetized,
+  // authorizeRoles("artist"),
+  // isArtistMonetized,
+  requireWorkspacePermission("uploadSong"),
   createSongValidator,
   validate,
   createSongController
