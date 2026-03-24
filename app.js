@@ -39,10 +39,9 @@ import playlistRoutes from "./routes/playlistRoutes.js";
 import adminplaylistRoutes from "./routes/adminPlaylist.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js";
+// import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-// import streamRoutes from "./routes/streamRoutes.js";
-import streamRoutes from "./modules/stream/stream.routes.js";
+import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
@@ -58,7 +57,13 @@ import monetizeRoutes from "./routes/monetizeRoutes.js";
 import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoutes.js";
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
-import playbackRoutes from "./modules/playback/playback.routes.js";
+// import paymentRoutes from "./modules/payments-v2/payment.routes.js";
+
+import workspaceRoutes from "./modules/workspace/workspace.routes.js"
+// import testQueue from "./routes/testQueue.js";
+// import couponRoutes from "./modules/coupon/coupon.routes.js"
+
+
 
 // --------------------
 // App setup
@@ -104,16 +109,16 @@ app.use(httpLogger);
 // --------------------
 // Webhooks (must come before body parser)
 // --------------------
-app.post(
-  "/api/webhooks/razorpay",
-  express.raw({ type: "application/json" }),
-  razorpayWebhook
-);
+// app.post(
+//   "/api/webhooks/razorpay",
+//   express.raw({ type: "application/json" }),
+//   paymentRoutes
+// );
 
 app.post(
   "/api/webhooks/paypal",
   express.raw({ type: "application/json" }),
-  paypalWebhook
+  paypalWebhook,
 );
 
 // --------------------
@@ -141,7 +146,7 @@ app.use("/api/artists", artistRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/discover", discoverRoutes);
 app.use("/api/adminPlaylist", adminplaylistRoutes);
-app.use("/api/payments", paymentLimiter, paymentRoutes);
+// app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/artist/dashboard", artistDashboardRoutes);
@@ -161,7 +166,9 @@ app.use("/api/v2/artist", artistPayoutRoutes);
 app.use("/api/v2/admin", adminPayoutRoutes);
 app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 
-app.use("/api/events", playbackRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+// app.use("api/test", testQueue )
+// app.use("/api/coupons", couponRoutes);
 
 // --------------------
 // 404 & Error handling
@@ -171,3 +178,4 @@ app.use(errorHandlerMiddleware);
 
 export default app;
 export { app };
+
