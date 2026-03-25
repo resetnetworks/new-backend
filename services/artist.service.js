@@ -32,8 +32,6 @@ export const createArtistService = async ({ name, bio, location, imageUrl, baseP
   return shapeArtistResponse(artist.toObject());
 };
 
-
-
 /**
  * Artist self-service profile update
  */
@@ -88,6 +86,7 @@ export const updateArtistProfileService = async ({
 
   return artist.toObject();
 };
+
 export const getAllArtistsService = async ({ page, limit }) => {
   const skip = (page - 1) * limit;
 

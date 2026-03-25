@@ -5,6 +5,10 @@ import { Artist } from "../../artist/models/artist.model.js";
 import {User} from "../../../models/User.js";
 import { ARTIST_SOCIAL_PROVIDERS } from "../../../constants/artistSocials.js";
 
+import { Workspace } from "../../workspace/workspace.model.js";
+import { WorkspaceMember } from "../../workspace/workspaceMember.model.js";
+import { ROLE_PERMISSIONS } from "../../../permissions/rolePermissions.js";
+
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
 const DOCUMENT_TYPES = ["gov_id", "proof_of_address", "tax_id", "portfolio", "other"];
@@ -175,62 +179,98 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
   try {
     const application = this;
 
+    console.log("----------------Application data:", application);
+
     // 1️⃣ Create Artist
-    const artist = await Artist.create(
-      [
-        {
-          name: overrides.name || application.stageName,
-          slug: overrides.slug || application.slug,
-          bio: overrides.bio || application.bio,
-          location: application.contact?.location || "",
-          createdBy: application.userId,
-          accountType: "self",
-          approvalStatus: "approved",
-          uploadVersion: 2,
-          socials:  [],
-          country: application.country || null,
-          email: application.contact?.email || null,
-          website: application.contact?.website || null,
+ const artist = await Artist.create(
+  [
+    {
+      name: overrides.name || application.stageName,
+      slug: overrides.slug || application.slug,
+      bio: overrides.bio || application.bio,
+      location: application.contact?.location || "",
+      createdBy: application.userId,
+      accountType: "self",
+      approvalStatus: "approved",
+      uploadVersion: 2,
+      socials: [],
+      country: application.country || null,
+      email: application.contact?.email || null,
+      website: application.contact?.website || null
+    }
+  ],
+  { session }
+);
 
-        },
-      ],
-      { session }
-    );
+const artistDoc = artist[0];
 
-    console .log("Created new Artist from application:", artist);
+    console.log("Created new Artist from application:", artist);
 
-    // 2️⃣ Update the application to approved
+    // 2️⃣ Create Workspace
+   const workspace = await Workspace.create(
+  [
+    {
+      name: artistDoc.name,
+      ownerId: application.userId,
+      artistId: artistDoc._id
+    }
+  ],
+  { session }
+);
+
+const workspaceDoc = workspace[0];
+
+    // 3️⃣ Create Workspace Owner Membership
+  await WorkspaceMember.create(
+  [
+    {
+      workspaceId: workspaceDoc._id,
+      userId: application.userId,
+      role: "owner",
+      permissions: ROLE_PERMISSIONS.owner,
+      invitedBy: application.userId
+    }
+  ],
+  { session }
+);
+
+    // 4️⃣ Attach workspace to artist
+    artistDoc.workspaceId = workspaceDoc._id;
+    await artistDoc.save({ session });
+
+    // 5️⃣ Update application
     const updatedApplication = await ArtistApplication.findByIdAndUpdate(
       application._id,
       {
         status: "approved",
         adminReviewer: adminUserId,
         adminNotes: overrides.adminNotes || null,
-        reviewedAt: new Date(),
+        reviewedAt: new Date()
       },
       { new: true, session }
     );
-    console.log("Updated application to approved:", application);
 
-    const  user = await User.findByIdAndUpdate(
+    console.log("Updated application to approved:", updatedApplication);
+
+    // 6️⃣ Update user role
+    const user = await User.findByIdAndUpdate(
       application.userId,
       {
-        artistId: artist[0]._id,
-        role: "artist",
-        
+        artistId: artistDoc._id,
+        role: "artist"
       },
       { new: true, session }
     );
-    user.roleVersion += 1; // bump roleVersion to invalidate existing tokens
-    await user.save();
+
+    user.roleVersion += 1;
+    await user.save({ session });
 
     console.log("Updated user to artist role:", user);
 
     await session.commitTransaction();
     session.endSession();
 
-    // Return both
-    return { artist: artist[0], updatedApplication };
+    return { artist, updatedApplication };
 
   } catch (err) {
     await session.abortTransaction();

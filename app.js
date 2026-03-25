@@ -24,7 +24,7 @@ import errorHandlerMiddleware from "./middleware/errorhandler.js";
 // Webhooks
 import {
   stripeWebhook,
-  razorpayWebhook,
+ 
   paypalWebhook,
 } from "./controllers/webhookController.js";
 
@@ -39,7 +39,7 @@ import playlistRoutes from "./routes/playlistRoutes.js";
 import adminplaylistRoutes from "./routes/adminPlaylist.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
-// import paymentRoutes from "./routes/paymentRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
@@ -58,6 +58,7 @@ import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoute
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 // import paymentRoutes from "./modules/payments-v2/payment.routes.js";
+import {razorpayWebhook}from "./modules/payment/razorpay/razorpayWebhook.controller.js";
 
 import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import testQueue from "./routes/testQueue.js";
@@ -109,11 +110,11 @@ app.use(httpLogger);
 // --------------------
 // Webhooks (must come before body parser)
 // --------------------
-// app.post(
-//   "/api/webhooks/razorpay",
-//   express.raw({ type: "application/json" }),
-//   paymentRoutes
-// );
+app.post(
+  "/api/webhooks/razorpay",
+  express.raw({ type: "application/json" }),
+  razorpayWebhook
+);
 
 app.post(
   "/api/webhooks/paypal",
@@ -146,7 +147,7 @@ app.use("/api/artists", artistRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/discover", discoverRoutes);
 app.use("/api/adminPlaylist", adminplaylistRoutes);
-// app.use("/api/payments", paymentLimiter, paymentRoutes);
+app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/artist/dashboard", artistDashboardRoutes);

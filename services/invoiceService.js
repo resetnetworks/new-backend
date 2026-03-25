@@ -162,8 +162,6 @@ const generateInvoiceBuffer = (invoice) => {
   });
 };
 
-
-
 // 🔹 Send invoice email
 const sendInvoiceEmail = async (to, invoiceBuffer, invoiceNumber, subject) => {
   const transporter = nodemailer.createTransport({
