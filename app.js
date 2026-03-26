@@ -171,6 +171,10 @@ app.use("/api/workspaces", workspaceRoutes);
 // app.use("api/test", testQueue )
 // app.use("/api/coupons", couponRoutes);
 
+app.use("/api/artist/dashboard", artistDashboardRoutes );
+
+app.use("/api/discover", discoverRoutes);
+
 // --------------------
 // 404 & Error handling
 // --------------------
