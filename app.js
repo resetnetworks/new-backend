@@ -44,7 +44,7 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
-import uploadRoutes2 from "./routes/uploadRoutes2.js";
+// import uploadRoutes2 from "./routes/uploadRoutes2.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 
 // --------------------
@@ -63,6 +63,8 @@ import {razorpayWebhook}from "./modules/payment/razorpay/razorpayWebhook.control
 import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import testQueue from "./routes/testQueue.js";
 // import couponRoutes from "./modules/coupon/coupon.routes.js"
+
+import uploadRoutes2 from "./modules/presigned-upload/presign-upload.route.js";
 
 
 
@@ -151,7 +153,7 @@ app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/artist/dashboard", artistDashboardRoutes);
-app.use("/api/uploads", uploadRoutes2);
+// app.use("/api/uploads", uploadRoutes2);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/user/dashboard", userDashboardRoutes);
 
@@ -170,6 +172,9 @@ app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 // app.use("api/test", testQueue )
 // app.use("/api/coupons", couponRoutes);
+
+
+app.use("/api/uploads", uploadRoutes2);
 
 // --------------------
 // 404 & Error handling
