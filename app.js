@@ -65,7 +65,7 @@ import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import couponRoutes from "./modules/coupon/coupon.routes.js"
 
 
-import artistDashboardRoutes from "./modules/artist-dashboard/artistDashboard.route.js";
+// import artistDashboardRoutes from "./modules/artist-dashboard/artistDashboard.route.js";
 import discoverRoutes from "./modules/discover/discover.route.js";
 
 // --------------------
@@ -173,7 +173,7 @@ app.use("/api/workspaces", workspaceRoutes);
 // app.use("api/test", testQueue )
 // app.use("/api/coupons", couponRoutes);
 
-app.use("/api/artist/dashboard", artistDashboardRoutes);
+// app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/discover", discoverRoutes);
 
 // --------------------
