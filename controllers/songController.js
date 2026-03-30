@@ -435,7 +435,7 @@ export const getAllSongsController = async (req, res) => {
   // 📘 read event (NOT per-song)
   req.log.info(
     {
-      event: "songs.listed",
+      event: "songs.listed", 
       type,
       page,
       limit,

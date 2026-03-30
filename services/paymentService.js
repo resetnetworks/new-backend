@@ -5,189 +5,93 @@ import { getNextInvoiceNumber } from "../utils/invoiceNumber.js";
 import mongoose from "mongoose";
 import { creditArtistEarnings } from "../modules/artist-payout/services/artistEarningService.js";
 import { EXCHANGE_RATES } from "../utils/priceInUSD.js";
+import buildQuery from "../utils/buildQuery .js"
+import logger  from "../utils/logger.js"
 const subscriptionDuration = {
   "1m": 30,   // 30 days
   "3m": 90,   // 90 days
   "6m": 180   // 180 days
 };
-// ✅ Mark transaction as paid
-// export const markTransactionPaid = async ({
-//   gateway,
-//   paymentId,
-//   razorpayOrderId,
-//   paymentIntentId,
-//   stripeSubscriptionId,
-//   subscriptionId,
-// }) => {
-//   let query = {};
-//   console.log("🔍 Marking transaction as paid:")
-// console.log({ gateway, paymentId, razorpayOrderId, paymentIntentId, stripeSubscriptionId, subscriptionId });
-// console.log("Searching with query:", query);
-//   if (!gateway) {
-//     console.warn("⚠️ No payment gateway provided. Cannot mark transaction as paid.");
-//     return null;
-//   }
-//   if (gateway === "stripe") {
-//     if (stripeSubscriptionId) {
-//       query = { stripeSubscriptionId };
-//     } else {
-//       query = { paymentIntentId };
-//     }
-//   } else if(gateway === "razorpay") {
-//     if (subscriptionId) {
-//       query = { "metadata.razorpaySubscriptionId": subscriptionId };
-//     } else if (razorpayOrderId) {
-//       query = { razorpayOrderId };
-//     } else if (paymentId) {
-//       query = { paymentId }; 
-//     }
-//   }
-//   else if (gateway === "paypal") {
-//     if (subscriptionId) {
-//       query = { "metadata.paypalSubscriptionId": subscriptionId };
-//     } else if (paymentId) {
-//       query = { paypalOrderId:paymentId };
-//     }
-//   }
-// console.log("Final query for transaction:", query);
-
-//    const transaction = await Transaction.findOne({
-//   ...query,
-//   status: "pending",
-// }).sort({ createdAt: -1 });
-//   console.log("Found transaction:", transaction);
-//   if (!transaction || transaction.status === "paid") {
-//     console.warn("⚠️ Transaction not found or already marked as paid");
-    
-    
-//     return null;
-//   }
-
-//   transaction.status = "paid";
-//   const invoiceNumber = await getNextInvoiceNumber();
-// // Save invoiceNumber in Transaction document
-// transaction.invoiceNumber = invoiceNumber;
-//   await transaction.save();
 
 
-//   // / 4️⃣ 💰 CREDIT ARTIST EARNINGS (CENTRALIZED HERE)
-//   await creditArtistEarnings({
-//     artistId: transaction.artistId,
-//     transactionId: transaction._id,
-//     amount: transaction.artistShare,
-//     currency: transaction.currency,
-//     source:
-//       transaction.itemType === "artist-subscription"
-//         ? "subscription"
-//         : transaction.itemType,
-//   });
-//   return transaction;
-// };
-
-export const markTransactionPaid = async ({
-  gateway,
-  paymentId,
-  razorpayOrderId,
-  paymentIntentId,
-  stripeSubscriptionId,
-  subscriptionId,
-}) => {
-  if (!gateway) return null;
-
-  let query = {};
-
-  // ----------------------------
-  // Build gateway-specific query
-  // ----------------------------
-  if (gateway === "stripe") {
-    query = stripeSubscriptionId
-      ? { stripeSubscriptionId }
-      : { paymentIntentId };
-  }
-
-  if (gateway === "razorpay") {
-    if (subscriptionId) {
-      query = { "metadata.razorpaySubscriptionId": subscriptionId };
-    } else if (razorpayOrderId) {
-      query = { razorpayOrderId };
-    } else if (paymentId) {
-      query = { paymentId };
-    }
-  }
-
-  if (gateway === "paypal") {
-    query = subscriptionId
-      ? { "metadata.paypalSubscriptionId": subscriptionId }
-      : { paypalOrderId: paymentId };
-  }
-
-  const session = await mongoose.startSession();
-
+export const markTransactionPaid = async (payload) => {
   try {
-    session.startTransaction();
+    const query = buildQuery(payload);
 
     // ----------------------------
-    // Find transaction (NO status filter)
+    // 1️⃣ Atomic update (core payment state)
     // ----------------------------
-    const transaction = await Transaction.findOne(query).session(session);
+    const transaction = await Transaction.findOneAndUpdate(
+      {
+        ...query,
+        status: { $ne: "paid" }, // 🔥 concurrency + idempotency guard
+      },
+      {
+        $set: {
+          status: "paid",
+          paidAt: new Date(),
+        },
+      },
+      { new: true }
+    );
 
+    // ----------------------------
+    // 2️⃣ Not found OR already processed
+    // ----------------------------
     if (!transaction) {
-      await session.abortTransaction();
-      return null;
+      logger.warn({ payload }, "Duplicate or missing transaction");
+      return { transaction: null, isFirstTime: false };
     }
 
     // ----------------------------
-// Idempotency guard
-// ----------------------------
-if (transaction.status === "paid") {
-  await session.abortTransaction();
-  return transaction;
-}
+    // 3️⃣ Financial calculations (non-critical but important)
+    // ----------------------------
+    const rate = EXCHANGE_RATES[transaction.currency];
 
-// ----------------------------
-// Mark transaction as paid
-// ----------------------------
-transaction.status = "paid";
-transaction.invoiceNumber = await getNextInvoiceNumber();
-const rate = EXCHANGE_RATES[transaction.currency];
+    if (!rate) {
+      throw new Error(`Unsupported currency: ${transaction.currency}`);
+    }
 
-if (!rate) {
-  throw new Error(`Unsupported currency: ${transaction.currency}`);
-}
-
-transaction.amountUSD = Number(
-  (transaction.artistShare * rate).toFixed(2)
-);
-
-transaction.exchangeRate = rate;
-transaction.exchangeRateSource = "static";
-transaction.exchangeRateAt = new Date();
-
-await transaction.save({ session });
+    const amountUSD = Number(
+      (transaction.artistShare * rate).toFixed(2)
+    );
 
     // ----------------------------
-    // Credit artist earnings
+    // 4️⃣ Safe update (post-processing)
     // ----------------------------
-    await creditArtistEarnings({
-      artistId: transaction.artistId,
-      transactionId: transaction._id,
-      amount: transaction.artistShare,
-      currency: transaction.currency,
-      amountUSD: transaction.amountUSD,
-      source:
-        transaction.itemType === "artist-subscription"
-          ? "subscription"
-          : transaction.itemType,
-    });
+    await Transaction.updateOne(
+      { _id: transaction._id },
+      {
+        $set: {
+          amountUSD,
+          exchangeRate: rate,
+          exchangeRateSource: "static",
+          exchangeRateAt: new Date(),
+        },
+      }
+    );
 
-    await session.commitTransaction();
-    return transaction;
+    // ----------------------------
+    // 5️⃣ Return contract
+    // ----------------------------
+    return {
+      transaction: {
+        ...transaction.toObject(),
+        amountUSD,
+      },
+      isFirstTime: true,
+    };
 
   } catch (err) {
-    await session.abortTransaction();
+    logger.error(
+      {
+        error: err.message,
+        stack: err.stack,
+        payload,
+      },
+      "markTransactionPaid failed"
+    );
     throw err;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -196,18 +100,22 @@ await transaction.save({ session });
 export const updateUserAfterPurchase = async (transaction, paymentId) => {
   const updateOps = {};
 
-  // ✅ Push purchaseHistory entry (no duplicates)
+  // ----------------------------
+  // 🧾 Purchase history (best-effort)
+  // ----------------------------
   updateOps.$push = {
     purchaseHistory: {
       itemType: transaction.itemType,
       itemId: transaction.itemId,
       price: transaction.amount,
-      amount: transaction.amount,
       currency: transaction.currency,
       paymentId,
     },
   };
 
+  // ----------------------------
+  // 🎵 Item unlock
+  // ----------------------------
   switch (transaction.itemType) {
     case "song":
       updateOps.$addToSet = { purchasedSongs: transaction.itemId };
@@ -218,60 +126,85 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
       break;
 
     case "artist-subscription": {
-      const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
-      let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+      const daysToAdd =
+        subscriptionDuration[transaction.metadata?.cycle] || 30;
 
-      const fallbackExternalId =
-        transaction.metadata?.externalSubscriptionId ??
-        transaction.metadata?.razorpaySubscriptionId ??
-        transaction.metadata?.paypalSubscriptionId ??
-        transaction.stripeSubscriptionId ??
-        transaction.paymentIntentId ??
-        transaction.razorpayOrderId ??
-        "unknown";
+      const externalSubscriptionId =
+        transaction.metadata?.razorpaySubscriptionId ||
+        transaction.stripeSubscriptionId ||
+        transaction.metadata?.paypalSubscriptionId;
 
-      // 🧠 Optionally enrich with Stripe’s actual period
-      if (transaction.stripeSubscriptionId) {
-        try {
-          const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
-          const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
-          if (stripeSub?.current_period_end) {
-            validUntil = new Date(stripeSub.current_period_end * 1000);
-          }
-        } catch (err) {
-          console.warn("⚠️ Failed to fetch Stripe period:", err.message);
-        }
+      if (!externalSubscriptionId) {
+        logger.error(
+          { transactionId: transaction._id },
+          "Missing externalSubscriptionId"
+        );
+        break;
       }
 
-      // ✅ Upsert subscription
+      // 🔥 fetch existing
+      const existing = await Subscription.findOne({
+        externalSubscriptionId,
+      });
+
+      const now = new Date();
+      const baseDate =
+        existing?.validUntil > now ? existing.validUntil : now;
+
+      const validUntil = new Date(
+        baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000
+      );
+
       await Subscription.findOneAndUpdate(
-        { userId: transaction.userId, artistId: transaction.artistId },
+        { externalSubscriptionId },
         {
+          userId: transaction.userId,
+          artistId: transaction.artistId,
           status: "active",
           validUntil,
           gateway: transaction.gateway,
-          externalSubscriptionId: fallbackExternalId,
           transactionId: transaction._id,
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true }
       );
 
-      console.log("✅ Subscription created/updated for artist:", transaction.artistId);
+      logger.info(
+        { artistId: transaction.artistId },
+        "Subscription created/updated"
+      );
+
       break;
     }
 
     default:
-      console.warn("⚠️ Unknown itemType:", transaction.itemType);
+      logger.warn(
+        { itemType: transaction.itemType },
+        "Unknown itemType"
+      );
   }
 
-  // ✅ Atomic update instead of load+save
-  const user = await User.findByIdAndUpdate(transaction.userId, updateOps, { new: true });
+  // ----------------------------
+  // 👤 Update user
+  // ----------------------------
+  const user = await User.findByIdAndUpdate(
+    transaction.userId,
+    updateOps,
+    { new: true }
+  );
+
   if (!user) {
-    console.warn("❌ User not found for transaction:", transaction._id);
+    logger.warn(
+      { transactionId: transaction._id },
+      "User not found"
+    );
     return false;
   }
 
-  console.log("✅ User updated:", user._id);
+  logger.info(
+    { userId: user._id },
+    "User updated after purchase"
+  );
+
   return true;
 };
 

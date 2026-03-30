@@ -4,7 +4,7 @@ import { initiateArtistSubscription, cancelArtistSubscription } from "../control
 import { artistIdValidator } from "../validators/artistValidators.js";
 import validate from "../middleware/validate.js";
 import { createSetupIntent } from "../controllers/subscriptionController.js";
-import { createRazorpaySubscription } from "../controllers/subscriptionController.js";
+import { createRazorpaySubscription } from "../modules/payment/controllers/subscription.controller.js";
 import {createPaypalSubscription} from "../controllers/subscriptionController.js";
 
 const router = express.Router();

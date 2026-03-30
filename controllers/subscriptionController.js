@@ -15,6 +15,7 @@ import paypal from "@paypal/checkout-server-sdk";
 import  {paypalClient}  from "../utils/paypalClient.js";
 import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
+// import calculateValidUntil  from "../utils/calculateValidUntil"
 
 const PLATFORM_FEE_PERCENT = 0.15;
 
@@ -287,6 +288,22 @@ export const createRazorpaySubscription = async (req, res) => {
         cycle,
       },
     });
+    
+    
+    
+await Subscription.create({
+  userId: user._id,
+  artistId: artistId,
+  externalSubscriptionId: subscription.id,
+  cycle,
+  gateway: "razorpay",
+
+  status: "pending", // after fixing enum
+
+  startedAt: new Date(),
+
+  validUntil: new Date("2030-01-01"), // 🔥 IMPORTANT
+});
 
     res.status(201).json({
       success: true,
