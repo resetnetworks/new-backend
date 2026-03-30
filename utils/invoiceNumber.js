@@ -1,19 +1,34 @@
 import { Counter } from "../models/Counter.js";
+import logger  from "./logger.js";
 
 export const getNextInvoiceNumber = async () => {
   try {
+    const year = new Date().getFullYear();
+
     const counter = await Counter.findOneAndUpdate(
-      { name: "invoice" },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true }
+      {
+        name: "invoice",
+        year, // 🔥 add year-based separation
+      },
+      {
+        $inc: { seq: 1 },
+      },
+      {
+        new: true,
+        upsert: true,
+      }
     );
 
-    const year = new Date().getFullYear();
-    const paddedSeq = String(counter.seq).padStart(6, "0"); // pad to 6 digits
+    const paddedSeq = String(counter.seq).padStart(6, "0");
 
-    return `INV-${year}-${paddedSeq}`; // INV-2025-001001
+    return `INV-${year}-${paddedSeq}`;
+
   } catch (err) {
-    console.error("Failed to generate invoice number:", err);
+    logger.error(
+      { error: err.message, stack: err.stack },
+      "Failed to generate invoice number"
+    );
+
     throw new Error("Could not generate invoice number");
   }
 };
