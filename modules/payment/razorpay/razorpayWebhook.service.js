@@ -1,170 +1,202 @@
-import crypto from "crypto";
-import { Transaction } from "../../../models/Transaction.js";
-import { Subscription } from "../../../models/Subscription.js";
-import {markTransactionPaid, updateUserAfterPurchase,} from "../../../services/paymentService.js";
-import { WebhookEventLog } from "../../../models/WebhookEventLog.js";
-import Razorpay from "razorpay";
-import {processAndSendInvoice} from "../../../services/invoiceService.js";
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+import { processPayment } from "../common/payment.service.js";
+import { normalizeRazorpayPayment } from "./razorpay.normalizer.js";
+import {
+  updateSubscriptionStatus,
+  mapRazorpaySubscriptionStatus,
+} from "../subscription/subscription.service.js";
+import  logger  from "../../../utils/logger.js";
+import { razorpay } from "../../../config/razorpay.js";
 
 
+
+// --------------------------------------------------
+// 🔹 Main Event Router
+// --------------------------------------------------
 export const handleRazorpayEvent = async (event, eventData) => {
-  if (event === "payment.captured") {
-    return handlePaymentCaptured(eventData);
+  const eventId =
+    eventData?.payload?.payment?.entity?.id ||
+    eventData?.payload?.subscription?.entity?.id ||
+    null;
+
+  try {
+    // ---------------------------
+    // 1️⃣ Route events
+    // ---------------------------
+    switch (event) {
+      case "payment.captured":
+        return await handlePaymentCaptured(eventData);
+
+      case "subscription.activated":
+      case "subscription.charged":
+      case "subscription.cancelled":
+      case "subscription.halted":
+      case "subscription.completed":
+      case "subscription.authenticated":
+        return await handleSubscriptionEvent(eventData);
+
+      default:
+        logger.warn(
+          { event, eventId },
+          "Ignored unknown Razorpay event"
+        );
+    }
+  } catch (err) {
+    // ---------------------------
+    // 2️⃣ Local error logging
+    // ---------------------------
+    logger.error(
+      {
+        event,
+        eventId,
+        error: err.message,
+        stack: err.stack,
+      },
+      "Error handling Razorpay event"
+    );
+
+    throw err; // let controller handle response
   }
-
-  const subscriptionEvents = [
-    "subscription.activated",
-    "subscription.charged",
-    "subscription.cancelled",
-    "subscription.halted",
-    "subscription.completed",
-    "subscription.authenticated",
-  ];
-
-  if (subscriptionEvents.includes(event)) {
-    return handleSubscriptionEvent(eventData);
-  }
-
-  console.log("⚠️ Ignored unknown event:", event);
 };
 
-
-const handlePaymentCaptured = async (eventData) => {
+// --------------------------------------------------
+// 🔹 Payment Captured Handler
+// --------------------------------------------------
+export const handlePaymentCaptured = async (eventData) => {
   const paymentEntity = eventData.payload.payment.entity;
   const paymentId = paymentEntity.id;
-  const razorpayOrderId = paymentEntity.order_id;
 
-  console.log("[Razorpay] Processing payment:", paymentId);
+  logger.info({ paymentId }, "Processing Razorpay payment");
 
-  const fullPayment = await razorpay.payments.fetch(paymentId);
-
+  let fullPayment = paymentEntity; // 🔥 use webhook data first
   let subscriptionId = null;
 
-  if (fullPayment.invoice_id) {
-    const invoice = await razorpay.invoices.fetch(fullPayment.invoice_id);
-    subscriptionId = invoice.subscription_id;
-  }
+  try {
+    // ---------------------------
+    // 1️⃣ Fetch full payment only if needed
+    // ---------------------------
+    if (!paymentEntity.notes || !paymentEntity.amount) {
+      fullPayment = await razorpay.payments.fetch(paymentId);
+    }
 
-  // 🔥 NORMALIZED PAYLOAD
-  const basePayload = {
-    gateway: "razorpay",
-    paymentId,
-    orderId: razorpayOrderId,
-    metadata: fullPayment.notes || {},
-  };
+    // ---------------------------
+    // 2️⃣ Detect subscription payment
+    // ---------------------------
+    if (fullPayment.invoice_id) {
+      try {
+        const invoice = await razorpay.invoices.fetch(
+          fullPayment.invoice_id
+        );
+        subscriptionId = invoice.subscription_id;
+      } catch (err) {
+        logger.error(
+          { paymentId, error: err.message },
+          "Failed to fetch invoice for subscription detection"
+        );
+      }
+    }
 
-  if (subscriptionId) {
-    return handleSubscriptionPayment({
-      ...basePayload,
-      subscriptionId,
-      type: "subscription",
-    });
-  }
+    // ---------------------------
+    // 3️⃣ Normalize payload
+    // ---------------------------
+    const { isValid, payload, error, rawMetadata } =
+      await normalizeRazorpayPayment({
+        fullPayment,
+        paymentEntity,
+        subscriptionId,
+      });
 
-  return handleOneTimePayment({
-    ...basePayload,
-    type: "one-time",
-  });
-};
-
-const handleSubscriptionEvent = async (eventData) => {
-  const subId = eventData.payload.subscription.entity.id;
-
-  const subEntity = await razorpay.subscriptions.fetch(subId);
-  const status = subEntity.status;
-
-  switch (status) {
-    case "active":
-      await Subscription.findOneAndUpdate(
-        { externalSubscriptionId: subId },
-        { status: "active" }
+    if (!isValid) {
+      logger.error(
+        {
+          paymentId,
+          error,
+          rawMetadata,
+        },
+        "Invalid normalized payload"
       );
-      console.log("✅ Subscription active:", subId);
-      break;
+      return;
+    }
 
-    case "completed":
-      await Subscription.findOneAndUpdate(
-        { externalSubscriptionId: subId },
-        { status: "completed" }
-      );
-      console.log("✅ Subscription lifecycle completed:", subId);
-      break;
+    // ---------------------------
+    // 4️⃣ Core engine
+    // ---------------------------
+    return await processPayment(payload);
 
-    case "cancelled":
-    case "halted":
-      await Subscription.findOneAndUpdate(
-        { externalSubscriptionId: subId },
-        { status: "cancelled" }
-      );
-      console.log("❌ Subscription cancelled/halted:", subId);
-      break;
-
-    default:
-      console.log(
-        "ℹ️ Subscription event ignored:",
-        subId,
-        "status:",
-        status
-      );
-  }
-};
-
-const handleSubscriptionPayment = async ({
-  paymentId,
-  subscriptionId,
-  razorpayOrderId,
-}) => {
-  const transaction = await markTransactionPaid({
-    gateway: "razorpay",
-    paymentId,
-    subscriptionId,
-    razorpayOrderId,
-  });
-
-  if (transaction) {
-    await updateUserAfterPurchase(transaction, subscriptionId);
-    console.log("✅ Subscription payment processed:", subscriptionId);
-  }
-
-  await processAndSendInvoice(transaction);
-  console.log("📧 Invoice emailed to user for subscription:", subscriptionId);
-};
-
-const handleOneTimePayment = async ({
-  paymentId,
-  razorpayOrderId,
-  notes,
-}) => {
-  const { itemType: type, itemId, userId } = notes || {};
-
-  if (!type || !itemId || !userId) {
-    console.warn("⚠️ Missing metadata for one-time payment.");
-    return;
-  }
-
-  const transaction = await markTransactionPaid({
-    gateway: "razorpay",
-    paymentId,
-    userId,
-    itemId,
-    type,
-    razorpayOrderId,
-  });
-
-  if (transaction) {
-    await updateUserAfterPurchase(transaction, paymentId);
-    console.log("✅ One-time purchase completed:", type, itemId);
-
-    await processAndSendInvoice(transaction);
-    console.log(
-      "📧 Invoice emailed to user for one-time purchase:",
-      type,
-      itemId
+  } catch (err) {
+    logger.error(
+      {
+        paymentId,
+        error: err.message,
+        stack: err.stack,
+      },
+      "Failed to handle payment.captured"
     );
+
+    throw err;
+  }
+};
+
+// --------------------------------------------------
+// 🔹 Subscription Events Handler
+// --------------------------------------------------
+export const handleSubscriptionEvent = async (eventData) => {
+  const subId = eventData.payload.subscription.entity.id;
+  const event = eventData.event;
+
+  try {
+    // ---------------------------
+    // 1️⃣ Fetch latest subscription state
+    // ---------------------------
+    const subEntity = await razorpay.subscriptions.fetch(subId);
+
+    const rawStatus = subEntity.status;
+    const mappedStatus = mapRazorpaySubscriptionStatus(rawStatus);
+
+    // ---------------------------
+    // 2️⃣ Handle unknown status
+    // ---------------------------
+    if (mappedStatus === "unknown") {
+      logger.warn(
+        { subId, rawStatus, event },
+        "Unknown subscription status"
+      );
+      return;
+    }
+
+    // ---------------------------
+    // 3️⃣ Update DB (idempotent inside service)
+    // ---------------------------
+    const updated = await updateSubscriptionStatus({
+      externalSubscriptionId: subId,
+      status: mappedStatus,
+    });
+
+    if (!updated) {
+      logger.warn(
+        { subId, mappedStatus },
+        "Subscription not found"
+      );
+    } else {
+      logger.info(
+        { subId, mappedStatus },
+        "Subscription status updated"
+      );
+    }
+
+  } catch (err) {
+    // ---------------------------
+    // 4️⃣ Error handling
+    // ---------------------------
+    logger.error(
+      {
+        subId,
+        event,
+        error: err.message,
+        stack: err.stack,
+      },
+      "Failed to handle subscription event"
+    );
+
+    throw err;
   }
 };
