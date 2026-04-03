@@ -58,7 +58,8 @@ import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoute
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 // import paymentRoutes from "./modules/payments-v2/payment.routes.js";
-import {razorpayWebhook}from "./modules/payment/razorpay/razorpayWebhook.controller.js";
+// import {razorpayWebhook}from "./modules/payment2/razorpay/razorpayWebhook.controller.js";
+import {razorpayWebhook}from "./controllers/webhookController.js";
 
 import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import testQueue from "./routes/testQueue.js";

@@ -5,15 +5,7 @@ import { Subscription } from "../models/Subscription.js";
 import {markTransactionPaid, updateUserAfterPurchase,} from "../services/paymentService.js";
 import { WebhookEventLog } from "../models/WebhookEventLog.js";
 import Razorpay from "razorpay";
-import { log } from "console";
-import { User } from "../models/User.js";
-import { sendInvoiceEmail } from "../utils/email.js";
-import { razorpayWebhookService } from "../services/razorpayWebhook.js";
 import fetch from "node-fetch";
-
-import { transactionRepository } from "../repositories/transaction.js";
-import { subscriptionRepository } from "../repositories/subscription.js";
-import { userRepository } from "../repositories/user.js";
 import {processAndSendInvoice} from "../services/invoiceService.js";
 
 
@@ -161,160 +153,6 @@ await WebhookEventLog.create({
 };
 
 
-// ---------------------------
-// ✅ RAZORPAY WEBHOOK HANDLER
-// ---------------------------
-
-
-
-
-
-export const razorpayWebhook = async (req, res) => {
-  try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    const signature = req.headers["x-razorpay-signature"];
-    const rawBody = req.body; // express.raw()
-
-    // ---------------------------
-    // 1️⃣ Verify signature
-    // ---------------------------
-    const expectedSignature = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody)
-      .digest("hex");
-
-    if (signature !== expectedSignature) {
-      console.error("❌ Invalid Razorpay signature");
-      return res.status(400).json({ message: "Invalid signature" });
-    }
-
-    const eventData = JSON.parse(rawBody.toString());
-    const event = eventData.event;
-    console.log(`📥 Razorpay event received: ${event}`);
-
-    // ---------------------------
-    // 2️⃣ Payment Captured (One-time or subscription)
-    // ---------------------------
-    if (event === "payment.captured") {
-      const paymentEntity = eventData.payload.payment.entity;
-      const paymentId = paymentEntity.id;
-      const razorpayOrderId = paymentEntity.order_id;
-
-      const fullPayment = await razorpay.payments.fetch(paymentId);
-      let subscriptionId = null;
-
-      if (fullPayment.invoice_id) {
-        const invoice = await razorpay.invoices.fetch(fullPayment.invoice_id);
-        subscriptionId = invoice.subscription_id;
-      }
-
-      if (subscriptionId) {
-        // Subscription payment
-        const transaction = await markTransactionPaid({
-          gateway: "razorpay",
-          paymentId,
-          subscriptionId,
-          razorpayOrderId,
-        });
-
-        if (transaction) {
-          await updateUserAfterPurchase(transaction, subscriptionId);
-          console.log("✅ Subscription payment processed:", subscriptionId);
-        }
-        await processAndSendInvoice(transaction);
-        console.log("📧 Invoice emailed to user for subscription:", subscriptionId);
-
-        return res.status(200).json({ status: "subscription payment processed" });
-      }
-
-      // One-time payment
-      const { itemType: type, itemId, userId } = fullPayment.notes || {};
-      if (type && itemId && userId) {
-        const transaction = await markTransactionPaid({
-          gateway: "razorpay",
-          paymentId,
-          userId,
-          itemId,
-          type,
-          razorpayOrderId,
-        });
-
-        if (transaction) {
-          await updateUserAfterPurchase(transaction, paymentId);
-          console.log("✅ One-time purchase completed:", type, itemId);
-          await processAndSendInvoice(transaction);
-          console.log("📧 Invoice emailed to user for one-time purchase:", type, itemId);
-        }
-      } else {
-        console.warn("⚠️ Missing metadata for one-time payment.");
-      }
-
-      return res.status(200).json({ status: "payment processed" });
-    }
-
-    // ---------------------------
-    // 3️⃣ Subscription events
-    // ---------------------------
-    const subscriptionEvents = [
-      "subscription.activated",
-      "subscription.charged",
-      "subscription.cancelled",
-      "subscription.halted",
-      "subscription.completed",
-      "subscription.authenticated",
-    ];
-
-    if (subscriptionEvents.includes(event)) {
-      const subId = eventData.payload.subscription.entity.id;
-
-      // Fetch latest subscription from Razorpay to get ground-truth status
-      const subEntity = await razorpay.subscriptions.fetch(subId);
-      const status = subEntity.status; // "active", "completed", "cancelled", "halted", etc.
-
-      switch (status) {
-        case "active":
-          await Subscription.findOneAndUpdate(
-            { externalSubscriptionId: subId },
-            { status: "active" }
-          );
-          console.log("✅ Subscription active:", subId);
-          break;
-
-        case "completed":
-          await Subscription.findOneAndUpdate(
-            { externalSubscriptionId: subId },
-            { status: "completed" }
-          );
-          console.log("✅ Subscription lifecycle completed:", subId);
-          break;
-
-        case "cancelled":
-        case "halted":
-          await Subscription.findOneAndUpdate(
-            { externalSubscriptionId: subId },
-            { status: "cancelled" }
-          );
-          console.log("❌ Subscription cancelled/halted:", subId);
-          break;
-
-        default:
-          console.log("ℹ️ Subscription event ignored:", subId, "status:", status);
-      }
-
-      return res.status(200).json({ status: "subscription event processed" });
-    }
-
-    // ---------------------------
-    // 4️⃣ Ignore unknown events
-    // ---------------------------
-    console.log("⚠️ Ignored unknown event:", event);
-    return res.status(200).json({ status: "ignored" });
-
-  } catch (err) {
-    console.error("❌ Webhook processing failed:", err);
-    return res.status(500).json({ message: "Something went wrong" });
-  }
-};
 
 // export const razorpayWebhook = async (req, res) => {
 //   try {
@@ -348,45 +186,15 @@ export const razorpayWebhook = async (req, res) => {
 //       const razorpayOrderId = paymentEntity.order_id;
 
 //       const fullPayment = await razorpay.payments.fetch(paymentId);
-
 //       let subscriptionId = null;
+
 //       if (fullPayment.invoice_id) {
-//         const invoice = await razorpay.invoices.fetch(
-//           fullPayment.invoice_id
-//         );
+//         const invoice = await razorpay.invoices.fetch(fullPayment.invoice_id);
 //         subscriptionId = invoice.subscription_id;
 //       }
 
-//       // ==========================================================
-//       // 🔥 ONLY CHANGE: CREATE NEW TRANSACTION FOR EVERY RENEWAL
-//       // ==========================================================
 //       if (subscriptionId) {
-//         const notes = fullPayment.notes || {};
-//         console.log("Subscription payment notes:", notes);
-//         const subscription = await Subscription.findOne({
-//           externalSubscriptionId: subscriptionId,
-//         });
-//         console.log("Existing subscription found:", subscriptionId, subscription);
-
-//         // 🔹 Create NEW transaction for this renewal
-//         const newTransaction = await Transaction.create({
-//           userId: notes.userId,
-//           itemType: "artist-subscription",
-//           itemId: notes.itemId,
-//           artistId: notes.artistId,
-//           gateway: "razorpay",
-//           amount: fullPayment.amount / 100, // paise → INR
-//           currency: fullPayment.currency,
-//           status: "pending",
-//           metadata: {
-//             razorpaySubscriptionId: subscriptionId,
-//             cycle: notes.cycle,
-//             razorpayPaymentId: paymentId,
-//             razorpayOrderId,
-//           },
-//         });
-
-//         // 🔹 Mark THIS transaction as paid (existing logic)
+//         // Subscription payment
 //         const transaction = await markTransactionPaid({
 //           gateway: "razorpay",
 //           paymentId,
@@ -396,29 +204,16 @@ export const razorpayWebhook = async (req, res) => {
 
 //         if (transaction) {
 //           await updateUserAfterPurchase(transaction, subscriptionId);
-//           console.log(
-//             "✅ Subscription renewal processed (new transaction):",
-//             subscriptionId
-//           );
+//           console.log("✅ Subscription payment processed:", subscriptionId);
 //         }
-
 //         await processAndSendInvoice(transaction);
-//         console.log(
-//           "📧 Invoice emailed to user for subscription:",
-//           subscriptionId
-//         );
+//         console.log("📧 Invoice emailed to user for subscription:", subscriptionId);
 
-//         return res.status(200).json({
-//           status: "subscription renewal processed",
-//           transactionId: transaction._id,
-//         });
+//         return res.status(200).json({ status: "subscription payment processed" });
 //       }
 
-//       // ---------------------------
-//       // One-time payment (unchanged)
-//       // ---------------------------
+//       // One-time payment
 //       const { itemType: type, itemId, userId } = fullPayment.notes || {};
-
 //       if (type && itemId && userId) {
 //         const transaction = await markTransactionPaid({
 //           gateway: "razorpay",
@@ -433,11 +228,7 @@ export const razorpayWebhook = async (req, res) => {
 //           await updateUserAfterPurchase(transaction, paymentId);
 //           console.log("✅ One-time purchase completed:", type, itemId);
 //           await processAndSendInvoice(transaction);
-//           console.log(
-//             "📧 Invoice emailed to user for one-time purchase:",
-//             type,
-//             itemId
-//           );
+//           console.log("📧 Invoice emailed to user for one-time purchase:", type, itemId);
 //         }
 //       } else {
 //         console.warn("⚠️ Missing metadata for one-time payment.");
@@ -447,7 +238,7 @@ export const razorpayWebhook = async (req, res) => {
 //     }
 
 //     // ---------------------------
-//     // 3️⃣ Subscription lifecycle events (UNCHANGED)
+//     // 3️⃣ Subscription events
 //     // ---------------------------
 //     const subscriptionEvents = [
 //       "subscription.activated",
@@ -461,8 +252,9 @@ export const razorpayWebhook = async (req, res) => {
 //     if (subscriptionEvents.includes(event)) {
 //       const subId = eventData.payload.subscription.entity.id;
 
+//       // Fetch latest subscription from Razorpay to get ground-truth status
 //       const subEntity = await razorpay.subscriptions.fetch(subId);
-//       const status = subEntity.status;
+//       const status = subEntity.status; // "active", "completed", "cancelled", "halted", etc.
 
 //       switch (status) {
 //         case "active":
@@ -491,17 +283,10 @@ export const razorpayWebhook = async (req, res) => {
 //           break;
 
 //         default:
-//           console.log(
-//             "ℹ️ Subscription event ignored:",
-//             subId,
-//             "status:",
-//             status
-//           );
+//           console.log("ℹ️ Subscription event ignored:", subId, "status:", status);
 //       }
 
-//       return res.status(200).json({
-//         status: "subscription event processed",
-//       });
+//       return res.status(200).json({ status: "subscription event processed" });
 //     }
 
 //     // ---------------------------
@@ -516,13 +301,126 @@ export const razorpayWebhook = async (req, res) => {
 //   }
 // };
 
+export const razorpayWebhook = async (req, res) => {
+  try {
+    const rawBody = req.body;
+    const signature = req.headers["x-razorpay-signature"];
+
+    verifyRazorpaySignature(rawBody, signature);
+
+    const eventData = JSON.parse(rawBody.toString());
+
+    await handleRazorpayEvent(eventData);
+
+    return res.status(200).json({ status: "ok" });
+
+  } catch (err) {
+    console.error("❌ Webhook failed:", err);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
 
 
+export const verifyRazorpaySignature = (rawBody, signature) => {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  if (!signature) {
+    throw new Error("Missing Razorpay signature");
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+
+  if (!isValid) {
+    throw new Error("Invalid Razorpay signature");
+  }
+
+  return true;
+};
+
+export const handleRazorpayEvent = async (eventData) => {
+  const event = eventData.event;
+
+  switch (event) {
+    case "payment.captured":
+      return handlePaymentCaptured(eventData);
+
+    case "subscription.activated":
+    case "subscription.charged":
+    case "subscription.cancelled":
+    case "subscription.halted":
+    case "subscription.completed":
+      return handleSubscriptionEvent(eventData);
+
+    default:
+      console.log("⚠️ Ignored event:", event);
+  }
+};
 
 
-// ---------------------------
-// ✅ PAYPAL WEBHOOK HANDLER
-// ---------------------------
+export const handlePaymentCaptured = async (eventData) => {
+  const paymentEntity = eventData.payload.payment.entity;
+  const paymentId = paymentEntity.id;
+
+  const fullPayment = await razorpay.payments.fetch(paymentId);
+
+  // 🔥 IMPORTANT CHANGE
+  const { type } = fullPayment.notes || {};
+
+  if (type === "purchase") {
+    return handlePurchasePayment(fullPayment);
+  }
+
+  if (type === "subscription") {
+    return handleSubscriptionPayment(fullPayment);
+  }
+
+  console.warn("Unknown payment type");
+};
+
+export const handlePurchasePayment = async (payment) => {
+  const { itemType, itemId, userId } = payment.notes;
+
+  if (!itemType || !itemId || !userId) {
+    throw new Error("Invalid payment metadata");
+  }
+
+  const transaction = await markTransactionPaid({
+    gateway: "razorpay",
+    paymentId: payment.id,
+    userId,
+    itemId,
+    type: itemType,
+    razorpayOrderId: payment.order_id,
+  });
+
+  if (!transaction) return;
+
+  // 🔥 DO NOT BLOCK WEBHOOK
+  processPurchaseSideEffects(transaction);
+
+  console.log("✅ Purchase processed:", itemType, itemId);
+};
+
+
+const processPurchaseSideEffects = async (transaction) => {
+  try {
+    await Promise.all([
+      updateUserAfterPurchase(transaction),
+      processAndSendInvoice(transaction),
+      creditArtistEarnings(transaction),
+    ]);
+  } catch (err) {
+    console.error("Side effects failed:", err);
+  }
+};
 
 export const paypalWebhook = async (req, res) => {
   console.log("satellite_antenna: PayPal webhook called");
@@ -638,166 +536,3 @@ export const paypalWebhook = async (req, res) => {
 };
 
 
-// 
-
-// export const paypalWebhook = async (req, res) => {
-//   console.log("📡 PayPal webhook called");
-//   try {
-//     const rawBody = req.body.toString();
-//     const webhookEvent = JSON.parse(rawBody);
-
-//     // ---------------------------
-//     // 1️⃣ Verify PayPal signature (UNCHANGED)
-//     // ---------------------------
-//     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
-//     const verificationBody = {
-//       auth_algo: req.headers["paypal-auth-algo"],
-//       cert_url: req.headers["paypal-cert-url"],
-//       transmission_id: req.headers["paypal-transmission-id"],
-//       transmission_sig: req.headers["paypal-transmission-sig"],
-//       transmission_time: req.headers["paypal-transmission-time"],
-//       webhook_id: webhookId,
-//       webhook_event: webhookEvent,
-//     };
-
-//     const baseUrl = "https://api-m.sandbox.paypal.com";
-//     const auth = Buffer.from(
-//       `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-//     ).toString("base64");
-
-//     const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
-//       method: "POST",
-//       headers: {
-//         Authorization: `Basic ${auth}`,
-//         "Content-Type": "application/x-www-form-urlencoded",
-//       },
-//       body: "grant_type=client_credentials",
-//     });
-
-//     const { access_token } = await tokenRes.json();
-
-//     const verifyRes = await fetch(
-//       `${baseUrl}/v1/notifications/verify-webhook-signature`,
-//       {
-//         method: "POST",
-//         headers: {
-//           Authorization: `Bearer ${access_token}`,
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify(verificationBody),
-//       }
-//     );
-
-//     const verification = await verifyRes.json();
-
-//     if (verification.verification_status !== "SUCCESS") {
-//       console.error("❌ Invalid PayPal signature");
-//       return res.status(400).json({ message: "Invalid signature" });
-//     }
-
-//     // ---------------------------
-//     // 2️⃣ Process event
-//     // ---------------------------
-//     const eventType = webhookEvent.event_type;
-//     console.log(`📥 PayPal event received: ${eventType}`);
-
-//     // ==========================================================
-//     // 🔥 ONLY CHANGE: CREATE NEW TRANSACTION FOR SUB RENEWAL
-//     // ==========================================================
-//     if (
-//       eventType === "BILLING.SUBSCRIPTION.ACTIVATED" ||
-//       eventType === "BILLING.SUBSCRIPTION.RENEWED"
-//     ) {
-//       const subscriptionId = webhookEvent.resource.id;
-//       const notes = webhookEvent.resource.custom_id
-//         ? JSON.parse(webhookEvent.resource.custom_id)
-//         : {};
-
-//       // 🔹 Create NEW transaction for this renewal
-//       await Transaction.create({
-//         userId: notes.userId,
-//         itemType: "artist-subscription",
-//         itemId: notes.itemId,
-//         artistId: notes.artistId,
-//         gateway: "paypal",
-//         amount: webhookEvent.resource.billing_info?.last_payment?.amount?.value,
-//         currency: webhookEvent.resource.billing_info?.last_payment?.amount?.currency_code,
-//         status: "pending",
-//         metadata: {
-//           paypalSubscriptionId: subscriptionId,
-//           cycle: notes.cycle,
-//         },
-//       });
-
-//       // 🔹 Mark THIS transaction as paid (existing logic)
-//       const transaction = await markTransactionPaid({
-//         gateway: "paypal",
-//         subscriptionId,
-//       });
-
-//       if (transaction) {
-//         await updateUserAfterPurchase(transaction, subscriptionId);
-//         await processAndSendInvoice(transaction);
-//         console.log("✅ PayPal subscription renewal processed (new transaction)");
-//       }
-
-//       return res.status(200).json({ status: "subscription processed" });
-//     }
-
-//     // ---------------------------
-//     // One-time payment (UNCHANGED)
-//     // ---------------------------
-//     if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
-//       const { id: paymentId, purchase_units } = webhookEvent.resource;
-//       const notes = purchase_units?.[0]?.custom_id
-//         ? JSON.parse(purchase_units[0].custom_id)
-//         : {};
-
-//       const { type, itemId, userId } = notes;
-//       if (!type || !itemId || !userId) {
-//         console.warn("⚠️ Missing metadata for PayPal purchase");
-//         return res.status(200).send("OK");
-//       }
-
-//       const transaction = await markTransactionPaid({
-//         gateway: "paypal",
-//         paymentId,
-//         userId,
-//         itemId,
-//         type,
-//       });
-
-//       if (transaction) {
-//         await updateUserAfterPurchase(transaction, paymentId);
-//         await processAndSendInvoice(transaction);
-//         console.log("✅ PayPal one-time purchase completed:", type, itemId);
-//       }
-
-//       return res.status(200).json({ status: "purchase processed" });
-//     }
-
-//     // ---------------------------
-//     // Subscription cancelled (UNCHANGED)
-//     // ---------------------------
-//     if (
-//       eventType === "BILLING.SUBSCRIPTION.CANCELLED" ||
-//       eventType === "BILLING.SUBSCRIPTION.EXPIRED"
-//     ) {
-//       await Subscription.findOneAndUpdate(
-//         { externalSubscriptionId: webhookEvent.resource.id },
-//         { status: "cancelled" }
-//       );
-//       console.log("❌ PayPal subscription cancelled/expired");
-//       return res.status(200).json({ status: "ok" });
-//     }
-
-//     console.log("ℹ️ Ignored PayPal event:", eventType);
-//     return res.status(200).json({ status: "ignored" });
-
-//   } catch (err) {
-//     console.error("❌ PayPal webhook processing failed:", err);
-//     return res.status(500).json({
-//       message: "Something went wrong, please try again later",
-//     });
-//   }
-// };

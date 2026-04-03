@@ -65,6 +65,38 @@ const transactionSchema = new mongoose.Schema(
     paypalOrderId: String,
 
     invoiceNumber: String,
+    
+    processing: {
+  earnings: {
+    status: {
+      type: String,
+      enum: ["pending", "done", "failed"],
+      default: "pending",
+    },
+    lastAttemptAt: Date,
+    error: String,
+  },
+
+  userUpdate: {
+    status: {
+      type: String,
+      enum: ["pending", "done", "failed"],
+      default: "pending",
+    },
+    lastAttemptAt: Date,
+    error: String,
+  },
+
+  invoice: {
+    status: {
+      type: String,
+      enum: ["pending", "sent", "failed"],
+      default: "pending",
+    },
+    lastAttemptAt: Date,
+    error: String,
+  },
+},
 
     metadata: { type: Object, default: {} },
   },
