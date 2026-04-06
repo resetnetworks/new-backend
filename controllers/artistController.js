@@ -36,7 +36,7 @@ export const getAllArtistsController = async (req, res) => {
 
   const cacheKey = `artists:list:page=${page}:limit=${limit}`;
 
-  logger.info("Get all artists", { page, limit });
+  // logger.info("Get all artists", { page, limit });
 
   const cached = await getCached(cacheKey);
   // if (cached) {
@@ -68,7 +68,7 @@ export const getArtistById = async (req, res) => {
 
   const cacheKey = `artist:detail:${identifier}`;
 
-  logger.info("Get artist by identifier", { identifier });
+//  logger.info("Get artist by identifier", { identifier }); // 
 
   // 1. Cache first
   const cached = await getCached(cacheKey);
@@ -95,7 +95,7 @@ export const getArtistProfile = async (req, res) => {
   const artistId = req.user.artistId;
   const userId = req.user._id;
 
-  logger.info("Get artist profile", { artistId, userId });
+  // logger.info("Get artist profile", { artistId, userId });
 
   const artist = await getArtistProfileService(artistId, userId);
 
@@ -107,7 +107,7 @@ export const getArtistProfile = async (req, res) => {
 
 
 export const getAllArtistsWithoutPagination = async (req, res) => {
-  logger.info("Get all artists without pagination");
+  // logger.info("Get all artists without pagination");
 
   const artists = await getAllArtistsWithoutPaginationService();
 

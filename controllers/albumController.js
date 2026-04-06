@@ -96,7 +96,7 @@ export const getAllAlbumsController = async (req, res) => {
   const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
   const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 10;
 
-  logger.info("Get all albums", { page, limit });
+  // logger.info("Get all albums", { page, limit });
 
   const { albums, total } = await getAllAlbumsService({ page, limit });
 
@@ -117,7 +117,7 @@ export const getAlbumByIdController = async (req, res) => {
   const identifier = req.params.id;
   const user = req.user || null;
 
-  logger.info("Get album by identifier", { identifier });
+  // logger.info("Get album by identifier", { identifier });
 
   const album = await getAlbumByIdService(identifier, user);
 
@@ -186,7 +186,7 @@ export const getAlbumsByArtistController = async (req, res) => {
 
 
 export const getAllAlbumsWithoutPaginationController = async (req, res) => {
-  logger.info("Get all albums without pagination");
+  // logger.info("Get all albums without pagination");
 
   const albums = await getAllAlbumsWithoutPaginationService();
 

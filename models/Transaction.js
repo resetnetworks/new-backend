@@ -66,6 +66,9 @@ const transactionSchema = new mongoose.Schema(
 
     invoiceNumber: String,
     
+    stripeSessionId: String,     // required for payments from stripe
+    stripeInvoiceId: String,     // required for payments from stripe
+    
     processing: {
   earnings: {
     status: {
@@ -127,6 +130,9 @@ transactionSchema.index({ status: 1, createdAt: -1 });
 
 // 🔹 Invoice / accounting audits
 transactionSchema.index({ invoiceNumber: 1 }, { sparse: true });
+
+transactionSchema.index({ stripeSessionId: 1 }, { sparse: true });
+transactionSchema.index({ stripeInvoiceId: 1 }, { sparse: true });
 
 export const Transaction = mongoose.model(
   "Transaction",

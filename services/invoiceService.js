@@ -173,10 +173,15 @@ const sendInvoiceEmail = async (to, invoiceBuffer, invoiceNumber, subject) => {
   });
   console.log("Sending invoice email to:", to);
 
+  const isCancellation = invoiceNumber.startsWith("CN-");
+  const heading = isCancellation
+    ? "🔕 Artist Subscription Cancelled"
+    : "🎵 Thank you for your purchase!";
+
   const htmlBody = `
   <div style="font-family: Arial, sans-serif; color: #333;">
-    <h2>🎵 Thank you for your purchase!</h2>
-    <p>We’ve attached your invoice <b>#${invoiceNumber}</b> for your reference.</p>
+    <h2>${heading}</h2>
+    <p>We've attached your invoice <b>#${invoiceNumber}</b> for your reference.</p>
     <p>If you have any questions, contact us at <a href="mailto:support@reset93.net">support@reset93.net</a>.</p>
     <br>
     <p>– Reset Music Team</p>
@@ -213,4 +218,83 @@ const sendInvoiceEmail = async (to, invoiceBuffer, invoiceNumber, subject) => {
   console.log("Generated invoice PDF buffer, size:", invoiceBuffer.length);
   await sendInvoiceEmail(invoiceData.customer.email, invoiceBuffer, invoiceData.invoiceNumber);
   console.log("Sent invoice email to:", invoiceData.customer.email);
+};
+
+
+
+export const prepareCancellationInvoiceData = async (subscription) => {
+  const user = await User.findById(subscription.userId)
+    .select("name email")
+    .lean();
+
+  if (!user) return null;
+
+  // 🔥 Get original transaction for currency reference
+  const transaction = await Transaction.findById(subscription.transactionId)
+    .select("currency")
+    .lean();
+
+  const currency = transaction?.currency || "USD";
+
+  return {
+    invoiceNumber: `CN-${Date.now()}`,
+    transactionId: subscription.transactionId?.toString(),
+    issueDate: new Date(),
+    seller: {
+      name: "Reset Music",
+      address: `45 Malviya Nagar road
+New Delhi, Delhi 110017
+India`,
+      email: "contact@reset93.net",
+    },
+    customer: {
+      name: user.name,
+      email: user.email,
+    },
+    items: [
+      {
+        description: "Artist Subscription Cancellation",
+        quantity: 1,
+        price: 0,
+        total: 0,
+      },
+    ],
+    subtotal: 0,
+    currency,
+    total: 0,
+    amountPaid: 0,
+    balanceDue: 0,
+  };
+};
+
+// 🔹 Public function: handles full cancellation invoice flow
+export const processAndSendCancellationInvoice = async (subscription) => {
+  try {
+    console.log("Processing cancellation invoice for subscription:", subscription._id);
+
+    // 1️⃣ Prepare invoice data
+    const invoiceData = await prepareCancellationInvoiceData(subscription);
+
+    if (!invoiceData) {
+      console.warn("No cancellation invoice data available.");
+      return;
+    }
+
+    // 2️⃣ Generate PDF buffer
+    const invoiceBuffer = await generateInvoiceBuffer(invoiceData);
+
+    console.log("Generated cancellation invoice PDF, size:", invoiceBuffer.length);
+
+    // 3️⃣ Send email
+    await sendInvoiceEmail(
+      invoiceData.customer.email,
+      invoiceBuffer,
+      invoiceData.invoiceNumber
+    );
+
+    console.log("Cancellation invoice sent to:", invoiceData.customer.email);
+
+  } catch (error) {
+    console.error("Error processing cancellation invoice:", error);
+  }
 };

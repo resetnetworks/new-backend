@@ -371,18 +371,29 @@ export const handlePaymentCaptured = async (eventData) => {
 
   const fullPayment = await razorpay.payments.fetch(paymentId);
 
-  // 🔥 IMPORTANT CHANGE
-  const { type } = fullPayment.notes || {};
+  const notes = fullPayment.notes || {};
+  const { type } = notes;
 
+  // ✅ CASE 1: Explicit purchase
   if (type === "purchase") {
     return handlePurchasePayment(fullPayment);
   }
 
+  // ✅ CASE 2: Explicit subscription
   if (type === "subscription") {
     return handleSubscriptionPayment(fullPayment);
   }
 
-  console.warn("Unknown payment type");
+  // ✅ CASE 3: Fallback (Razorpay subscription flow)
+  if (fullPayment.invoice_id) {
+    return handleSubscriptionPayment(fullPayment);
+  }
+
+  console.warn("⚠️ Unknown payment type", {
+    paymentId,
+    notes,
+    invoiceId: fullPayment.invoice_id,
+  });
 };
 
 export const handlePurchasePayment = async (payment) => {
@@ -409,6 +420,57 @@ export const handlePurchasePayment = async (payment) => {
   console.log("✅ Purchase processed:", itemType, itemId);
 };
 
+
+export const handleSubscriptionPayment = async (payment) => {
+  const { userId, artistId } = payment.notes || {};
+
+  if (!userId || !artistId) {
+    throw new Error("Invalid subscription metadata");
+  }
+
+  const transaction = await markTransactionPaid({
+    gateway: "razorpay",
+    paymentId: payment.id,
+    userId,
+    type: "artist-subscription",
+    razorpayOrderId: payment.order_id,
+  });
+
+  if (!transaction) return;
+
+  // 🔥 DO NOT DO SIDE EFFECTS YET
+  console.log("✅ Subscription payment recorded");
+};
+
+export const handleSubscriptionEvent = async (eventData) => {
+  const subId = eventData.payload.subscription.entity.id;
+
+  const subEntity = await razorpay.subscriptions.fetch(subId);
+
+  const status = mapRazorpayStatus(subEntity.status);
+
+  await Subscription.findOneAndUpdate(
+    { externalSubscriptionId: subId },
+    { status }
+  );
+
+  console.log("📡 Subscription status updated:", status);
+};
+
+
+const mapRazorpayStatus = (status) => {
+  switch (status) {
+    case "active":
+      return "active";
+    case "completed":
+      return "completed";
+    case "cancelled":
+    case "halted":
+      return "cancelled";
+    default:
+      return "unknown";
+  }
+};
 
 const processPurchaseSideEffects = async (transaction) => {
   try {

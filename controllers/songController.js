@@ -669,15 +669,15 @@ export const getSinglesByArtistController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.singles.listed.by_artist",
-      artistId: result.artist.id,
-      page,
-      limit
-    },
-    "Artist singles listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.singles.listed.by_artist",
+  //     artistId: result.artist.id,
+  //     page,
+  //     limit
+  //   },
+  //   "Artist singles listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
