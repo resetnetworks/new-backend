@@ -433,16 +433,16 @@ export const getAllSongsController = async (req, res) => {
   });
 
   // 📘 read event (NOT per-song)
-  req.log.info(
-    {
-      event: "songs.listed",
-      type,
-      page,
-      limit,
-      artistId
-    },
-    "Songs listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed",
+  //     type,
+  //     page,
+  //     limit,
+  //     artistId
+  //   },
+  //   "Songs listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -473,16 +473,16 @@ export const getAllSinglesController = async (req, res) => {
   });
 
   // 📘 read event (list-level, not per song)
-  req.log.info(
-    {
-      event: "songs.singles.listed",
-      type,
-      page,
-      limit,
-      artistId
-    },
-    "Singles listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.singles.listed",
+  //     type,
+  //     page,
+  //     limit,
+  //     artistId
+  //   },
+  //   "Singles listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -512,14 +512,14 @@ export const getSongByIdController = async (req, res) => {
   });
 
   // 📘 read event
-  req.log.info(
-    {
-      event: "song.viewed",
-      songId: song._id,
-      identifier: id
-    },
-    "Song viewed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "song.viewed",
+  //     songId: song._id,
+  //     identifier: id
+  //   },
+  //   "Song viewed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -548,16 +548,16 @@ export const getSongsMatchingUserGenresController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.recommended.by_genre",
-      userId,
-      page,
-      limit,
-      matchedGenres: result.matchingGenres.length
-    },
-    "Genre-based recommendations fetched"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.recommended.by_genre",
+  //     userId,
+  //     page,
+  //     limit,
+  //     matchedGenres: result.matchingGenres.length
+  //   },
+  //   "Genre-based recommendations fetched"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -591,15 +591,15 @@ export const getSongsByGenreController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.by_genre",
-      genre,
-      page,
-      limit
-    },
-    "Songs listed by genre"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.by_genre",
+  //     genre,
+  //     page,
+  //     limit
+  //   },
+  //   "Songs listed by genre"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -633,15 +633,15 @@ export const getSongsByArtistController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.by_artist",
-      artistId: result.artist.id,
-      page,
-      limit
-    },
-    "Songs listed by artist"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.by_artist",
+  //     artistId: result.artist.id,
+  //     page,
+  //     limit
+  //   },
+  //   "Songs listed by artist"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -710,15 +710,15 @@ export const getSongsByAlbumController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.by_album",
-      albumId: result.album.id,
-      page,
-      limit
-    },
-    "Songs listed by album"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.by_album",
+  //     albumId: result.album.id,
+  //     page,
+  //     limit
+  //   },
+  //   "Songs listed by album"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -750,15 +750,15 @@ export const getPurchasedSongsController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.purchased",
-      userId: user._id,
-      page,
-      limit
-    },
-    "Purchased songs listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.purchased",
+  //     userId: user._id,
+  //     page,
+  //     limit
+  //   },
+  //   "Purchased songs listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -788,14 +788,14 @@ export const getPremiumSongsController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.purchase_only",
-      page,
-      limit
-    },
-    "Purchase-only songs listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.purchase_only",
+  //     page,
+  //     limit
+  //   },
+  //   "Purchase-only songs listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -827,15 +827,15 @@ export const getLikedSongsController = async (req, res) => {
   });
 
   // 📘 analytics / read event
-  req.log.info(
-    {
-      event: "songs.listed.liked",
-      userId: user._id,
-      page,
-      limit
-    },
-    "Liked songs listed"
-  );
+  // req.log.info(
+  //   {
+  //     event: "songs.listed.liked",
+  //     userId: user._id,
+  //     page,
+  //     limit
+  //   },
+  //   "Liked songs listed"
+  // );
 
   res.status(StatusCodes.OK).json({
     success: true,

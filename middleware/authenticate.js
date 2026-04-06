@@ -31,6 +31,7 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     const user = await User.findById(decodedData.id).select("-password");
+  
 
     if (!user) {
       return res.status(401).json({
@@ -52,7 +53,12 @@ export const authenticateUser = async (req, res, next) => {
       role: decodedData.role,
       artistId: decodedData.artistId,
     } || null;
+    
+    // req.user = user;
+    // req.user.role = user.role;
+    // req.user.artistId = user.artistId;
 
+   
     next();
   } catch (error) {
     res.status(500).json({

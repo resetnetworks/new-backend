@@ -90,7 +90,7 @@ export const markTransactionPaid = async ({
   razorpayOrderId,
   paymentIntentId,
   stripeSubscriptionId,
-  stripeInvoiceID,
+  stripeInvoiceId,
   subscriptionId,
 }) => {
   if (!gateway) return null;

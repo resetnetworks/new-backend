@@ -46,6 +46,8 @@ import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
+import webhookRoutesv2 from "./modules/payment/routes/webhook.routes.js";
+import stripePayment from "./modules/payment/routes/payment.routes.js";
 
 // --------------------
 // API V2 Routes
@@ -123,6 +125,9 @@ app.post(
   paypalWebhook,
 );
 
+app.use("/api/v2/webhooks", webhookRoutesv2);
+
+
 // --------------------
 // Body & security middleware
 // --------------------
@@ -136,6 +141,9 @@ app.use(mongoSanitize());
 // Auth
 // --------------------
 app.use(passport.initialize());
+
+
+
 
 // --------------------
 // API V1 Routes
@@ -171,6 +179,8 @@ app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 // app.use("api/test", testQueue )
 // app.use("/api/coupons", couponRoutes);
+
+app.use("/api/v2/payment", stripePayment);
 
 // --------------------
 // 404 & Error handling

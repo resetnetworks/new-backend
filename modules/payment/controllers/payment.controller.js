@@ -10,7 +10,8 @@ const ALLOWED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
 export const createStripeCheckout = async (req, res) => {
   try {
     const { itemId, itemType, currency = "USD" } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
+   
 
     if (!["song", "album", "artist"].includes(itemType)) {
       return res.status(400).json({ message: "Invalid item type" });
