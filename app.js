@@ -1,10 +1,11 @@
-// File: app.js
 import "express-async-errors";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Security & core middleware
+// --------------------
+// Security & Core Middleware
+// --------------------
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import cors from "cors";
@@ -12,20 +13,26 @@ import rateLimit from "express-rate-limit";
 import xssClean from "xss-clean";
 import mongoSanitize from "express-mongo-sanitize";
 
+// --------------------
 // Logging
+// --------------------
 import morgan from "morgan";
 import { httpLogger } from "./middleware/http-logger.js";
 
-// Auth & error handling
+// --------------------
+// Auth & Error Handling
+// --------------------
 import passport from "./middleware/passport.js";
 import notFoundMiddleware from "./middleware/not-found.js";
 import errorHandlerMiddleware from "./middleware/errorhandler.js";
 
+// --------------------
 // Webhooks
+// --------------------
 import {
   stripeWebhook,
- 
   paypalWebhook,
+  razorpayWebhook,
 } from "./controllers/webhookController.js";
 
 // --------------------
@@ -46,31 +53,27 @@ import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
-import webhookRoutesv2 from "./modules/payment/routes/webhook.routes.js";
-import stripePayment from "./modules/payment/routes/payment.routes.js";
 
 // --------------------
 // API V2 Routes
 // --------------------
+import webhookRoutesv2 from "./modules/payment/routes/webhook.routes.js";
+import stripePayment from "./modules/payment/routes/payment.routes.js";
+
 import artistApplicationRoutes from "./modules/artist/routes/artist-application.routes.js";
 import adminArtistRoutes from "./modules/artist/routes/artist-application.admin.routes.js";
+
 import uploadRoutes from "./modules/upload/routes/upload.routes.js";
 import monetizeRoutes from "./routes/monetizeRoutes.js";
+
 import artistPayoutRoutes from "./modules/artist-payout/routes/artistPayoutRoutes.js";
 import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.js";
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
-// import paymentRoutes from "./modules/payments-v2/payment.routes.js";
-// import {razorpayWebhook}from "./modules/payment2/razorpay/razorpayWebhook.controller.js";
-import {razorpayWebhook}from "./controllers/webhookController.js";
 
-import workspaceRoutes from "./modules/workspace/workspace.routes.js"
-// import testQueue from "./routes/testQueue.js";
-// import couponRoutes from "./modules/coupon/coupon.routes.js"
-
-
+import workspaceRoutes from "./modules/workspace/workspace.routes.js";
 
 // --------------------
-// App setup
+// App Setup
 // --------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +81,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // --------------------
-// Rate limiters
+// Rate Limiters
 // --------------------
 const paymentLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -90,7 +93,7 @@ const paymentLimiter = rateLimit({
 });
 
 // --------------------
-// Global middleware
+// Global Middleware
 // --------------------
 app.set("trust proxy", 1);
 
@@ -111,7 +114,7 @@ app.use(helmet());
 app.use(httpLogger);
 
 // --------------------
-// Webhooks (must come before body parser)
+// Webhooks (BEFORE body parser)
 // --------------------
 app.post(
   "/api/webhooks/razorpay",
@@ -122,14 +125,13 @@ app.post(
 app.post(
   "/api/webhooks/paypal",
   express.raw({ type: "application/json" }),
-  paypalWebhook,
+  paypalWebhook
 );
 
 app.use("/api/v2/webhooks", webhookRoutesv2);
 
-
 // --------------------
-// Body & security middleware
+// Body & Security Middleware
 // --------------------
 app.use(cookieParser());
 app.use(express.json());
@@ -142,9 +144,6 @@ app.use(mongoSanitize());
 // --------------------
 app.use(passport.initialize());
 
-
-
-
 // --------------------
 // API V1 Routes
 // --------------------
@@ -156,9 +155,11 @@ app.use("/api/artists", artistRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/discover", discoverRoutes);
 app.use("/api/adminPlaylist", adminplaylistRoutes);
+
 app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
+
 app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/uploads", uploadRoutes2);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
@@ -169,6 +170,7 @@ app.use("/api/user/dashboard", userDashboardRoutes);
 // --------------------
 app.use("/api/v2/artist", artistApplicationRoutes);
 app.use("/api/v2/admin", adminArtistRoutes);
+
 app.use("/api/v2/uploads", uploadRoutes);
 app.use("/api/v2/monetize", monetizeRoutes);
 
@@ -177,13 +179,10 @@ app.use("/api/v2/admin", adminPayoutRoutes);
 app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 
 app.use("/api/workspaces", workspaceRoutes);
-// app.use("api/test", testQueue )
-// app.use("/api/coupons", couponRoutes);
-
 app.use("/api/v2/payment", stripePayment);
 
 // --------------------
-// 404 & Error handling
+// 404 & Error Handling
 // --------------------
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

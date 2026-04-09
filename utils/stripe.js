@@ -70,7 +70,8 @@ export const getOrCreateStripeCustomer = async (user) => {
   });
 
   user.stripeCustomerId = customer.id;
-  await user.save();
+  
+  // await user.save();
 
   return customer.id;
 };

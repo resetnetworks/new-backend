@@ -36,6 +36,13 @@ const songSchema = new mongoose.Schema(
       ref: "Album",
       default: null,
     },
+    
+    type: {
+      type: String,
+      enum: ["original", "dj-mix", "remix", "cover"],
+      default: "original",
+      index: true,
+     },
 
     /* ======================================================
        CLASSIFICATION & METADATA

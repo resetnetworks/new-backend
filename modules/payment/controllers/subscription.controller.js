@@ -4,6 +4,7 @@ import { Transaction } from "../../../models/Transaction.js";
 import { Subscription } from "../../../models/Subscription.js";
 import { Artist } from "../../../models/Artist.js";
 import { getOrCreateStripeCustomer } from "../../../utils/stripe.js";
+import { User } from "../../../models/User.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 const ALLOWED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
@@ -96,6 +97,8 @@ export const createSubscriptionCheckout = async (req, res) => {
       platformFee,
       artistShare,
     });
+    
+   
 
     // 5️⃣ Get Stripe customer
     const stripeCustomerId = await getOrCreateStripeCustomer(user);

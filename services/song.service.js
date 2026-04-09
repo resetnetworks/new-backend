@@ -57,7 +57,8 @@ export const createSongService = async ({
           albumOnly: data.albumOnly || false,
           isrc: data.isrc || null,
           audioKey: data.audioKey,
-          convertedPrices: data.convertedPrices || []
+          convertedPrices: data.convertedPrices || [],
+          type: data.type || "original"
         }
       ],
       { session }
@@ -205,13 +206,22 @@ export const getAllSinglesService = async ({
   page,
   limit,
   type,
-  artistId
+  artistId,
+  songType
 }) => {
   const skip = (page - 1) * limit;
 
   // Singles = no album
   const query = { album: null };
   let sortOption = { createdAt: -1 };
+  
+  if (songType) {
+  const allowedTypes = ["original", "dj-mix"];
+  if (!allowedTypes.includes(songType)) {
+    throw new BadRequestError("Invalid song type");
+  }
+  query.type = songType;
+}
 
   switch (type) {
     case "recent":

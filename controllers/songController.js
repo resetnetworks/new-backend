@@ -98,7 +98,8 @@ export const createSongController = async (req, res) => {
     album,
     isrc,
     audioKey,
-    coverImageKey
+    coverImageKey,
+    type = "original"
   } = req.body;
 
   /* -------------------- Basic validation -------------------- */
@@ -254,6 +255,7 @@ export const createSongController = async (req, res) => {
       isrc,
       coverImageKey: finalCoverImageKey || null,
       audioKey,
+      type
     },
     
    
@@ -462,6 +464,7 @@ export const getAllSinglesController = async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(50, Number(req.query.limit) || 20);
   const type = req.query.type || "all";
+  const songType = req.query.songType || null;
   const artistId = req.query.artistId || null;
 
   const { songs, total } = await getAllSinglesService({
@@ -469,7 +472,8 @@ export const getAllSinglesController = async (req, res) => {
     page,
     limit,
     type,
-    artistId
+    artistId,
+    songType
   });
 
   // 📘 read event (list-level, not per song)
