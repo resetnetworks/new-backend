@@ -3,6 +3,7 @@ import pino from "pino";
 
 const logger = pino({
   level: process.env.LOG_LEVEL || "info",
+  target: "pino-pretty",
   redact: {
     paths: [
       "req.headers.authorization",

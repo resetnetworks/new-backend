@@ -1,4 +1,3 @@
-// models/Playlist.js
 import mongoose from "mongoose";
 
 const playlistSchema = new mongoose.Schema(
@@ -7,51 +6,59 @@ const playlistSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
     description: {
       type: String,
       trim: true,
+      maxlength: 500,
     },
-    coverImage: {
-      type: String, // optional custom cover
-    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
+
     songs: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Song",
       },
     ],
+
     isPublic: {
       type: Boolean,
       default: false,
+      index: true,
     },
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+
   },
   { timestamps: true }
 );
 
-// Virtual for song count
+// ----------------------
+// Indexes
+// ----------------------
+playlistSchema.index({ createdBy: 1, createdAt: -1 });
+
+// ----------------------
+// Virtuals
+// ----------------------
 playlistSchema.virtual("songCount").get(function () {
-  return this.songs.length;
+  return this.songs?.length || 0;
 });
 
-// Transform output to remove internal fields
+// ----------------------
+// Transform
+// ----------------------
 playlistSchema.set("toJSON", {
   virtuals: true,
   versionKey: false,
   transform: (_, ret) => {
+    ret.id = ret._id;
     delete ret._id;
-    delete ret.__v;
   },
 });
 

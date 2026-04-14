@@ -30,7 +30,6 @@ import errorHandlerMiddleware from "./middleware/errorhandler.js";
 // Webhooks
 // --------------------
 import {
-  stripeWebhook,
   paypalWebhook,
   razorpayWebhook,
 } from "./controllers/webhookController.js";

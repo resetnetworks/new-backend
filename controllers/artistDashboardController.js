@@ -71,8 +71,6 @@ export const getArtistDashboardSongs = async (req, res) => {
 };
 
 
-
-
 export const getArtistDashboardAlbums = async (req, res) => {
   const artistId = req.user.artistId;
 

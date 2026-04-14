@@ -39,7 +39,7 @@ export const presignSongUpload = async (req, res) => {
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET,
     Key: key,
-    // ACL: "bucket-owner-full-control"
+    
   });
   
 

@@ -467,7 +467,19 @@ export const cancelArtistSubscription = async (req, res) => {
       }
       gatewayResponse = await response.text();
 
-    } else {
+    } 
+     // Step 2: Cancel at Stripe if needed
+    else if (subscription.gateway === "stripe" && sub.externalSubscriptionId) {
+      try {
+        await stripe.subscriptions.update(sub.externalSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        console.log("⛔ Stripe subscription set to cancel at period end");
+      } catch (err) {
+        console.warn("⚠️ Stripe cancel failed:", err.message);
+      }
+    }
+    else {
       throw new BadRequestError(`Unsupported gateway: ${subscription.gateway}`);
     }
 
