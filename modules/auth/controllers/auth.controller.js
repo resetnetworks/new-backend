@@ -290,7 +290,11 @@ export const refreshAccessToken = async (req, res) => {
   }
 
   // 🔁 Issue new access token ONLY
-  const newAccessToken = generateToken(user, res);
+  // const newAccessToken = generateToken(user, res);
+
+  // 🔁 ROTATE TOKENS
+  await generateRefreshToken(user, res);
+  generateToken(user, res);
 
   res.status(200).json({
     message: "Access token refreshed",
