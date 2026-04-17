@@ -38,12 +38,12 @@ import artistRoutes from "./routes/artistRoutes.js";
 import playlistRoutes from "./routes/playlistRoutes.js";
 import adminplaylistRoutes from "./routes/adminPlaylist.js";
 import searchRoutes from "./routes/searchRoutes.js";
-import discoverRoutes from "./routes/discoverRoutes.js";
+// import discoverRoutes from "./routes/discoverRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
-import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
+// import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import uploadRoutes2 from "./routes/uploadRoutes2.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 
@@ -65,6 +65,8 @@ import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import couponRoutes from "./modules/coupon/coupon.routes.js"
 
 
+// import artistDashboardRoutes from "./modules/artist-dashboard/artistDashboard.route.js";
+import discoverRoutes from "./modules/discover/discover.route.js";
 
 // --------------------
 // App setup
@@ -145,12 +147,12 @@ app.use("/api/albums", albumRoutes);
 app.use("/api/playlist", playlistRoutes);
 app.use("/api/artists", artistRoutes);
 app.use("/api/search", searchRoutes);
-app.use("/api/discover", discoverRoutes);
+// app.use("/api/discover", discoverRoutes);
 app.use("/api/adminPlaylist", adminplaylistRoutes);
 app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
-app.use("/api/artist/dashboard", artistDashboardRoutes);
+// app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/uploads", uploadRoutes2);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/user/dashboard", userDashboardRoutes);
@@ -170,6 +172,9 @@ app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 // app.use("api/test", testQueue )
 // app.use("/api/coupons", couponRoutes);
+
+// app.use("/api/artist/dashboard", artistDashboardRoutes);
+app.use("/api/discover", discoverRoutes);
 
 // --------------------
 // 404 & Error handling
