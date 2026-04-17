@@ -37,7 +37,7 @@ import albumRoutes from "./routes/albumRoutes.js";
 import artistRoutes from "./routes/artistRoutes.js";
 import playlistRoutes from "./routes/playlistRoutes.js";
 import adminplaylistRoutes from "./routes/adminPlaylist.js";
-import searchRoutes from "./routes/searchRoutes.js";
+// import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -63,6 +63,8 @@ import {razorpayWebhook}from "./modules/payment/razorpay/razorpayWebhook.control
 import workspaceRoutes from "./modules/workspace/workspace.routes.js"
 // import testQueue from "./routes/testQueue.js";
 // import couponRoutes from "./modules/coupon/coupon.routes.js"
+
+import searchRoutes from "./modules/search/search.route.js";
 
 
 
