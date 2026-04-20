@@ -386,6 +386,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
           gateway: transaction.gateway,
           externalSubscriptionId: fallbackExternalId,
           transactionId: transaction._id,
+          cycle, // Store cycle for future reference
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );

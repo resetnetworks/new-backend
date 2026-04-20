@@ -56,7 +56,7 @@ export const getAllArtistsController = async (req, res) => {
     },
   };
 
-console.log(response)
+
   await setCached(cacheKey, response, 600); // 10 min
 
   res.status(StatusCodes.OK).json(response);

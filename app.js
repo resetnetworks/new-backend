@@ -1,6 +1,5 @@
 import "express-async-errors";
 import express from "express";
-import path from "path";
 import { fileURLToPath } from "url";
 
 // --------------------
@@ -16,7 +15,7 @@ import mongoSanitize from "express-mongo-sanitize";
 // --------------------
 // Logging
 // --------------------
-import morgan from "morgan";
+
 import { httpLogger } from "./middleware/http-logger.js";
 
 // --------------------
@@ -70,12 +69,13 @@ import adminPayoutRoutes from "./modules/artist-payout/routes/adminPayoutRoutes.
 import artistRevenueDashboardRoutes from "./modules/artist-payout/routes/artistDashboardRoutes.js";
 
 import workspaceRoutes from "./modules/workspace/workspace.routes.js";
+import favoriteArtistRoutes from "./routes/favoriteArtistRoutes.js";
 
 // --------------------
 // App Setup
 // --------------------
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
 
 const app = express();
 
@@ -110,7 +110,7 @@ app.use(
 
 app.use(rateLimit({ windowMs: 5 * 60 * 1000, max: 300 }));
 app.use(helmet());
-app.use(httpLogger);
+// app.use(httpLogger);
 
 // --------------------
 // Webhooks (BEFORE body parser)
@@ -179,6 +179,8 @@ app.use("/api/v2/artist", artistRevenueDashboardRoutes);
 
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/v2/payment", stripePayment);
+app.use("/api/favorite-artists", favoriteArtistRoutes);
+
 
 // --------------------
 // 404 & Error Handling

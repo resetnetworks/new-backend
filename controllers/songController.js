@@ -99,6 +99,7 @@ export const createSongController = async (req, res) => {
     isrc,
     audioKey,
     coverImageKey,
+    copyright,
     type = "original"
   } = req.body;
 
@@ -255,7 +256,8 @@ export const createSongController = async (req, res) => {
       isrc,
       coverImageKey: finalCoverImageKey || null,
       audioKey,
-      type
+      type,
+      copyright: albumDoc ? albumDoc.copyright : copyright
     },
     
    

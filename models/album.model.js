@@ -85,6 +85,11 @@ const albumSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
+    
+    copyright: {
+    type: String,
+    required: true
+    },
 
     songs: [
       {

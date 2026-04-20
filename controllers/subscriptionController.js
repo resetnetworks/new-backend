@@ -468,17 +468,22 @@ export const cancelArtistSubscription = async (req, res) => {
       gatewayResponse = await response.text();
 
     } 
-     // Step 2: Cancel at Stripe if needed
-    else if (subscription.gateway === "stripe" && sub.externalSubscriptionId) {
-      try {
-        await stripe.subscriptions.update(sub.externalSubscriptionId, {
+
+    // =========================================================
+    //               STRIPE
+    // =========================================================
+    else if (subscription.gateway === "stripe") {
+      console.log("👉👉👉👉👉👉👉👉👉👉 INSIDE STRIPE NOW: " );
+
+      const stripeSub = await stripe.subscriptions.update(
+        subscription.externalSubscriptionId,
+        {
           cancel_at_period_end: true,
-        });
-        console.log("⛔ Stripe subscription set to cancel at period end");
-      } catch (err) {
-        console.warn("⚠️ Stripe cancel failed:", err.message);
-      }
+        }
+      );
+      gatewayResponse = stripeSub;
     }
+    
     else {
       throw new BadRequestError(`Unsupported gateway: ${subscription.gateway}`);
     }
@@ -487,18 +492,19 @@ export const cancelArtistSubscription = async (req, res) => {
     subscription.status = "cancelled";
     subscription.cancelledAt = new Date();
     subscription.isRecurring = false;
+    
     if (!subscription.cycle) {
-  const txn = await Transaction.findOne({
-    userId: user._id,
-    artistId,
-    gateway: subscription.gateway,
-    "metadata.cycle": { $exists: true },
-  }).lean();
+      const txn = await Transaction.findOne({
+        userId: user._id,
+        artistId,
+        gateway: subscription.gateway,
+        "metadata.cycle": { $exists: true },
+      }).lean();
 
-  if (txn?.metadata?.cycle) {
-    subscription.cycle = txn.metadata.cycle;
-  }
-}
+      if (txn?.metadata?.cycle) {
+        subscription.cycle = txn.metadata.cycle;
+      }
+    }
     await subscription.save();
 
     // ✅ Update transaction status too

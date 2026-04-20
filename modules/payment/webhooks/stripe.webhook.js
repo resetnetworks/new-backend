@@ -292,17 +292,26 @@ export const handleStripeWebhook = async (req, res) => {
           { new: true }
         );
 
-        if (!subscriptionData) {
-          console.warn("Subscription not found in DB:", stripeSubscription.id);
-          break;
-        }
-        console.log( "🚫 Subscription cancelled in DB:", subscriptionData );
+        console.log("👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 ")
+        console.log("subscribe data from cancellation trigger:", subscriptionData)
+        console.log("👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 ")
 
-        // 🔥 Call your cancellation invoice service
-        await processAndSendCancellationInvoice(subscriptionData);
-
+        // log Stripe cancellation immediately
         console.warn("🚫 Subscription cancelled:", subscription.id);
+
+        // only run side-effects if DB record exists (no early break)
+        if (subscriptionData) {
+          // await processAndSendCancellationInvoice(subscriptionData);
+          await EmailService.sendSubscriptionCancelled({
+            userId: subscriptionData.userId,
+            artistId: subscriptionData.artistId,
+            validUntil: subscriptionData.validUntil,
+          });
+          
+
+        }
         break;
+      
       }
 
       default:

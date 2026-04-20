@@ -58,7 +58,8 @@ export const createSongService = async ({
           isrc: data.isrc || null,
           audioKey: data.audioKey,
           convertedPrices: data.convertedPrices || [],
-          type: data.type || "original"
+          type: data.type || "original",
+          copyright: data.copyright || null
         }
       ],
       { session }

@@ -65,6 +65,11 @@ const songSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    
+    copyright: {
+    type: String,
+    required: true
+    },
 
     /* ======================================================
        MEDIA (AUDIO + IMAGES)

@@ -14,6 +14,7 @@ export const createAlbumService = async ({ artistId, payload }) => {
     basePrice,
     coverImageKey = null,
     songs,
+    copyright
   } = payload;
 
   // --- Pricing rules ---
@@ -71,6 +72,7 @@ export const createAlbumService = async ({ artistId, payload }) => {
     convertedPrices,
     coverImageKey,
     songs,
+    copyright
   });
 
   return album.toObject();
