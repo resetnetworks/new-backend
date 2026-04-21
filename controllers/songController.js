@@ -308,16 +308,17 @@ export const updateSongController = async (req, res) => {
   });
 
   /* -------------------- Business event log -------------------- */
-  req.log.info(
-    {
-      event: "song.updated",
-      songId: song._id,
-      artistId,
-      accessType: song.accessType,
-      albumId: song.album || null
-    },
-    "Song updated"
-  );
+  // commented - need to look into
+  // req.log.info(
+  //   {
+  //     event: "song.updated",
+  //     songId: song._id,
+  //     artistId,
+  //     accessType: song.accessType,
+  //     albumId: song.album || null
+  //   },
+  //   "Song updated"
+  // );
 
   /* -------------------- Response -------------------- */
   res.status(StatusCodes.OK).json({
