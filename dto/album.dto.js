@@ -20,6 +20,7 @@ export const shapeAlbumResponse = (album) => {
     description: album.description || "",
     releaseDate: album.releaseDate,
     genre: album.genre || [],
+    copyright: song.copyright || "",
 
     // access & pricing
     accessType: album.accessType,

@@ -139,7 +139,7 @@ export const createSongController = async (req, res) => {
   /* -------------------- Album validation -------------------- */
   const albumDoc = album
     ? await Album.findOne({ _id: album, artist: artistId })
-        .select("coverImageKey genre accessType")
+        .select("coverImageKey genre accessType copyright")
         .lean()
     : null;
 
@@ -264,16 +264,17 @@ export const createSongController = async (req, res) => {
   });
 
   /* -------------------- Business event log -------------------- */
-  req.log.info(
-    {
-      event: "song.created",
-      songId: song._id,
-      artistId,
-      albumId: song.album || null,
-      accessType: song.accessType
-    },
-    "Song created"
-  );
+  // some-sort of error  - need to look into.
+  // req.log.info(
+  //   {
+  //     event: "song.created",
+  //     songId: song._id,
+  //     artistId,
+  //     albumId: song.album || null,
+  //     accessType: song.accessType
+  //   },
+  //   "Song created"
+  // );
 
   /* -------------------- Response -------------------- */
   res.status(StatusCodes.CREATED).json({

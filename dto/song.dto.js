@@ -21,6 +21,8 @@ export const shapeSongResponse = (
     albumOnly: song.albumOnly,
     hlsReady: song.hlsReady,
 
+    copyright: song.copyright || "",
+
     // 🎤 Artist (stable shape)
     artist:
       typeof song.artist === "object"
