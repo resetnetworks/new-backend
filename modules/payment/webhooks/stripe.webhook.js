@@ -1,5 +1,3 @@
-// -------------------Above is correct.--------------------
-
 import { stripe } from "../providers/stripe.client.js";
 import { Transaction } from "../../../models/Transaction.js";
 import { Subscription } from "../../../models/Subscription.js";
@@ -50,42 +48,11 @@ export const handleStripeWebhook = async (req, res) => {
         const session = event.data.object;
 
         if (session.mode === "payment" && session.payment_status === "paid") {
-          // const transactionId = session.metadata.transactionId;
-        
-          // await Transaction.findByIdAndUpdate(transactionId, {
-          //   status: "paid",
-          //   paidAt: new Date(),
-          //   stripeSessionId: session.id,
-          //   stripePaymentIntentId: session.payment_intent,
-          // });
 
-          //------old-code-------
-          // const transaction = await Transaction.findById(transactionId);
-
-          // if (!transaction) {
-          //   console.error("Transaction not found:", transactionId);
-          //   break;
-          // }
-
-          // if (transaction.status === "paid") {
-          //   console.log("Transaction already marked paid:", transactionId);
-          //   break;
-          // }
-
-          // transaction.status = "paid";
-          // transaction.paidAt = new Date();
-          // transaction.stripeSessionId = session.id;
-          // transaction.stripePaymentIntentId = session.payment_intent;
-
-          // await transaction.save();
-
-          //------new-code-------
-
-          
           const transactionId = session.metadata.transactionId;
           const paymentIntentId = session.payment_intent;
-          console.log("👉👉👉👉👉👉👉session data, :", session);
-          console.log("👉👉👉👉👉👉👉👉session paymentIntent :", paymentIntentId);
+          console.log("👉 👉 👉 👉 session data, :", session);
+          console.log("👉 👉 👉 👉 session paymentIntent :", paymentIntentId);
 
           // 1️⃣ First update transaction with paymentIntentId
           await Transaction.findByIdAndUpdate(transactionId, {
@@ -99,10 +66,10 @@ export const handleStripeWebhook = async (req, res) => {
             paymentIntentId,
           });
 
-          console.log("👉👉👉👉👉👉👉👉markTransactionPaid result :", transaction);
+          // console.log("👉 👉 👉 👉 👉 markTransactionPaid result :", transaction);
 
           if (!transaction) {
-            console.log("❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌Transaction already processed or not found");
+            console.log("❌ ❌ ❌ ❌ Transaction already processed or not found");
             break;
           }
 
@@ -111,17 +78,19 @@ export const handleStripeWebhook = async (req, res) => {
           transaction.paymentIntentId = paymentIntentId;
           transaction.paidAt = new Date();
           await transaction.save();
-          console.log("👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉✅ Transaction marked as paid:", transaction._id);
+          console.log("✅ Transaction marked as paid:", transaction._id);
 
           // 🔥 Update user access
           await updateUserAfterPurchase(transaction, paymentIntentId);
-          console.log("👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉👉✅ User access updated for transaction:", transaction._id);
+          console.log("✅ User access updated for transaction:", transaction._id);
 
           // 🔥 Send invoice
           await processAndSendInvoice(transaction);
 
-          console.log("✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ One-time payment fully processed:", transaction._id);
-          console.log("✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ One-time payment successful:", transactionId);
+          // new-centralized-email-service-activated
+          // await EmailService.sendOneTimeInvoice(transaction._id);
+
+          console.log("✅ One-time payment successful:", transactionId);
         }
 
         // ===================================================
@@ -132,19 +101,22 @@ export const handleStripeWebhook = async (req, res) => {
           const transactionId = session.metadata.transactionId;
           const stripeSubscriptionId = session.subscription;
 
-          console.log("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥 First stripeSubscriptionId - subscription ID:", session.subscription);
+          console.log("👉 👉 👉 👉 First stripe-Subscription: ", session.subscription);
 
           if (!stripeSubscriptionId) {
             console.error("Missing Stripe subscription ID");
             break;
           }
 
-          console.log("🔥 First subscription session:", session.id);
+          console.log("👉 👉 👉 👉 First subscription session:", session.id);
 
           // 1️⃣ Attach subscription + session ID to transaction
-          await Transaction.findByIdAndUpdate(transactionId, {
+          const txn = await Transaction.findByIdAndUpdate(transactionId, {
             stripeSubscriptionId,
             stripeSessionId: session.id,
+            metadata: {
+              ...session.metadata,   // ⭐ stores cycle here
+            },
           });
 
           // 2️⃣ Mark as paid (same as one-time)
@@ -169,10 +141,9 @@ export const handleStripeWebhook = async (req, res) => {
           await processAndSendInvoice(transaction);
 
           console.log("✅ First subscription fully processed:", transaction._id);
-
-          console.log("✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ Subscription upserted:", stripeSubscriptionId);
+          // console.log("👉 👉 👉 👉 ✅ Subscription upserted:", stripeSubscriptionId);
         }
-        
+
         break;
       }
 
@@ -237,8 +208,8 @@ export const handleStripeWebhook = async (req, res) => {
           stripeInvoiceId: invoice.id,
         });
 
-        if (!paidTransaction){
-          console.error(" ❌ ❌ ❌ ❌ ❌ ❌Failed to mark renewal transaction as paid:", paidTransaction);
+        if (!paidTransaction) {
+          console.error("❌ ❌ ❌ ❌ Failed to mark renewal transaction as paid:", paidTransaction);
           break;
         }
 
@@ -301,17 +272,9 @@ export const handleStripeWebhook = async (req, res) => {
 
         // only run side-effects if DB record exists (no early break)
         if (subscriptionData) {
-          // await processAndSendCancellationInvoice(subscriptionData);
-          await EmailService.sendSubscriptionCancelled({
-            userId: subscriptionData.userId,
-            artistId: subscriptionData.artistId,
-            validUntil: subscriptionData.validUntil,
-          });
-          
-
+          await processAndSendCancellationInvoice(subscriptionData);
         }
         break;
-      
       }
 
       default:
