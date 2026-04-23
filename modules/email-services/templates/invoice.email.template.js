@@ -11,7 +11,7 @@ export const prepareInvoiceEmailFormat = (invoiceData) => {
   const userName = customer?.name || "there";
   const formattedAmount = formatMoney(total, currency);
 
-  const subject = `Your Reset Music receipt 🎧`;
+  const subject = `Your Reset Music receipt`;
 
   const text = `
 Hi ${userName},
@@ -21,9 +21,10 @@ Thanks for your purchase. Your receipt is attached.
 Amount paid: ${formattedAmount}
 Reference: ${invoiceNumber}
 
-If you need help, contact support@reset93.net
+If you need help, contact support@musicreset.com
 
 — Team Reset Music
+Billing questions: support@musicreset.com
 `;
 
   const html = `
@@ -63,25 +64,24 @@ If you need help, contact support@reset93.net
     <p>Hi ${userName},</p>
 
     <h2 style="margin:0;font-size:28px;font-weight:700;color:#000000;">
-    Thanks for your purchase 🎵
+    Your receipt from Reset Music
     </h2>
 
     <p>
-    We’ve attached your receipt for your recent purchase on <b>Reset Music</b>.
+    Your payment was successful. Your receipt is attached to this email.
     </p>
 
     <p><b>Amount paid:</b> ${formattedAmount}</p>
     <p><b>Reference ID:</b> ${invoiceNumber}</p>
 
     <p>Your payment was received successfully and no further action is required.</p>
-
-    <p>
-    Need help?  
-    <a href="mailto:support@reset93.net">support@reset93.net</a>
-    </p>
+  
 
     <p style="margin-top:40px;">— Team Reset Music</p>
 
+    <p style="font-size:13px;color:#64748b;margin-top:25px;">
+    Billing questions? Contact <b>support@musicreset.com</b>
+    </p>
     </td></tr></table>
     </td></tr></table>
     </body>

@@ -1,24 +1,30 @@
 import nodemailer from "nodemailer";
+import { EMAIL_SENDERS } from "../utils/email.identify.js";
 
-// 🔹 Send Registration Email
-export const sendMail = async (to, emailContent) => {
+export const sendMail = async (to, emailContent, sender) => {
   if (!to || !emailContent) {
-    console.warn("Missing email recipient or content. Skipping registration email.");
+    console.warn("Missing email recipient or content.");
     return;
   }
 
   const transporter = nodemailer.createTransport({
-    service: "gmail", // later switch to SES/SMTP in production
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
   });
 
-  console.log("\n📨 📨 📨 📨Sending registration email to:", to);
-  
+  // ⭐ fallback sender (never crash jobs)
+  const safeSender = sender || EMAIL_SENDERS.INFO;
+  const fromEmail = `"${safeSender.name}" <${safeSender.email}>`;
+
+  console.log("📨 Sending email to:", to);
+
   await transporter.sendMail({
-    from: `"Reset Music" <${process.env.SMTP_USER}>`,
+    from: fromEmail,
     to,
     subject: emailContent.subject,
     text: emailContent.text,
@@ -26,5 +32,5 @@ export const sendMail = async (to, emailContent) => {
     attachments: emailContent.attachments || [],
   });
 
-  console.log("📥 📥 📥 📥 Registration email sent to:", to);
+  console.log("✅ Email sent to:", to);
 };

@@ -1,98 +1,152 @@
 // modules/email-services/templates/invoice/invoice.pdf.js
 
 import PDFDocument from "pdfkit";
+import { formatMoney } from "../../utils/moneyFormatter.js";
+import { fromRoot } from "../../../../utils/paths.js";
 
 const formatDate = (date) => new Date(date).toLocaleDateString("en-IN");
 
-// 🔹 Generate invoice PDF buffer
 export const generateInvoiceBuffer = (invoice) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 0 });
       const buffers = [];
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      const startX = doc.page.margins.left;
-      const endX = doc.page.width - doc.page.margins.right;
+      const pageWidth = doc.page.width;
+      const pageHeight = doc.page.height;
 
-      // ------------------- Seller Info -------------------
-      doc.fontSize(20).font("Helvetica-Bold").text(invoice.seller.name, startX, doc.y);
-      doc.fontSize(10).font("Helvetica").text(invoice.seller.address);
-      doc.text(invoice.seller.email || "");
-      doc.text(invoice.seller.phone || "");
-      doc.moveDown();
+      /* ───────── PAGE LIGHT BACKGROUND ───────── */
+      doc.rect(0, 0, pageWidth, pageHeight).fill("#EEF2FF");
 
-      // ------------------- Invoice Header -------------------
-      doc.fontSize(14).font("Helvetica-Bold")
-        .text("INVOICE", endX - 100, doc.y - 50, { width: 100, align: "right" });
-      doc.fontSize(10).font("Helvetica")
-        .text(`Invoice #${invoice.invoiceNumber}`, { align: "right" });
-      doc.text(`Transaction ID: ${invoice.transactionId}`, { align: "right" });
-      doc.text(`Issue Date: ${formatDate(invoice.issueDate)}`, { align: "right" });
-      doc.moveDown(2);
+      /* ───────── HERO HEADER ───────── */
+      doc.rect(0, 0, pageWidth, 140).fill("#0F172A")
 
-      // ------------------- Separator -------------------
-      doc.strokeColor("#aaaaaa").lineWidth(1)
-        .moveTo(startX, doc.y).lineTo(endX, doc.y).stroke();
-      doc.moveDown();
+      // using relative path here, ⚠️ CAUTION on folder change ⚠️ 
+      const logoPath = fromRoot("assets", "images", "resetIcon.png");
 
-      // ------------------- Customer Info -------------------
-      doc.fontSize(10).font("Helvetica-Bold").text("INVOICE TO:");
-      doc.font("Helvetica").text(invoice.customer.name || "");
-      doc.text(invoice.customer.email || "");
-      doc.text(invoice.customer.phone || "");
-      doc.moveDown(2);
+      const headerHeight = 140;
+      const logoSize = 70;
 
-      // ------------------- Table -------------------
-      const descriptionX = startX,
-        quantityX = 300,
-        priceX = 380,
-        totalX = 450;
-      let tableY = doc.y;
+      doc.image(
+        logoPath,
+        pageWidth / 2 - logoSize / 2,
+        headerHeight / 2 - logoSize / 2,
+        { width: logoSize }
+      );
 
-      // Table Header
+      /* ───────── WHITE INVOICE CARD ───────── */
+      const paddingX = 40;
+      const startX = paddingX;
+      const endX = pageWidth - paddingX;
+
+      let y = headerHeight + 40;
+
+      /* ───────── COMPANY INFO ───────── */
+      doc.fillColor("#0F172A")
+        .font("Helvetica-Bold")
+        .fontSize(18)
+        .text(invoice.seller.name, startX, y);
+
+      y += 25;
+      doc.font("Helvetica").fontSize(10)
+        .text(invoice.seller.address)
+        .text(invoice.seller.email);
+
+      /* ───────── INVOICE META RIGHT ───────── */
+      const metaX = endX - 160;
+      let metaY = headerHeight + 40;
+
+      doc.font("Helvetica-Bold")
+        .fontSize(20)
+        .fillColor("#1E3A8A")
+        .text("INVOICE", metaX, metaY);
+
+      metaY += 30;
+
+      doc.font("Helvetica")
+        .fontSize(10)
+        .fillColor("#0F172A")
+        .text(`Invoice #: ${invoice.invoiceNumber}`, metaX, metaY);
+
+      metaY += 15;
+      doc.text(`Transaction: ${invoice.transactionId}`, metaX, metaY);
+
+      metaY += 15;
+      doc.text(`Date: ${formatDate(invoice.issueDate)}`, metaX, metaY);
+
+      /* ───────── BILL TO ───────── */
+      y += 80;
+      doc.font("Helvetica-Bold").fillColor("#64748B").text("BILL TO", startX, y);
+
+      y += 18;
+      doc.fillColor("#0F172A").fontSize(11)
+        .text(invoice.customer.name)
+        .font("Helvetica")
+        .text(invoice.customer.email);
+
+      /* ───────── TABLE ───────── */
+      y += 60;
+
+      doc.strokeColor("#E5E7EB")
+        .moveTo(startX, y)
+        .lineTo(endX, y)
+        .stroke();
+
+      y += 15;
       doc.font("Helvetica-Bold").fontSize(10);
-      doc.text("Product/Service", descriptionX, tableY);
-      doc.text("Qty", quantityX, tableY, { width: 50, align: "right" });
-      doc.text("Price", priceX, tableY, { width: 70, align: "right" });
-      doc.text("Total", totalX, tableY, { width: 70, align: "right" });
+      doc.text("Description", startX, y);
+      doc.text("Qty", endX - 180, y);
+      doc.text("Price", endX - 120, y);
+      doc.text("Total", endX - 60, y);
 
-      tableY += 20;
-      doc.strokeColor("#cccccc").lineWidth(1)
-        .moveTo(startX, tableY - 5).lineTo(endX, tableY - 5).stroke();
+      y += 20;
+      doc.strokeColor("#E5E7EB")
+        .moveTo(startX, y)
+        .lineTo(endX, y)
+        .stroke();
 
-      // Table Rows
-      doc.font("Helvetica").fontSize(10);
+      y += 10;
+      doc.font("Helvetica");
+
       invoice.items.forEach((item) => {
-        const rowHeight = Math.max(
-          doc.heightOfString(item.description, { width: quantityX - descriptionX - 10 }),
-          doc.heightOfString(item.quantity.toString(), { width: 50 }),
-          doc.heightOfString(item.price.toFixed(2), { width: 70 }),
-          doc.heightOfString(item.total.toFixed(2), { width: 70 })
-        ) + 5;
-
-        doc.text(item.description, descriptionX, tableY, { width: quantityX - descriptionX - 10 });
-        doc.text(item.quantity.toString(), quantityX, tableY, { width: 50, align: "right" });
-        doc.text(item.price.toFixed(2), priceX, tableY, { width: 70, align: "right" });
-        doc.text(item.total.toFixed(2), totalX, tableY, { width: 70, align: "right" });
-
-        tableY += rowHeight;
-
-        // optional row separator
-        doc.strokeColor("#eeeeee").lineWidth(0.5)
-          .moveTo(startX, tableY - 2).lineTo(endX, tableY - 2).stroke();
+        doc.text(item.description, startX, y);
+        doc.text(item.quantity.toString(), endX - 175, y);
+        doc.text(formatMoney(item.price, invoice.currency), endX - 120, y);
+        doc.text(formatMoney(item.total, invoice.currency), endX - 60, y);
+        y += 25;
       });
 
-      // ------------------- Totals -------------------
-      doc.moveDown(1);
-      const totalsX = endX - 150;
-      doc.font("Helvetica-Bold").text("Subtotal:", totalsX, tableY, { width: 100, align: "right" });
-      doc.font("Helvetica").text(`${invoice.currency} ${invoice.subtotal.toFixed(2)}`, endX - 100, tableY, { width: 100, align: "right" });
+      /* ───────── DIVIDER ───────── */
+      doc.strokeColor("#E5E7EB")
+        .moveTo(endX - 120, y)
+        .lineTo(endX, y)
+        .stroke();
 
-      tableY += 20;
-      doc.font("Helvetica-Bold").text("Invoice Total:", totalsX, tableY, { width: 100, align: "right" });
-      doc.font("Helvetica").text(`${invoice.currency} ${invoice.total.toFixed(2)}`, endX - 100, tableY, { width: 100, align: "right" });
+      y += 10;
+
+      /* ───────── TOTAL ───────── */
+      y += 15;
+      doc.font("Helvetica")
+        .fontSize(11)
+        .fillColor("black")
+        .text("Total", endX - 120, y);
+
+      doc.font("Helvetica-Bold")
+        .fontSize(11)
+        .fillColor("#1E3A8A")
+        .text(formatMoney(invoice.total, invoice.currency), endX - 60, y);
+
+      /* ───────── FOOTER ───────── */
+      doc.fillColor("#64748B")
+        .fontSize(9)
+        .text(
+          "Thank you for supporting independent artists.",
+          startX,
+          pageHeight - 40,
+          { width: pageWidth - 80, align: "center" }
+        );
 
       doc.end();
     } catch (err) {

@@ -2,6 +2,7 @@ import { User } from "../../../models/User.js";
 import { prepareRegistrationData, prepareRegistrationEmailFormat } from "../templates/registration.email.template.js";
 import { preparePasswordResetData, preparePasswordResetEmailFormat } from "../templates/passwordReset.email.template.js";
 import { sendMail } from "./email.mailer.service.js";
+import { EMAIL_SENDERS } from "../utils/email.identify.js";
 
 // ===================================================================
 // 🔐 REGISTRATION EMAIL HANDLER
@@ -43,7 +44,7 @@ export const processAndSendRegistrationEmail = async ( payload ) => {
       return;
     }
 
-    await sendMail(user.email, emailContent);
+    await sendMail(user.email, emailContent, EMAIL_SENDERS.INFO);
 
     console.log(`\n🎉 [${jobTag}] Email successfully sent → ${user.email} 🎉\n`);
 
@@ -91,7 +92,7 @@ export const processAndSendPasswordResetEmail = async ({ userId, resetToken }) =
     }
 
     // 4️⃣ Send email
-    await sendMail(user.email, emailContent);
+    await sendMail(user.email, emailContent, EMAIL_SENDERS.SUPPORT);
 
     console.log(`\n🎉 [${jobTag}] Email successfully sent → ${user.email} 🎉\n`);
 
@@ -156,7 +157,7 @@ export const processAndSendOneTimeInvoiceEmail = async ({ transactionId }) => {
           content: pdfBuffer,
         },
       ],
-    });
+    }, EMAIL_SENDERS.BILLING);
 
     console.log(`\n🎉 [${jobTag}] Invoice Email successfully sent -> ${invoiceData.customer.email} 🎉\n`);
 
@@ -218,7 +219,7 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
           content: pdfBuffer,
         },
       ],
-    });
+    }, EMAIL_SENDERS.BILLING);
 
     console.log(`\n🎉 [${jobTag}] Subscription Invoice Email successfully sent -> ${invoiceData.customer.email} 🎉\n`);
 
@@ -270,7 +271,7 @@ export const processAndSendSubscriptionCancelledEmail = async ({ payload }) => {
     });
 
     // 4️⃣ Send email
-    await sendMail(user.email, emailContent);
+    await sendMail(user.email, emailContent, EMAIL_SENDERS.BILLING);
 
     console.log(`\n🎉 [${jobTag}] Cancellation Email successfully sent -> ${user.email} 🎉\n`);
 
@@ -285,7 +286,7 @@ export const processAndSendSubscriptionCancelledEmail = async ({ payload }) => {
 // 🎧 ARTIST APPROVED EMAIL HANDLER
 // ===================================================================
 
-import { prepareArtistApprovedEmailTemplate } from "../templates/artistApproved.email.template.js"
+import { prepareArtistApprovedData, prepareArtistApprovedEmailTemplate } from "../templates/artistApproved.email.template.js"
 
 export const processAndSendArtistApprovedEmail = async ({ payload }) => {
   const jobTag = "ARTIST_APPROVED_EMAIL";
@@ -302,16 +303,19 @@ export const processAndSendArtistApprovedEmail = async ({ payload }) => {
       return;
     }
 
-    // 1️⃣ Prepare template content
-    const emailContent = prepareArtistApprovedEmailTemplate(payload);
+    // 1️⃣ Prepare dynamic template data
+    const data = await prepareArtistApprovedData(payload);
 
-    if (!emailContent) {
-      console.warn(`⚠️ [${jobTag}] Template generation failed.`);
+    if (!data) {
+      console.warn(`⚠️ [${jobTag}] Failed to prepare email data.`);
       return;
     }
 
+    // 2️⃣ Build email template
+    const emailContent = prepareArtistApprovedEmailTemplate(data);
+
     // 2️⃣ Send email
-    await sendMail(payload.userEmail, emailContent);
+    await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
 
     console.log(`\n🎉 [${jobTag}] Artist Approval Email successfully sent -> ${payload.userEmail} 🎉\n`);
 

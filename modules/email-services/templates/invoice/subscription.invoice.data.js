@@ -23,7 +23,7 @@ export const prepareSubscriptionInvoiceData = async (transaction) => {
       address: `45 Malviya Nagar road
 New Delhi, Delhi 110017
 India`,
-      email: "contact@reset93.net",
+      email: "billing@musicreset.com",
     },
 
     customer: {
