@@ -81,8 +81,8 @@ export const createSubscriptionCheckout = async (req, res) => {
     const normalizedCurrency = selectedCurrency.toLowerCase();
 
     // 3️⃣ Calculate platform fee
-    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
-    const artistShare = amount - platformFee;
+    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT * 100) / 100;
+    const artistShare = Math.round((amount - platformFee) * 100) / 100;
 
     // 4️⃣ Create pending transaction
     const transaction = await Transaction.create({
