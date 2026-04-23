@@ -10,6 +10,7 @@ import { Subscription } from "../models/Subscription.js";
 import paypal from "@paypal/checkout-server-sdk";
 import  {paypalClient}  from "../utils/paypalClient.js";
 
+
 const PLATFORM_FEE_PERCENT = 0.15;
 
 
