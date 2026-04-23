@@ -1,6 +1,6 @@
 services:
   backend:
-    image: resetnetworks/new-music-backend:latest   # use the image from Docker Hub
+    image: resetnetworks/new-music-backend:${TAG}   # use the image from Docker Hub
     container_name: new-music-backend
     restart: always
     env_file:
