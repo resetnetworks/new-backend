@@ -10,8 +10,9 @@ export const preparePasswordResetData = async (user, resetToken) => {
   return {
     app: {
       name: "Reset Music",
-      supportEmail: "support@reset93.net",
+      supportEmail: "support@musicreset.com",
       website: "https://www.musicreset.com",
+      url: "https://www.musicreset.com",
     },
 
     user: {
@@ -37,7 +38,7 @@ export const preparePasswordResetEmailFormat = (data) => {
     return null;
   }
 
-  const subject = `${data.app.name} password reset 🔐`;
+  const subject = `Reset your ${data.app.name} password`;
 
   const text = `
 Hi ${data.user.name},
@@ -47,9 +48,9 @@ We received a request to reset your password.
 Reset your password:
 ${data.reset.url}
 
-This link expires in ${data.reset.expiryMinutes} minutes.
+⚠️ This secure link expires in ${data.reset.expiryMinutes} minutes.
 
-If you did not request this, you can safely ignore this email.
+If you did not request this, please ignore this email — your password has not been changed.
 
 Need help? ${data.app.supportEmail}
 
@@ -97,8 +98,8 @@ Need help? ${data.app.supportEmail}
     </h2>
 
     <p>
-    We received a request to reset your password.  
-    Click the button below to choose a new one.
+    We received a request to reset your password.
+    Click the button below to securely choose a new one.
     </p>
 
     <div style="text-align:center;margin:35px;">

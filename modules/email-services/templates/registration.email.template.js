@@ -9,8 +9,9 @@ export const prepareRegistrationData = async (user) => {
   return {
     app: {
       name: "Reset Music",
-      supportEmail: "support@reset93.net",
+      supportEmail: "support@musicreset.com",
       website: "https://www.musicreset.com",
+      url: "https://www.musicreset.com",
     },
 
     user: {
@@ -34,7 +35,7 @@ export const prepareRegistrationEmailFormat = (data) => {
     return null;
   }
 
-  const subject = `${data.app.name} 🎵`;
+  const subject = `Welcome to ${data.app.name} 🎵`;
 
   const text = `
 Hi ${data.user.name},
@@ -52,6 +53,7 @@ Start exploring:
 Visit: ${data.app.url}
 
 — Team ${data.app.name}
+Need help? ${data.app.supportEmail}
 `;
 
   const html = `
@@ -111,7 +113,7 @@ Visit: ${data.app.url}
 
     <div style="text-align:center;margin:35px;">
     <a href="${data.app.url}" style="background:#3B82F6;color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;">
-    Keep exploring artists
+    Start exploring
     </a>
     </div>
 
@@ -130,6 +132,10 @@ Visit: ${data.app.url}
     </ul>
 
     <p style="margin-top:40px;">— Team ${data.app.name}</p>
+
+    <p style="font-size:13px;color:#64748b;margin-top:25px;">
+    Need help? Contact us at <b>${data.app.supportEmail}</b>
+    </p>
 
     </td></tr></table>
     </td></tr></table>

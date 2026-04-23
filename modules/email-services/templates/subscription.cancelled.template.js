@@ -8,7 +8,7 @@ export const prepareSubscriptionCancelledEmailTemplate = ({
     ? new Date(validUntil).toDateString()
     : null;
 
-  const subject = `Subscription cancelled`;
+  const subject = `Your subscription has been cancelled`;
 
   const text = `
 Hi ${userName},
@@ -21,6 +21,7 @@ You won’t be charged further.
 You can subscribe again anytime.
 
 — Team Reset Music
+Billing questions: support@musicreset.com
 `;
 
   const html = `
@@ -72,6 +73,11 @@ You can subscribe again anytime.
     <p>If this was a mistake or you’d like to subscribe again, you can do so anytime.</p>
 
     <p style="margin-top:40px;">— Team Reset Music</p>
+
+    <p style="font-size:13px;color:#64748b;margin-top:25px;">
+    If you have any billing questions, contact us at
+    <b>support@musicreset.com</b>
+    </p>
 
     </td></tr></table>
     </td></tr></table>
