@@ -182,6 +182,7 @@ app.use("/api/v2/payment", stripePayment);
 app.use("/api/favorite-artists", favoriteArtistRoutes);
 
 
+
 // --------------------
 // 404 & Error Handling
 // --------------------
@@ -190,4 +191,7 @@ app.use(errorHandlerMiddleware);
 
 export default app;
 export { app };
+
+
+
 
