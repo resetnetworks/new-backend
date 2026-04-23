@@ -64,8 +64,8 @@ export const createStripeCheckout = async (req, res) => {
     const normalizedCurrency = selectedCurrency.toLowerCase();
 
     // 💰 Calculate platform fee
-    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
-    const artistShare = amount - platformFee;
+    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT * 100) / 100;
+    const artistShare = Math.round((amount - platformFee) * 100) / 100;
 
     // 🧾 Create pending transaction
     const transaction = await Transaction.create({
