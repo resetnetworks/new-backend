@@ -19,7 +19,7 @@ jobs:
         run: docker build -t resetnetworks/new-music-backend:$TAG .
 
       - name: Login to Docker Hub
-        run: echo ${{ secrets.DOCKER_PASS }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+        run: echo "${{ secrets.DOCKER_PASS }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
 
       - name: Push image
         run: docker push resetnetworks/new-music-backend:$TAG
