@@ -203,6 +203,7 @@ export const getPlaylistById = async (req, res) => {
     throw new NotFoundError("Playlist not found.");
   }
 
+  
   res.status(StatusCodes.OK).json({
     success: true,
     playlist,
