@@ -101,7 +101,7 @@ export const handleStripeWebhook = async (req, res) => {
           const transactionId = session.metadata.transactionId;
           const stripeSubscriptionId = session.subscription;
 
-          console.log("👉 👉 👉 👉 First stripeSubscriptionId - subscription ID:", session.subscription);
+          console.log("👉 👉 👉 👉 First stripe-Subscription: ", session.subscription);
 
           if (!stripeSubscriptionId) {
             console.error("Missing Stripe subscription ID");
@@ -118,10 +118,6 @@ export const handleStripeWebhook = async (req, res) => {
               ...session.metadata,   // ⭐ stores cycle here
             },
           });
-
-          console.log("💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 ");
-          console.log("INSIDE THE FIRST SUBSCRIPTION TRSANSX - look for validUntil and invoiceNumber-string : ", txn)
-          console.log("💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 ");
 
           // 2️⃣ Mark as paid (same as one-time)
           const transaction = await markTransactionPaid({
@@ -145,7 +141,7 @@ export const handleStripeWebhook = async (req, res) => {
           await processAndSendInvoice(transaction);
 
           console.log("✅ First subscription fully processed:", transaction._id);
-          console.log("👉 👉 👉 👉 ✅ Subscription upserted:", stripeSubscriptionId);
+          // console.log("👉 👉 👉 👉 ✅ Subscription upserted:", stripeSubscriptionId);
         }
 
         break;
@@ -187,35 +183,6 @@ export const handleStripeWebhook = async (req, res) => {
         const amount = invoice.amount_paid / 100;
         const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
         const artistShare = amount - platformFee;
-
-        // 🔥 Get correct period from invoice
-        // const stripeSub = await stripe.subscriptions.retrieve(
-        //   stripeSubscriptionId
-        // );
-
-        // const line = invoice.lines.data[0];
-
-        // const startedAt = new Date(line.period.start * 1000);
-        // const validUntil = new Date(line.period.end * 1000);
-        // const cycle = stripeSub.metadata?.cycle;
-
-        // Create new transaction for renewal
-        // await Transaction.create({
-        //   userId: subscription.userId,
-        //   artistId: subscription.artistId,
-        //   itemId: subscription.artistId, // i have added this cause renwal req this field for transaction which is req.
-        //   itemType: "artist-subscription",
-        //   amount,
-        //   currency: invoice.currency,
-        //   gateway: "stripe",
-        //   status: "paid",
-        //   platformFee,
-        //   artistShare,
-        //   stripeSubscriptionId,
-        //   stripeInvoiceId: invoice.id,
-        //   paidAt: new Date(),
-        //   invoiceNumber: `INV-${Date.now()}` // 🔥 Important
-        // });
 
         // ✅ 1️⃣ Create renewal transaction as PENDING
         const renewalTransaction = await Transaction.create({
