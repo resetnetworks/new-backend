@@ -25,7 +25,7 @@ if (!["song", "album", "artist-subscription"].includes(itemType)) {
 throw new BadRequestError("Invalid item type. Must be 'song', 'album', or 'artist-subscription'.");
 }
 
-// ✅ Get artistId depending on item type
+// ✅ Get artistId depending on i
 let artistId;
 
 if (itemType === "song") {
