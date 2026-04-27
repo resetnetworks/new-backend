@@ -24,12 +24,20 @@ jobs:
       - name: Push image
         run: docker push resetnetworks/new-music-backend:$TAG
 
+      - name: Decode SSH key
+        run: |
+          echo "${{ secrets.SSH_KEY_BASE64 }}" | base64 -d > key.pem
+          chmod 600 key.pem
+          echo "KEY<<EOF" >> $GITHUB_ENV
+          cat key.pem >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ubuntu
-          key: ${{ secrets.SSH_KEY }}   # ✅ FIX: direct key usage
+          key: ${{ env.KEY }}   # 👈 THIS is the fix
           debug: true
           envs: TAG
           script: |
