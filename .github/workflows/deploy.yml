@@ -25,13 +25,14 @@ jobs:
         run: docker push resetnetworks/new-music-backend:$TAG
 
       - name: Deploy to EC2
+        env:
+          TAG: ${{ env.TAG }}
         run: |
           echo "${{ secrets.SSH_KEY }}" > key.pem
           chmod 600 key.pem
-          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_IP }} << EOF
-            cd app
-            docker pull resetnetworks/new-music-backend:$TAG
-            docker-compose -f docker-compose.prod.yml down
-            TAG=$TAG docker-compose -f docker-compose.prod.yml up -d
-          EOF
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_IP }} \
+            "cd app && \
+             docker pull resetnetworks/new-music-backend:$TAG && \
+             docker-compose -f docker-compose.prod.yml down && \
+             TAG=$TAG docker-compose -f docker-compose.prod.yml up -d"
           rm -f key.pem
