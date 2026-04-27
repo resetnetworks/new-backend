@@ -24,21 +24,12 @@ jobs:
       - name: Push image
         run: docker push resetnetworks/new-music-backend:$TAG
 
-      # ✅ Decode SSH key safely
-      - name: Create SSH key file
-        run: |
-          echo "${{ secrets.SSH_KEY_BASE64 }}" | base64 -d > key.pem
-          chmod 600 key.pem
-          ls -la key.pem  # optional debug
-
-      # ✅ Deploy using SSH
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ubuntu
-          key: ${{ secrets.SSH_KEY }}   # 👈 CHANGE THIS
-          debug: true
+          key: ${{ secrets.SSH_KEY }}
           envs: TAG
           script: |
             cd app
