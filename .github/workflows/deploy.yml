@@ -24,6 +24,12 @@ jobs:
       - name: Push image
         run: docker push resetnetworks/new-music-backend:$TAG
 
+      - name: Debug SSH key
+        run: |
+          echo "${{ secrets.SSH_KEY }}" | head -1
+          echo "${{ secrets.SSH_KEY }}" | tail -1
+          echo "${{ secrets.SSH_KEY }}" | wc -l
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
