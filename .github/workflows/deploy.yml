@@ -37,7 +37,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ubuntu
-          key_path: key.pem
+          key: ${{ secrets.SSH_KEY }}   # 👈 CHANGE THIS
           debug: true
           envs: TAG
           script: |
