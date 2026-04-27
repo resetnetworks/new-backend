@@ -24,21 +24,14 @@ jobs:
       - name: Push image
         run: docker push resetnetworks/new-music-backend:$TAG
 
-      - name: Debug SSH key
-        run: |
-          echo "${{ secrets.SSH_KEY }}" | head -1
-          echo "${{ secrets.SSH_KEY }}" | tail -1
-          echo "${{ secrets.SSH_KEY }}" | wc -l
-
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.0
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_KEY }}
-          envs: TAG
-          script: |
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_IP }} << EOF
             cd app
             docker pull resetnetworks/new-music-backend:$TAG
             docker-compose -f docker-compose.prod.yml down
             TAG=$TAG docker-compose -f docker-compose.prod.yml up -d
+          EOF
+          rm -f key.pem
