@@ -7,6 +7,8 @@ export const authenticateUser = async (req, res, next) => {
   try {
     let token =
       req.header("Authorization")?.replace("Bearer ", "") || req.cookies.token;
+      
+      console.log("####################Token from header/cookie:", token); // Debug log
 
     if (!token) {
       req.user = null;

@@ -110,7 +110,7 @@ app.use(
 
 app.use(rateLimit({ windowMs: 5 * 60 * 1000, max: 300 }));
 app.use(helmet());
-// app.use(httpLogger);
+app.use(httpLogger);
 
 // --------------------
 // Webhooks (BEFORE body parser)
