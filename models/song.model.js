@@ -68,7 +68,6 @@ const songSchema = new mongoose.Schema(
     
     copyright: {
     type: String,
-    required: true
     },
 
     /* ======================================================

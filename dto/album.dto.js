@@ -27,6 +27,7 @@ export const shapeAlbumResponse = (album) => {
     convertedPrices: Array.isArray(album.convertedPrices)
       ? album.convertedPrices
       : [],
+      copyright: album.copyright || "",
 
     // artist (optional populate / aggregation-safe)
     artist: album.artist
