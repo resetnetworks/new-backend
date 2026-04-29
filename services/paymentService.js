@@ -154,6 +154,7 @@ if (transaction.status === "paid") {
 // ----------------------------
 transaction.status = "paid";
 transaction.invoiceNumber = await getNextInvoiceNumber();
+transaction.currency = transaction.currency?.toUpperCase();// Default to USD if not set
 const rate = EXCHANGE_RATES[transaction.currency];
 
 if (!rate) {
