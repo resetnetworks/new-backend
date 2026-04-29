@@ -8,7 +8,7 @@ import { User } from "../../../models/User.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 const ALLOWED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
-
+const ZERO_DECIMAL_CURRENCIES = ["JPY", "KRW", "VND", "HUF"];
 
 
 export const createSubscriptionCheckout = async (req, res) => {
@@ -81,8 +81,19 @@ export const createSubscriptionCheckout = async (req, res) => {
     const normalizedCurrency = selectedCurrency.toLowerCase();
 
     // 3️⃣ Calculate platform fee
-    const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
-    const artistShare = amount - platformFee;
+    const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(selectedCurrency);
+
+    let platformFee;
+    let artistShare;
+
+    if (isZeroDecimal) {
+      platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
+      artistShare = amount - platformFee;
+    }
+    else {
+      platformFee = Number((amount * PLATFORM_FEE_PERCENT).toFixed(2));
+      artistShare = Number((amount - platformFee).toFixed(2));
+    }
 
     // 4️⃣ Create pending transaction
     const transaction = await Transaction.create({

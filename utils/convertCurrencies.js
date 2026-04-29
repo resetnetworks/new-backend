@@ -3,20 +3,34 @@ import fetch from "node-fetch";
 const SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
 const ZERO_DECIMAL_CURRENCIES = ["JPY", "KRW", "HUF", "VND"];
 
+// const HARDCODED_RATES = {
+//   USD: { EUR: 0.85, GBP: 0.74, JPY: 156.01, INR: 89.93},
+//   EUR: { USD: 1.18, GBP: 0.87, JPY: 183.68, INR: 105.80 },
+//   GBP: { USD: 1.35, EUR: 1.15, JPY: 210.75, INR: 121.24 },
+//   JPY: { USD: 0.0064, EUR: 0.0054, GBP: 0.0047, INR: 0.58 },
+//   INR: { USD: 0.011, EUR: 0.0095, GBP: 0.0082, JPY: 1.74 },
+// };
 const HARDCODED_RATES = {
-  USD: { EUR: 0.85, GBP: 0.74, JPY: 156.01, INR: 89.93},
-  EUR: { USD: 1.18, GBP: 0.87, JPY: 183.68, INR: 105.80 },
-  GBP: { USD: 1.35, EUR: 1.15, JPY: 210.75, INR: 121.24 },
-  JPY: { USD: 0.0064, EUR: 0.0054, GBP: 0.0047, INR: 0.58 },
-  INR: { USD: 0.011, EUR: 0.0095, GBP: 0.0082, JPY: 1.74 },
+  USD: { EUR: 0.8526, GBP: 0.7384, JPY: 159.3480, INR: 94.2827 },
+  EUR: { USD: 1.1729, GBP: 0.866, JPY: 186.86, INR: 110.55 },
+  GBP: { USD: 1.3545, EUR: 1.155, JPY: 215.83, INR: 127.70 },
+  JPY: { USD: 0.006276, EUR: 0.00535, GBP: 0.00463, INR: 0.592 },
+  INR: { USD: 0.0106066, EUR: 0.00904, GBP: 0.00783, JPY: 1.69 },
 };
 
+// export const EXCHANGE_RATES = {
+//   USD: 1,          // base
+//   INR: 0.01111975,      // 1 INR ≈ 0.012 USD
+//   GBP: 1.3515,       // 1 GBP ≈ 1.24 USD
+//   EUR: 1.17647058,       // 1 EUR ≈ 1.07 USD
+//   JPY: 0.0064098      // 1 JPY ≈ 0.0067 USD
+// };
 export const EXCHANGE_RATES = {
   USD: 1,          // base
-  INR: 0.01111975,      // 1 INR ≈ 0.012 USD
-  GBP: 1.3515,       // 1 GBP ≈ 1.24 USD
-  EUR: 1.17647058,       // 1 EUR ≈ 1.07 USD
-  JPY: 0.0064098      // 1 JPY ≈ 0.0067 USD
+  INR: 0.0106066,  // 1 INR -> USD
+  GBP: 1.3545,     // 1 GBP -> USD
+  EUR: 1.1729,     // 1 EUR -> USD
+  JPY: 0.006276    // 1 JPY -> USD
 };
 // import { getCached, setCached } from "../utils/cache.js";
 // // import { SUPPORTED_CURRENCIES } from "../constants/currencies.js";
