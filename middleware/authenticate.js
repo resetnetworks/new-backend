@@ -8,7 +8,7 @@ export const authenticateUser = async (req, res, next) => {
     let token =
       req.header("Authorization")?.replace("Bearer ", "") || req.cookies.token;
       
-      console.log("####################Token from header/cookie:", token); // Debug log
+   
 
     if (!token) {
       req.user = null;
@@ -56,9 +56,7 @@ export const authenticateUser = async (req, res, next) => {
       artistId: decodedData.artistId,
     } || null;
     
-    // req.user = user;
-    // req.user.role = user.role;
-    // req.user.artistId = user.artistId;
+ 
 
    
     next();

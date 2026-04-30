@@ -52,6 +52,9 @@ export const shapeArtistResponse = (artist) => {
     // optional precomputed stats
     songCount: artist.songCount ?? 0,
     albumCount: artist.albumCount ?? 0,
+    
+    // workspace details
+      workspaceId: artist.workspaceId || null,
 
     createdAt: artist.createdAt,
     updatedAt: artist.updatedAt,
