@@ -12,6 +12,8 @@ import { Subscription } from "../models/Subscription.js";
 
 import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 
+import { EmailService } from "../modules/email-services/email.service.js";
+
 
 
 
@@ -54,6 +56,14 @@ export const registerUser = async (req, res) => {
   // :9️⃣ Shape user response (remove sensitive data)
   const shapedUser = shapeUserResponse(user.toObject());
 
+  // sending registration email.
+  await EmailService.sendUserWelcome({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  })
+
   // :🔟 Return shaped user + token
   res.status(StatusCodes.CREATED).json({
     user: shapedUser,
@@ -94,6 +104,16 @@ export const loginUser = async (req, res) => {
   const rawToken = generateToken(user, res);
   // :white_tick: Hash token before saving
   const hashedToken = await bcrypt.hash(rawToken, 10);
+
+  // sending temporary email for testing, will remove.
+  await EmailService.sendUserWelcome({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  })
+
+
   // :white_tick: Save session
   // await Session.create({
   //   userId: user._id,
