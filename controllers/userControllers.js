@@ -366,7 +366,7 @@ export const googleAuthCallback = (req, res) => {
       return res.redirect(`${process.env.CLIENT_URL}/login?error=google_auth_failed`);
     }
     // :fire: NEW: Use same generateToken pattern as login/register
-    const token = generateToken(user._id, res);
+    const token = generateToken(user, res);
     // :fire: NEW: Redirect to frontend callback with newUser parameter
     const redirectUrl = `${process.env.CLIENT_URL}/auth/callback?newUser=${isNewUser}`;
     res.redirect(redirectUrl);
