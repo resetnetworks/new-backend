@@ -9,6 +9,8 @@ import { Workspace } from "../../workspace/workspace.model.js";
 import { WorkspaceMember } from "../../workspace/workspaceMember.model.js";
 import { ROLE_PERMISSIONS } from "../../../permissions/rolePermissions.js";
 
+import { EmailService } from "../../email-services/email.service.js";
+
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
 const DOCUMENT_TYPES = ["gov_id", "proof_of_address", "tax_id", "portfolio", "other"];
@@ -269,6 +271,27 @@ const workspaceDoc = workspace[0];
 
     await session.commitTransaction();
     session.endSession();
+
+    // ===================================================
+    // 🎉 Trigger Artist Approved Email (AFTER COMMIT)
+    // ===================================================
+
+    console.log("👉 👉 👉 👉 ")
+    // console.log("USER USER RISE ISER ipAddress: ", user)
+    // console.log("USER USER RISE ISER ipAddress: ", artist)
+    try {
+      await EmailService.sendArtistApproved({
+        userId: user._id,
+        userEmail: user.email,
+        userName: user.name,
+        artistName: artist[0].name,
+      });
+
+      console.log("📨 Artist approval email job queued");
+    } catch (emailErr) {
+      // ❗ Email must never break business flow
+      console.error("⚠️ Failed to queue artist approval email:", emailErr);
+    }
 
     return { artist, updatedApplication };
 
