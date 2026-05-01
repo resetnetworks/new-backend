@@ -181,7 +181,7 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
   try {
     const application = this;
 
-    console.log("----------------Application data:", application);
+    
 
     // 1️⃣ Create Artist
  const artist = await Artist.create(
@@ -252,7 +252,7 @@ const workspaceDoc = workspace[0];
       { new: true, session }
     );
 
-    console.log("Updated application to approved:", updatedApplication);
+    
 
     // 6️⃣ Update user role
     const user = await User.findByIdAndUpdate(
