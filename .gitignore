@@ -85,7 +85,7 @@ covers/
 # ======================================
 # ⚙️ PROJECT-SPECIFIC EXCLUSIONS
 # ======================================
-queue/
+# queue/
 # (Only if queue stores local jobs or Redis persistence files)
 
 # ======================================
