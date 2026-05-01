@@ -25,7 +25,7 @@ const startWorker = async () => {
     );
 
     console.log("📨 Email worker started...");
-  } catch (error) {
+  } catch (err) {
     console.error("💥 Worker startup failed:", err);
     process.exit(1);
   }
