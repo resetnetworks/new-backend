@@ -291,7 +291,7 @@ export const likeSong = async (req, res) => {
       liked: false,
     });
   }
-  user.likedsong.push(songId);
+  user.likedsong.unshift(songId);
   await user.save();
   return res.status(StatusCodes.OK).json({
     message: "Song added to liked songs",

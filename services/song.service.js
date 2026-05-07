@@ -657,22 +657,39 @@ export const getLikedSongsService = async ({
     };
   }
 
-  /* -------------------- Query songs properly -------------------- */
+  /* -------------------- Query songs -------------------- */
   const query = { _id: { $in: userDoc.likedsong } };
 
   const [total, songs] = await Promise.all([
     Song.countDocuments(query),
+
     Song.find(query)
-      .sort({ releaseDate: -1 }) // consistent ordering
-      .skip(skip)
-      .limit(limit)
       .populate("artist", "name slug")
       .populate("album", "title slug")
       .lean()
   ]);
 
+  /* -------------------- Preserve DB order -------------------- */
+  const songsMap = new Map(
+    songs.map(song => [song._id.toString(), song])
+  );
+
+  const orderedSongs = userDoc.likedsong
+    .map(id => songsMap.get(id.toString()))
+    .filter(Boolean);
+
+  /* -------------------- Pagination -------------------- */
+  const paginatedSongs = orderedSongs.slice(
+    skip,
+    skip + limit
+  );
+
   /* -------------------- Access + DTO -------------------- */
-  const shapedSongs = await shapeSongsWithAccess({songs, user});
+  const shapedSongs = await shapeSongsWithAccess({
+    songs: paginatedSongs,
+    user
+  });
+
 
   return {
     songs: shapedSongs,
