@@ -15,7 +15,8 @@ import {
   resetPassword,
   googleAuthCallback,
   getRecentlyPlayed,
-  appleAuth
+  appleAuth,
+  googleNativeAuth
 } from "../controllers/userControllers.js";
 
 import {
@@ -76,6 +77,8 @@ router.get("/recently-played", authenticateUser, getRecentlyPlayed);
 
 
 router.post("/apple/login", appleAuth);
+
+router.post("/google/login", googleNativeAuth);
 
 
 export default router;

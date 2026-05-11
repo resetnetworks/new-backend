@@ -467,3 +467,75 @@ export const appleAuth = async (req, res) => {
     message: "Apple login successful",
   });
 };
+
+
+// ===================================================================
+// @desc    Google Login (Native iOS)
+// @route   POST /api/users/google/login
+// @access  Public
+// ===================================================================
+import { StatusCodes } from "http-status-codes";
+import { verifyGoogleIdToken } from "../services/google.native.auth.service.js";
+import { User } from "../models/User.js";
+import { BadRequestError, UnauthorizedError } from "../errors/index.js";
+import { generateToken } from "../utils/generateToken.js";
+import { shapeUserResponse } from "../dto/shapeUserResponse.js";
+
+export const googleNativeAuth = async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    throw new BadRequestError("Google ID token missing");
+  }
+
+  // 1️⃣ Verify token from iOS SDK
+  const googleUser = await verifyGoogleIdToken(idToken);
+
+  if (!googleUser.emailVerified) {
+    throw new UnauthorizedError("Google email not verified");
+  }
+
+  // 2️⃣ Find user by googleId OR email (account linking)
+  let user = await User.findOne({
+    $or: [
+      { googleId: googleUser.googleId },
+      { email: googleUser.email }
+    ],
+  });
+
+  // 3️⃣ First Google login → create user
+  if (!user) {
+    user = await User.create({
+      email: googleUser.email,
+      name: googleUser.name || "Google User",
+      profileImage: googleUser.picture,
+      authType: "google",
+      googleId: googleUser.googleId,
+      password: null,
+    });
+  }
+
+  // 4️⃣ Existing email user → link Google
+  else if (!user.googleId) {
+    user.googleId = googleUser.googleId;
+    user.authType = "google";
+
+    if (!user.profileImage && googleUser.picture) {
+      user.profileImage = googleUser.picture;
+    }
+
+    await user.save();
+  }
+
+  // 5️⃣ Generate JWT
+  const token = generateToken(user, res);
+
+  // 6️⃣ Shape DTO response
+  const shapedUser = shapeUserResponse(user.toObject());
+
+  res.status(StatusCodes.OK).json({
+    user: shapedUser,
+    token,
+    message: "Google iOS login successful",
+  });
+};
