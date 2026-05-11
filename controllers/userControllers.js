@@ -14,6 +14,8 @@ import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 
 import { EmailService } from "../modules/email-services/email.service.js";
 
+import { verifyGoogleIdToken } from "../services/google.native.auth.service.js";
+import { verifyAppleIdentityToken } from "../services/apple.auth.service.js";
 
 
 
@@ -413,8 +415,6 @@ export const getRecentlyPlayed = async (req, res) => {
 // @route   POST /api/users/apple/login
 // @access  Public
 // ===================================================================
-import { verifyAppleIdentityToken } from "../services/apple.auth.service.js";
-
 export const appleAuth = async (req, res) => {
   const { identityToken } = req.body;
 
@@ -474,13 +474,6 @@ export const appleAuth = async (req, res) => {
 // @route   POST /api/users/google/login
 // @access  Public
 // ===================================================================
-import { StatusCodes } from "http-status-codes";
-import { verifyGoogleIdToken } from "../services/google.native.auth.service.js";
-import { User } from "../models/User.js";
-import { BadRequestError, UnauthorizedError } from "../errors/index.js";
-import { generateToken } from "../utils/generateToken.js";
-import { shapeUserResponse } from "../dto/shapeUserResponse.js";
-
 export const googleNativeAuth = async (req, res) => {
   const { idToken } = req.body;
 
