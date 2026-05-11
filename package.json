@@ -22,6 +22,7 @@
     "@aws-sdk/lib-storage": "^3.817.0",
     "@aws-sdk/s3-request-presigner": "^3.837.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
+    "apple-signin-auth": "^2.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.58.5",
     "cookie-parser": "^1.4.7",

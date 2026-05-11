@@ -45,6 +45,9 @@ const schema = new mongoose.Schema(
       type: Date,
     },
 
+    appleId: { type: String, unique: true, sparse: true },
+    authType: { type: String, default: "email" },
+
     role: {
       type: String,
       enum: ["user", "artist", "artist-pending", "admin"],

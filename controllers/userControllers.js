@@ -395,7 +395,6 @@ export const googleAuthCallback = (req, res) => {
   }
 };
 
-
 export const getRecentlyPlayed = async (req, res) => {
 
   const userId = req.user._id;
@@ -406,5 +405,65 @@ export const getRecentlyPlayed = async (req, res) => {
 
   res.json({
     songs: data?.songs || []
+  });
+};
+
+// ===================================================================
+// @desc    Apple Login (Native iOS)
+// @route   POST /api/users/apple/login
+// @access  Public
+// ===================================================================
+import { verifyAppleIdentityToken } from "../services/apple.auth.service.js";
+
+export const appleAuth = async (req, res) => {
+  const { identityToken } = req.body;
+
+  if (!identityToken) {
+    throw new BadRequestError("Apple identity token missing");
+  }
+
+  // 1️⃣ Verify Apple token
+  const appleUser = await verifyAppleIdentityToken(identityToken);
+
+  if (!appleUser.email) {
+    throw new BadRequestError("Apple account has no email");
+  }
+
+  // 2️⃣ Find by appleId OR email (important for account linking)
+  let user = await User.findOne({
+    $or: [
+      { appleId: appleUser.appleId },
+      { email: appleUser.email }
+    ]
+  });
+
+  // 3️⃣ First Apple login → create user
+  if (!user) {
+    user = await User.create({
+      email: appleUser.email,
+      name: "Apple User",
+      authType: "apple",
+      appleId: appleUser.appleId,
+      password: null,
+    });
+  }
+
+  // 4️⃣ Existing email user → link Apple account
+  else if (!user.appleId) {
+    user.appleId = appleUser.appleId;
+    user.authType = "apple";
+    await user.save();
+  }
+
+  // 5️⃣ Generate JWT (same util)
+  const token = generateToken(user, res);
+
+  // 6️⃣ Use SAME DTO as register
+  const shapedUser = shapeUserResponse(user.toObject());
+
+  res.status(StatusCodes.OK).json({
+    user: shapedUser,
+    token,
+    message: "Apple login successful",
   });
 };
