@@ -284,7 +284,7 @@ const workspaceDoc = workspace[0];
         userId: user._id,
         userEmail: user.email,
         userName: user.name,
-        artistName: "TESTER ARTIST",
+        artistName: artist.name,
       });
 
       console.log("📨 Artist approval email job queued");
