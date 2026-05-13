@@ -315,7 +315,7 @@ export const processAndSendArtistApprovedEmail = async (payload) => {
     const emailContent = prepareArtistApprovedEmailTemplate(data);
 
     // 2️⃣ Send email
-    // await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
+    await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
 
     console.log(`\n🎉 [${jobTag}] Artist Approval Email successfully sent -> ${payload.userEmail} 🎉\n`);
 
