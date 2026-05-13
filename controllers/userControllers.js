@@ -117,22 +117,22 @@ export const loginUser = async (req, res) => {
   // 🎉 Trigger Artist Approved Email (AFTER COMMIT)
   // ===================================================
 
-  console.log("👉 👉 👉 👉 ")
-  console.log("USER USER RISE ISER ipAddress: ", user.name)
-  console.log("USER USER RISE ISER ipAddress: ", "testing")
-  try {
-    await EmailService.sendArtistApproved({
-      userId: user._id,
-      userEmail: user.email,
-      userName: user.name,
-      artistName: "TESTER ARTIST",
-    });
+  // console.log("👉 👉 👉 👉 ")
+  // console.log("USER USER RISE ISER ipAddress: ", user.name)
+  // console.log("USER USER RISE ISER ipAddress: ", "testing")
+  // try {
+  //   await EmailService.sendArtistApproved({
+  //     userId: user._id,
+  //     userEmail: user.email,
+  //     userName: user.name,
+  //     artistName: "TESTER ARTIST",
+  //   });
 
-    console.log("📨 Artist approval email job queued");
-  } catch (emailErr) {
-    // ❗ Email must never break business flow
-    console.error("⚠️ Failed to queue artist approval email:", emailErr);
-  }
+  //   console.log("📨 Artist approval email job queued");
+  // } catch (emailErr) {
+  //   // ❗ Email must never break business flow
+  //   console.error("⚠️ Failed to queue artist approval email:", emailErr);
+  // }
 
   // :white_tick: Save session
   // await Session.create({
