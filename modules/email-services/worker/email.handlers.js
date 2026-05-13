@@ -238,7 +238,7 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
 import { Artist } from "../../../models/Artist.js";
 import { prepareSubscriptionCancelledEmailTemplate } from "../templates/subscription.cancelled.template.js";
 
-export const processAndSendSubscriptionCancelledEmail = async ({ payload }) => {
+export const processAndSendSubscriptionCancelledEmail = async ( payload ) => {
   const jobTag = "SUBSCRIPTION_CANCELLED_EMAIL";
 
   try {
@@ -288,11 +288,11 @@ export const processAndSendSubscriptionCancelledEmail = async ({ payload }) => {
 
 import { prepareArtistApprovedData, prepareArtistApprovedEmailTemplate } from "../templates/artistApproved.email.template.js"
 
-export const processAndSendArtistApprovedEmail = async ({ payload }) => {
+export const processAndSendArtistApprovedEmail = async (payload) => {
   const jobTag = "ARTIST_APPROVED_EMAIL";
 
   // console.log("💥 💥 💥 💥");
-  // console.log("this is from artist approval payload: ", payload)
+  console.log("this is from artist approval payload: ", payload)
 
   try {
     console.log(`\n📨 [${jobTag}] Job started`);
@@ -315,7 +315,7 @@ export const processAndSendArtistApprovedEmail = async ({ payload }) => {
     const emailContent = prepareArtistApprovedEmailTemplate(data);
 
     // 2️⃣ Send email
-    await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
+    // await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
 
     console.log(`\n🎉 [${jobTag}] Artist Approval Email successfully sent -> ${payload.userEmail} 🎉\n`);
 

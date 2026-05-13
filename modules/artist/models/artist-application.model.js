@@ -276,15 +276,15 @@ const workspaceDoc = workspace[0];
     // 🎉 Trigger Artist Approved Email (AFTER COMMIT)
     // ===================================================
 
-    console.log("👉 👉 👉 👉 ")
-    // console.log("USER USER RISE ISER ipAddress: ", user)
-    // console.log("USER USER RISE ISER ipAddress: ", artist)
+    // console.log("👉 👉 👉 👉 ")
+    // console.log("USER USER RISE ISER ipAddress: ", user.name)
+    // console.log("USER USER RISE ISER ipAddress: ", "testing")
     try {
       await EmailService.sendArtistApproved({
         userId: user._id,
         userEmail: user.email,
         userName: user.name,
-        artistName: artist[0].name,
+        artistName: "TESTER ARTIST",
       });
 
       console.log("📨 Artist approval email job queued");
