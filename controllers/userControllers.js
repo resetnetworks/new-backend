@@ -106,13 +106,33 @@ export const loginUser = async (req, res) => {
   const hashedToken = await bcrypt.hash(rawToken, 10);
 
   // sending temporary email for testing, will remove.
-  await EmailService.sendUserWelcome({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  })
+  // await EmailService.sendUserWelcome({
+  //   id: user.id,
+  //   name: user.name,
+  //   email: user.email,
+  //   role: user.role,
+  // })
 
+  // ===================================================
+  // 🎉 Trigger Artist Approved Email (AFTER COMMIT)
+  // ===================================================
+
+  // console.log("👉 👉 👉 👉 ")
+  // console.log("USER USER RISE ISER ipAddress: ", user.name)
+  // console.log("USER USER RISE ISER ipAddress: ", "testing")
+  // try {
+  //   await EmailService.sendArtistApproved({
+  //     userId: user._id,
+  //     userEmail: user.email,
+  //     userName: user.name,
+  //     artistName: "TESTER ARTIST",
+  //   });
+
+  //   console.log("📨 Artist approval email job queued");
+  // } catch (emailErr) {
+  //   // ❗ Email must never break business flow
+  //   console.error("⚠️ Failed to queue artist approval email:", emailErr);
+  // }
 
   // :white_tick: Save session
   // await Session.create({
@@ -323,6 +343,7 @@ export const updatePreferredGenres = async (req, res) => {
     preferredGenres: user.preferredGenres,
   });
 };
+
 // ===================================================================
 // @desc    Send password reset link to user email
 // @route   POST /api/auth/forgot-password
@@ -330,18 +351,28 @@ export const updatePreferredGenres = async (req, res) => {
 // ===================================================================
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
+
   const user = await User.findOne({ email });
   if (!user) {
     throw new NotFoundError("User not found");
   }
+
   // Generate secure reset token
   const resetToken = crypto.randomBytes(20).toString("hex");
   user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
   user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
   await user.save({ validateBeforeSave: false });
-  const resetURL = `${process.env.FRONTEND_URL_WITHOUT_HOME}/reset-password/${resetToken}`;
-  const message = `You requested a password reset. Click the link to reset your password:\n\n${resetURL}\n\nIf you did not request this, you can safely ignore this email.`;
-  await sendMail(user.email, "Reset Your Password", message);
+
+  // const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  // const message = `You requested a password reset. Click the link to reset your password:\n\n${resetURL}\n\nIf you did not request this, you can safely ignore this email.`;
+
+  // await sendMail(user.email, "Reset Your Password", message);
+  await EmailService.sendPasswordReset({
+    userId: user._id,
+    resetToken: resetToken,
+  });
+
   res.status(StatusCodes.OK).json({
     message: "Reset link sent to your email",
   });

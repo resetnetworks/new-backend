@@ -6,21 +6,21 @@ export const EmailService = {
   sendUserWelcome(payload) {
     return EmailProducer.addJob(
       EMAIL_JOBS.USER_WELCOME,
-      { payload }
+      payload
     );
   },
   
   sendPasswordReset(userId, resetToken) {
     return EmailProducer.addJob(
       EMAIL_JOBS.PASSWORD_RESET,
-      { userId, resetToken }
+      userId, resetToken
     );
   },
   
   sendArtistApproved(payload) {
     return EmailProducer.addJob(
       EMAIL_JOBS.ARTIST_APPROVED,
-      { payload }
+      payload
     );
   },
 
@@ -42,7 +42,7 @@ export const EmailService = {
   sendSubscriptionCancelled(payload) {
     return EmailProducer.addJob(
       EMAIL_JOBS.SUBSCRIPTION_CANCELLED,
-      { payload }
+      payload
     );
   },
 };

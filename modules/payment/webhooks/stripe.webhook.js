@@ -5,6 +5,8 @@ import { WebhookEventLog } from "../../../models/WebhookEventLog.js";
 import { markTransactionPaid, updateUserAfterPurchase } from "../../../services/paymentService.js";
 import { processAndSendInvoice, processAndSendCancellationInvoice } from "../../../services/invoiceService.js";
 
+import { EmailService } from "../../email-services/email.service.js";
+
 const PLATFORM_FEE_PERCENT = 0.15;
 
 export const handleStripeWebhook = async (req, res) => {
@@ -85,7 +87,8 @@ export const handleStripeWebhook = async (req, res) => {
           console.log("✅ User access updated for transaction:", transaction._id);
 
           // 🔥 Send invoice
-          await processAndSendInvoice(transaction);
+          // await processAndSendInvoice(transaction);
+          await EmailService.sendOneTimeInvoice(transactionId);
 
           console.log("✅ One-time payment successful:", transactionId);
         }
@@ -139,7 +142,8 @@ export const handleStripeWebhook = async (req, res) => {
           console.log("✅ User subscription updated:", transaction._id);
 
           // 4️⃣ Send invoice
-          await processAndSendInvoice(transaction);
+          // await processAndSendInvoice(transaction);
+          await EmailService.sendSubscriptionInvoice(transactionId);
 
           console.log("✅ First subscription fully processed:", transaction._id);
           console.log("👉 👉 👉 👉 ✅ Subscription upserted:", stripeSubscriptionId);
@@ -302,7 +306,8 @@ export const handleStripeWebhook = async (req, res) => {
 
         // only run side-effects if DB record exists (no early break)
         if (subscriptionData) {
-          await processAndSendCancellationInvoice(subscriptionData);
+          // await processAndSendCancellationInvoice(subscriptionData);
+          await EmailService.sendSubscriptionCancelled(subscriptionData)
         }
         break;
       }
