@@ -72,6 +72,7 @@ import workspaceRoutes from "./modules/workspace/workspace.routes.js";
 import favoriteArtistRoutes from "./routes/favoriteArtistRoutes.js";
 
 import emailQueueRoute from "./modules/email-services/queue/email.queue.route.js"
+import audienceRoute from "./modules/audience/audience.routes.js"
 // import awsEmail from "./modules/email-services/queue/sqs.routes.js"
 
 // --------------------
@@ -185,6 +186,7 @@ app.use("/api/v2/payment", stripePayment);
 app.use("/api/favorite-artists", favoriteArtistRoutes);
 
 app.use("/api/queue", emailQueueRoute)
+app.use("/api/audience", audienceRoute)
 // app.use("/api/aws", awsEmail)
 
 
