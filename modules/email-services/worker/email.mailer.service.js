@@ -1,40 +1,3 @@
-// import nodemailer from "nodemailer";
-// import { EMAIL_SENDERS } from "../utils/email.identify.js";
-
-// export const sendMail = async (to, emailContent, sender) => {
-//   if (!to || !emailContent) {
-//     console.warn("Missing email recipient or content.");
-//     return;
-//   }
-
-//   const transporter = nodemailer.createTransport({
-//     host: process.env.SMTP_HOST,
-//     port: Number(process.env.SMTP_PORT),
-//     secure: false,
-//     auth: {
-//       user: process.env.SMTP_USER,
-//       pass: process.env.SMTP_PASS,
-//     },
-//   });
-
-//   // ⭐ fallback sender (never crash jobs)
-//   const safeSender = sender || EMAIL_SENDERS.INFO;
-//   const fromEmail = `"${safeSender.name}" <${safeSender.email}>`;
-
-//   console.log("📨 Sending email to:", to);
-
-//   await transporter.sendMail({
-//     from: fromEmail,
-//     to,
-//     subject: emailContent.subject,
-//     text: emailContent.text,
-//     html: emailContent.html,
-//     attachments: emailContent.attachments || [],
-//   });
-
-//   console.log("✅ Email sent to:", to);
-// };
-
 import { SendEmailCommand, SendRawEmailCommand } from "@aws-sdk/client-ses";
 import nodemailer from "nodemailer";
 import { sesClient } from "../config/ses.client.js";
@@ -70,8 +33,10 @@ export const sendMail = async (to, emailContent, sender) => {
         },
       },
     });
-
+      
+    // console.log("❌ ❌ MAILER is down, uncomment it. ❌ ❌")
     await sesClient.send(command);
+    
     console.log("✅ SES email sent (no attachment)");
     return;
   }
@@ -102,6 +67,7 @@ export const sendMail = async (to, emailContent, sender) => {
     RawMessage: { Data: info.message },
   });
 
+  // console.log("❌ ❌ MAILER is down, uncomment it. ❌ ❌")
   await sesClient.send(rawCommand);
 
   console.log("✅ SES email sent WITH attachment");

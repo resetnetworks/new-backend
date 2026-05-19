@@ -244,8 +244,12 @@ export const processAndSendSubscriptionCancelledEmail = async ( payload ) => {
   try {
     console.log(`\n📨 [${jobTag}] Job started`);
     console.log(`🔎 [${jobTag}] Payload:`, payload);
-
-    const { userId, artistId, validUntil } = payload;
+    
+    const {
+      userId,
+      userEmail,
+      subscriptionData: { artistId, validUntil }
+    } = payload;
 
     // 1️⃣ Fetch user
     const user = await User.findById(userId).select("name email").lean();
@@ -257,6 +261,7 @@ export const processAndSendSubscriptionCancelledEmail = async ( payload ) => {
 
     // 2️⃣ Fetch artist
     const artist = await Artist.findById(artistId).select("name").lean();
+    console.log("ARTIST: ", artist)
 
     if (!artist) {
       console.warn(`⚠️ [${jobTag}] Artist not found. Skipping email.`);

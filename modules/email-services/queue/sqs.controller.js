@@ -1,13 +1,14 @@
 import { publishEmailEvent } from "./sqsProducer.service.js";
 
+// sqs.controller.js
 export const testSQS = async (req, res) => {
   await publishEmailEvent({
-    type: "WELCOME",
+    type: "FORCE_FAIL", // 👈 fake event type
     payload: {
-      email: "your@email.com",
-      userName: "Raman",
+      email: "fail@test.com",
+      userName: "Poison Message",
     },
   });
 
-  res.send("Event sent to SQS");
+  res.send("Failing Event sent to SQS");
 };
