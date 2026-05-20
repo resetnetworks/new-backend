@@ -35,7 +35,7 @@ export const prepareArtistApprovedEmailTemplate = (data) => {
   const text = `
     Hi ${data.user.name},
 
-    Great news — your artist profile "${data.artist.name}" has been approved.
+    Great news — your artist profile "${data.artist[0].name}" has been approved.
 
     You can now:
     • Access your Artist Dashboard
