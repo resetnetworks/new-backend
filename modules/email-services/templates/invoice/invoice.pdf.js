@@ -1,156 +1,107 @@
 // modules/email-services/templates/invoice/invoice.pdf.js
 
-import PDFDocument from "pdfkit";
-import { formatMoney } from "../../utils/moneyFormatter.js";
+import fs from "fs/promises";
+import path from "path";
+import puppeteer from "puppeteer";
 import { fromRoot } from "../../../../utils/paths.js";
+import { formatMoney } from "../../utils/moneyFormatter.js";
 
-const formatDate = (date) => new Date(date).toLocaleDateString("en-IN");
+const formatDate = (date) =>
+  new Date(date)
+    .toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    .toUpperCase();
 
-export const generateInvoiceBuffer = (invoice) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ margin: 0 });
-      const buffers = [];
-      doc.on("data", buffers.push.bind(buffers));
-      doc.on("end", () => resolve(Buffer.concat(buffers)));
+function buildItemsRows(invoice) {
+  return invoice.items
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #ddd;">
+        <td style="font-size:12px;padding:10px 6px 10px 0;">${invoice.itemNumber}</td>
+        <td style="font-size:12px;font-weight:bold;padding:10px 6px;">${item.description}</td>
+        <td style="font-size:12px;text-align:right;padding:10px 6px;">${item.quantity}</td>
+        <td style="font-size:12px;text-align:right;padding:10px 6px;">
+          ${formatMoney(item.price, invoice.currency)}
+        </td>
+        <td style="font-size:12px;text-align:right;padding:10px 6px;">
+          ${formatMoney(item.total, invoice.currency)}
+        </td>
+        <td style="font-size:12px;text-align:right;padding:10px 6px;">0.00%</td>
+        <td style="font-size:12px;text-align:right;padding:10px 6px;">0.00</td>
+        <td style="font-size:12px;text-align:right;padding:10px 0 10px 6px;">
+          ${formatMoney(item.total, invoice.currency)}
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+}
 
-      const pageWidth = doc.page.width;
-      const pageHeight = doc.page.height;
+function injectDataIntoTemplate(template, invoice, logoBase64) {
+  const itemsRows = buildItemsRows(invoice);
 
-      /* ───────── PAGE LIGHT BACKGROUND ───────── */
-      doc.rect(0, 0, pageWidth, pageHeight).fill("#EEF2FF");
+  return template
+    .replace(/{{invoiceNumber}}/g, invoice.invoiceNumber)
+    .replace(/{{invoiceDate}}/g, formatDate(invoice.issueDate))
+    .replace(/{{transactionId}}/g, invoice.transactionId)
+    .replace(/{{customerEmail}}/g, invoice.customer.email)
+    .replace(/{{customerName}}/g, invoice.customer.name)
+    .replace(/{{currency}}/g, invoice.currency)
+    .replace(/{{gatewayMethod}}/g, invoice.gateway?.charAt(0).toUpperCase() + invoice.gateway?.slice(1))
+    .replace(/{{itemsRows}}/g, itemsRows)
+    .replace(/{{netAmount}}/g, formatMoney(invoice.subtotal, invoice.currency))
+    .replace(/{{taxAmount}}/g, formatMoney(invoice.tax, invoice.currency))
+    .replace(/{{grandTotal}}/g, formatMoney(invoice.total, invoice.currency))
 
-      /* ───────── HERO HEADER ───────── */
-      doc.rect(0, 0, pageWidth, 140).fill("#0F172A")
+    .replace(/{{logoSrc}}/g, logoBase64);
+}
 
-      // using relative path here, ⚠️ CAUTION on folder change ⚠️ 
-      const logoPath = fromRoot("assets", "images", "resetIcon.png");
+export const generateInvoiceBuffer = async (invoice) => {
+  try {
+    // 1️⃣ load HTML template
+    const templatePath = fromRoot(
+      "modules",
+      "email-services",
+      "templates",
+      "invoice",
+      "invoice.template.html"
+    );
+    let html = await fs.readFile(templatePath, "utf8");
 
-      const headerHeight = 140;
-      const logoSize = 70;
+    // 2️⃣ load logo and convert to base64
+    const logoPath = fromRoot("assets", "images", "resetIcon.png");
+    const logoBuffer = await fs.readFile(logoPath);
+    const logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
-      doc.image(
-        logoPath,
-        pageWidth / 2 - logoSize / 2,
-        headerHeight / 2 - logoSize / 2,
-        { width: logoSize }
-      );
+    // 3️⃣ inject dynamic data + logo
+    html = injectDataIntoTemplate(html, invoice, logoBase64);
 
-      /* ───────── WHITE INVOICE CARD ───────── */
-      const paddingX = 40;
-      const startX = paddingX;
-      const endX = pageWidth - paddingX;
+    // 4️⃣ launch headless browser
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
-      let y = headerHeight + 40;
+    const page = await browser.newPage();
 
-      /* ───────── COMPANY INFO ───────── */
-      doc.fillColor("#0F172A")
-        .font("Helvetica-Bold")
-        .fontSize(18)
-        .text(invoice.seller.name, startX, y);
+    // 5️⃣ set HTML content
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
-      y += 25;
-      doc.font("Helvetica").fontSize(10)
-        .text(invoice.seller.address)
-        .text(invoice.seller.email);
+    // 6️⃣ generate PDF buffer
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
+    });
 
-      /* ───────── INVOICE META RIGHT ───────── */
-      const metaX = endX - 160;
-      let metaY = headerHeight + 40;
+    await browser.close();
 
-      doc.font("Helvetica-Bold")
-        .fontSize(20)
-        .fillColor("#1E3A8A")
-        .text("INVOICE", metaX, metaY);
-
-      metaY += 30;
-
-      doc.font("Helvetica")
-        .fontSize(10)
-        .fillColor("#0F172A")
-        .text(`Invoice #: ${invoice.invoiceNumber}`, metaX, metaY);
-
-      metaY += 15;
-      doc.text(`Transaction: ${invoice.transactionId}`, metaX, metaY);
-
-      metaY += 15;
-      doc.text(`Date: ${formatDate(invoice.issueDate)}`, metaX, metaY);
-
-      /* ───────── BILL TO ───────── */
-      y += 80;
-      doc.font("Helvetica-Bold").fillColor("#64748B").text("BILL TO", startX, y);
-
-      y += 18;
-      doc.fillColor("#0F172A").fontSize(11)
-        .text(invoice.customer.name)
-        .font("Helvetica")
-        .text(invoice.customer.email);
-
-      /* ───────── TABLE ───────── */
-      y += 60;
-
-      doc.strokeColor("#E5E7EB")
-        .moveTo(startX, y)
-        .lineTo(endX, y)
-        .stroke();
-
-      y += 15;
-      doc.font("Helvetica-Bold").fontSize(10);
-      doc.text("Description", startX, y);
-      doc.text("Qty", endX - 180, y);
-      doc.text("Price", endX - 120, y);
-      doc.text("Total", endX - 60, y);
-
-      y += 20;
-      doc.strokeColor("#E5E7EB")
-        .moveTo(startX, y)
-        .lineTo(endX, y)
-        .stroke();
-
-      y += 10;
-      doc.font("Helvetica");
-
-      invoice.items.forEach((item) => {
-        doc.text(item.description, startX, y);
-        doc.text(item.quantity.toString(), endX - 175, y);
-        doc.text(formatMoney(item.price, invoice.currency), endX - 120, y);
-        doc.text(formatMoney(item.total, invoice.currency), endX - 60, y);
-        y += 25;
-      });
-
-      /* ───────── DIVIDER ───────── */
-      doc.strokeColor("#E5E7EB")
-        .moveTo(endX - 120, y)
-        .lineTo(endX, y)
-        .stroke();
-
-      y += 10;
-
-      /* ───────── TOTAL ───────── */
-      y += 15;
-      doc.font("Helvetica")
-        .fontSize(11)
-        .fillColor("black")
-        .text("Total", endX - 120, y);
-
-      doc.font("Helvetica-Bold")
-        .fontSize(11)
-        .fillColor("#1E3A8A")
-        .text(formatMoney(invoice.total, invoice.currency), endX - 60, y);
-
-      /* ───────── FOOTER ───────── */
-      doc.fillColor("#64748B")
-        .fontSize(9)
-        .text(
-          "Thank you for supporting independent artists.",
-          startX,
-          pageHeight - 40,
-          { width: pageWidth - 80, align: "center" }
-        );
-
-      doc.end();
-    } catch (err) {
-      reject(err);
-    }
-  });
+    return pdfBuffer;
+  } catch (err) {
+    console.error("Invoice PDF generation failed:", err);
+    throw err;
+  }
 };

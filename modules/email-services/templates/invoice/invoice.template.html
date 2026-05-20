@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Reset Music</title>
+</head>
+
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;background:#fff;">
+  <div
+    style="max-width:900px;margin:0 auto;padding:30px 40px;background:#fff;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;">
+
+    <!-- ===== MAIN CONTENT (grows to fill page) ===== -->
+    <div style="flex:1;">
+
+      <!-- ===== HEADER ===== -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+
+          <td style="vertical-align:top;width:15%;">
+            <img src="{{logoSrc}}" width="70" height="70" style="border-radius:8px;display:block;"
+              alt="Reset Networks Logo" />
+          </td>
+
+          <td style="vertical-align:top;padding-left:16px;width:45%;">
+            <div style="font-size:14px;font-weight:bold;margin-bottom:3px;">RESET NETWORKS OÜ</div>
+            <div style="font-size:12px;">
+              Sakala tn 7-2, Kesklinna linnaosa<br>
+              Tallinn, Harju maakond 10141<br>
+              Estonia
+            </div>
+            <div style="font-size:12px;">Registry Code: 17321913</div>
+            <div style="font-size:12px;">GSTIN: 07AAKCR8658Q1Z8</div>
+            <div style="font-size:12px;">Customer GST No: 19AAKCR8658Q1Z3</div>
+            <div style="font-size:12px;">PAN: AAKCR8658Q</div>
+            <div style="font-size:12px;">CIN: U92100WB2021OPC243771</div>
+          </td>
+
+          <td style="vertical-align:top;width:40%;text-align:right;">
+            <div style="font-weight:bold;font-size:14px;margin-bottom:6px;">Invoice Information</div>
+            <table style="border-collapse:collapse;margin-left:auto;">
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Invoice Number</td>
+                <td style="font-size:12px;">{{invoiceNumber}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Invoice Date</td>
+                <td style="font-size:12px;">{{invoiceDate}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Payment Terms</td>
+                <td style="font-size:12px;">{{gatewayMethod}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Transaction Id</td>
+                <td style="font-size:12px;">{{transactionId}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Customer Email</td>
+                <td style="font-size:12px;">{{customerEmail}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:12px;color:#444;padding:2px 10px 2px 0;">Currency</td>
+                <td style="font-size:12px;">{{currency}}</td>
+              </tr>
+            </table>
+          </td>
+
+        </tr>
+      </table>
+
+      <!-- ===== BILL TO ===== -->
+      <div style="margin-bottom:24px;padding-left:86px;">
+        <div
+          style="font-weight:bold;font-size:13px;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:6px;width:220px;">
+          Bill To
+        </div>
+        <div style="font-weight:bold;font-size:13px;">{{customerName}}</div>
+        <div style="font-size:12px;">{{customerEmail}}</div>
+      </div>
+
+      <!-- ===== TITLE ===== -->
+      <div style="font-size:38px;font-weight:bold;margin-bottom:16px;">INVOICE</div>
+
+      <!-- ===== ITEMS HEADER ===== -->
+      <div style="background:#174f9f;color:#fff;font-weight:bold;font-size:13px;padding:7px 10px;">Item Details</div>
+
+      <!-- ===== ITEMS TABLE ===== -->
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid #bbb;">
+            <th style="text-align:left;font-size:11px;color:#555;font-weight:normal;padding:8px 6px 6px 0;">ITEM NUMBER
+            </th>
+            <th style="text-align:left;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">ITEM DESCRIPTION
+            </th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">QUANTITY</th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">UNIT PRICE</th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">NET AMOUNT</th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">TAX RATE</th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 6px;">TAXES</th>
+            <th style="text-align:right;font-size:11px;color:#555;font-weight:normal;padding:8px 0 6px 6px;">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{itemsRows}}
+        </tbody>
+      </table>
+
+      <!-- ===== TOTALS ===== -->
+      <div style="font-size:22px;font-weight:bold;margin-top:28px;margin-bottom:10px;">Invoice Total</div>
+
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="background:#f0f0f0;">
+          <td style="width:70%;padding:9px 14px;"></td>
+          <td style="padding:9px 14px;font-size:12px;color:#555;white-space:nowrap;">NET AMOUNT</td>
+          <td style="padding:9px 14px;font-size:12px;text-align:right;font-weight:500;white-space:nowrap;">{{netAmount}}
+          </td>
+        </tr>
+        <tr style="background:#f0f0f0;">
+          <td style="padding:4px 14px 14px;"></td>
+          <td style="padding:4px 14px 14px;font-size:12px;color:#555;white-space:nowrap;">TAXES</td>
+          <td style="padding:4px 14px 14px;font-size:12px;text-align:right;white-space:nowrap;">{{taxAmount}}</td>
+        </tr>
+        <tr style="background:#333;">
+          <td style="padding:10px 14px;"></td>
+          <td style="padding:10px 14px;font-size:13px;font-weight:bold;color:#fff;white-space:nowrap;">GRAND TOTAL</td>
+          <td style="padding:10px 14px;font-size:13px;font-weight:bold;color:#fff;text-align:right;white-space:nowrap;">
+            {{grandTotal}}</td>
+        </tr>
+      </table>
+
+    </div><!-- end flex:1 main content -->
+
+    <!-- ===== FOOTER (always at page bottom) ===== -->
+    <div style="margin-top:40px;">
+
+      <!-- Billing Contact: right aligned -->
+      <div style="text-align:right;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:bold;">Billing Contact</div>
+        <div style="font-size:12px;">
+          <a href="mailto:support@musicreset.com" style="color:#000;">support@musicreset.com</a>
+        </div>
+      </div>
+
+      <!-- Thank you + Page 1 of 1 -->
+      <table style="width:100%;border-collapse:collapse;border-top:1px solid #eee;">
+        <tr>
+          <td style="width:20%;"></td>
+          <td style="font-size:15px;font-weight:bold;text-align:center;padding-top:10px;">Thank you for your business!
+          </td>
+          <td style="font-size:12px;text-align:right;padding-top:10px;white-space:nowrap;">Page 1 of 1</td>
+        </tr>
+      </table>
+
+    </div><!-- end footer -->
+
+  </div><!-- end outer wrapper -->
+</body>
+
+</html>
