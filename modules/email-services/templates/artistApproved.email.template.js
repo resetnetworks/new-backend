@@ -33,22 +33,26 @@ export const prepareArtistApprovedEmailTemplate = (data) => {
   const subject = `You're officially an Artist 🎉`;
 
   const text = `
-    Hi ${data.user.name},
+Hi ${data.user.name},
 
-    Great news — your artist profile "${data.artist[0].name}" has been approved.
+Thank you for signing up with us for Reset Music Streaming Platform.
 
-    You can now:
-    • Access your Artist Dashboard
-    • Upload songs & DJ remixes
-    • Manage your profile
-    • Start growing your audience
+Let's get started:
+• Distribute your music — singles, EPs, albums, DJ mixes. It's completely free.
+• Activate monetisation
+• Reach a global audience
 
-    Open your dashboard:
-    ${data.artist.dashboardUrl}
+From here, you can:
+• Manage your releases
+• Customize your Artist Page
+• Request payouts at any time
 
-    — Team ${data.app.name}
-    Need help? ${data.app.supportEmail}
-    `;
+Open your dashboard:
+${data.artist.dashboardUrl}
+
+— Team ${data.app.name}
+Need help? ${data.app.supportEmail}
+  `;
 
   const html = `
     <!DOCTYPE html>
@@ -81,36 +85,40 @@ export const prepareArtistApprovedEmailTemplate = (data) => {
     </tr>
     </table>
 
-    <table width="620" style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
+    <table style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
     <tr><td style="color:#0f172a;font-size:16px;line-height:1.8;">
 
     <p>Hi ${data.user.name},</p>
 
-    <h2 style="margin:0;font-size:28px;font-weight:700;color:#000000;">
-    You’re officially an Artist 🎉
+    <h2 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#000000;">
+      You're officially an Artist 🎉
     </h2>
 
-    <p>
-    Your artist profile <b>${data.artist.name}</b> has been approved.
+    <p style="margin-top:8px;color:#334155;">
+      Thank you for signing up with us for <b>${data.app.name}</b> Streaming Platform.
     </p>
 
-    <p>You can now start your journey on ${data.app.name}.</p>
-
-    <b>What you can do now:</b>
-    <ul>
-      <li>Upload songs & DJ remixes</li>
-      <li>Manage your artist profile</li>
-      <li>Reach listeners worldwide</li>
-      <li>Start growing your audience</li>
+    <p style="margin-bottom:6px;"><b>Let's get started:</b></p>
+    <ul style="margin:0 0 24px;padding-left:20px;color:#334155;">
+      <li style="margin-bottom:8px;">Distribute your music — singles, EPs, albums, DJ mixes. It's <b>completely free.</b></li>
+      <li style="margin-bottom:8px;">Activate monetisation</li>
+      <li style="margin-bottom:8px;">Reach a global audience</li>
     </ul>
 
-    <div style="text-align:center;margin:35px;">
-      <a href="https://www.musicreset.com/artist/dashboard" style="background:#3B82F6;color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;">
+    <p style="margin-bottom:6px;"><b>From here, you can:</b></p>
+    <ul style="margin:0 0 24px;padding-left:20px;color:#334155;">
+      <li style="margin-bottom:8px;">Manage your releases</li>
+      <li style="margin-bottom:8px;">Customize your Artist Page</li>
+      <li style="margin-bottom:8px;">Request payouts at any time</li>
+    </ul>
+
+    <div style="text-align:center;margin:35px 0;">
+      <a href="${data.artist.dashboardUrl}" style="background:#3B82F6;color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
         Open Artist Dashboard
       </a>
     </div>
 
-    <p>We’re excited to have you onboard 💜</p>
+    <p>We're excited to have you onboard 💜</p>
 
     <p style="margin-top:40px;">— Team ${data.app.name}</p>
 

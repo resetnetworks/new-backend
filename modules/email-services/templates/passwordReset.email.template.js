@@ -88,7 +88,7 @@ Need help? ${data.app.supportEmail}
     </tr>
     </table>
 
-    <table width="620" style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
+    <table style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
     <tr><td style="color:#0f172a;font-size:16px;line-height:1.8;">
 
     <p>Hi ${data.user.name},</p>
