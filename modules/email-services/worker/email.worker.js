@@ -1,38 +1,3 @@
-
-// import dotenv from "dotenv";
-// import path from "path";
-// import { fileURLToPath } from "url";
-
-// const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
-
-// import { Worker } from "bullmq";
-// import { redisConnection } from "../producer/email.connection.js";
-// import { handleEmailJob } from "./email.jobDispatcher.js";
-// import { EMAIL_QUEUE_NAME } from "../producer/email.queue.js";
-// import connectDb from "../../../database/db.js";
-
-// const startWorker = async () => {
-//   try {
-//     await connectDb();
-
-//     new Worker(
-//       EMAIL_QUEUE_NAME,
-//       async (job) => {
-//         await handleEmailJob(job);
-//       },
-//       { connection: redisConnection }
-//     );
-
-//     console.log("📨 Email worker started...");
-//   } catch (err) {
-//     console.error("💥 Worker startup failed:", err);
-//     process.exit(1);
-//   }
-// };
-
-// startWorker();
-
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -41,18 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 import connectDb from "../../../database/db.js";
-
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand, } from "@aws-sdk/client-sqs";
-
 import { handleEmailJob } from "./email.jobDispatcher.js";
+import { sqsClient as sqs } from "../config/sqs.client.js"
 
-const sqs = new SQSClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+import EmailTrackingService from "../services/emailTracking.service.js";
+import { EMAIL_STATUS } from "../models/emailJob.model.js";
+import { EMAIL_EVENT_TYPES } from "../models/emailEvent.model.js";
 
 const QUEUE_URL = process.env.SQS_EMAIL_QUEUE_URL;
 
@@ -85,12 +45,35 @@ async function pollQueue() {
         const job = JSON.parse(message.Body);
 
         console.log("\n📩 Job received:", job.jobName);
-        console.log("\n📩 Job received all:", job);
+
+        // ⚠️ IMPORTANT: jobId lives inside payload
+        const jobId = job.payload.jobId;
 
         try {
+          // ======================================================
+          // 1️⃣ Worker received job from SQS
+          // ======================================================
+          await EmailTrackingService.markWorkerProcessing(
+            jobId,
+            message.MessageId
+          );
+
+          // ======================================================
+          // 2️⃣ Execute actual email sending logic
+          // ======================================================
           await handleEmailJob(job);
 
-          // delete only if success
+          // ======================================================
+          // 3️⃣ Mark email as successfully sent
+          // ======================================================
+          await EmailTrackingService.markEmailSent(
+            jobId,
+            "provider-message-id" // replace later with SES id
+          );
+
+          // ======================================================
+          // 4️⃣ Delete message from SQS (job completed)
+          // ======================================================
           await sqs.send(
             new DeleteMessageCommand({
               QueueUrl: QUEUE_URL,
@@ -98,14 +81,22 @@ async function pollQueue() {
             })
           );
 
-          console.log("✅ Job completed & deleted");
-        } catch (err) {
-          console.error("❌ Job failed → will retry via SQS:", err.message);
-          // do NOT delete → SQS retries automatically
+          console.log("✅ Job completed & deleted from queue");
+
+        } catch (error) {
+          console.error("❌ Worker job failed:", error);
+
+          // ======================================================
+          // 5️⃣ Mark retry (DO NOT delete message → SQS will retry)
+          // ======================================================
+          await EmailTrackingService.markRetry(
+            jobId,
+            error.message
+          );
         }
       }
-    } catch (err) {
-      console.error("Worker loop error:", err);
+    } catch (error) {
+      console.error("Worker loop error:", error);
     }
   }
 }

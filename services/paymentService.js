@@ -286,7 +286,7 @@ await transaction.save({ session });
 export const updateUserAfterPurchase = async (transaction, paymentId) => {
   const updateOps = {};
 
-  console.log("🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  Updating user after purchase - transaction:", transaction);
+  // console.log("🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  🔄.  Updating user after purchase - transaction:", transaction);
 
   // ✅ Push purchaseHistory entry (no duplicates)
   // updateOps.$push = {
@@ -325,7 +325,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
       break;
 
     case "artist-subscription": {
-      console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Processing artist subscription transaction:", transaction);
+      // console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Processing artist subscription transaction:", transaction);
       // const daysToAdd = subscriptionDuration[transaction.metadata?.cycle] || 30;
       // let validUntil = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
 
@@ -367,7 +367,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         try {
           const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
           const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
-          console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Stripe subscription details:", stripeSub);
+          // console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Stripe subscription details:", stripeSub);
 
           if (!existingSub && stripeSub?.current_period_end) {
             validUntil = new Date(stripeSub.current_period_end * 1000);
@@ -465,7 +465,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
     return false;
   }
 
-  console.log("✅ User updated:", user._id);
+  // console.log("✅ User updated:", user._id);
   return true;
 };
 

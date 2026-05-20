@@ -9,7 +9,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test jest --runInBand",
     "test:watch": "NODE_ENV=test jest --watch",
     "test:coverage": "NODE_ENV=test jest --coverage --runInBand",
-    "email-worker": "nodemon modules/email-services/worker/email.worker.js"
+    "email-worker": "node modules/email-services/worker/email.worker.js"
   },
   "keywords": [],
   "author": "",
@@ -55,6 +55,7 @@
     "pdfkit": "^0.17.2",
     "pino": "^10.3.0",
     "pino-http": "^11.0.0",
+    "puppeteer": "^25.0.4",
     "razorpay": "^2.9.6",
     "slugify": "^1.6.6",
     "stripe": "^18.5.0",

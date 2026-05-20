@@ -20,9 +20,10 @@ export const prepareSubscriptionInvoiceData = async (transaction) => {
 
     seller: {
       name: "Reset Music",
-      address: `45 Malviya Nagar road
-New Delhi, Delhi 110017
-India`,
+      address: `Sakala tn 7-2  
+Kesklinna linnaosa  
+Tallinn, Harju maakond 10141  
+Estonia`,
       email: "billing@musicreset.com",
     },
 

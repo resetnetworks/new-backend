@@ -47,12 +47,17 @@ export const prepareInvoiceData = async (transaction) => {
     invoiceNumber: transaction.invoiceNumber,
     transactionId: transaction._id.toString(),
     issueDate: new Date(),
+    gateway: transaction.gateway,
+    invoiceNumber: transaction.invoiceNumber,
+    itemNumber: transaction.itemId,
+    itemType: transaction.itemType,
 
     seller: {
       name: "Reset Music",
-      address: `45 Malviya Nagar road
-New Delhi, Delhi 110017
-India`,
+      address: `Sakala tn 7-2
+Kesklinna linnaosa
+Tallinn, Harju maakond 10141
+Estonia`,
       email: "billing@musicreset.com",
     },
     customer: {

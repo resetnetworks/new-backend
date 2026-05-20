@@ -373,6 +373,7 @@ export const forgotPassword = async (req, res) => {
   // await sendMail(user.email, "Reset Your Password", message);
   await EmailService.sendPasswordReset({
     userId: user._id,
+    userEmail: user.email,
     resetToken: resetToken,
   });
 

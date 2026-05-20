@@ -6,6 +6,7 @@ import { markTransactionPaid, updateUserAfterPurchase } from "../../../services/
 import { processAndSendInvoice, processAndSendCancellationInvoice } from "../../../services/invoiceService.js";
 
 import { EmailService } from "../../email-services/email.service.js";
+import { getUserEmailById } from "../../../utils/userEmailLookup.service.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 
@@ -53,8 +54,8 @@ export const handleStripeWebhook = async (req, res) => {
 
           const transactionId = session.metadata.transactionId;
           const paymentIntentId = session.payment_intent;
-          console.log("👉 👉 👉 👉 session data, :", session);
-          console.log("👉 👉 👉 👉 session paymentIntent :", paymentIntentId);
+          // console.log("👉 👉 👉 👉 session data, :", session);
+          // console.log("👉 👉 👉 👉 session paymentIntent :", paymentIntentId);
 
           // 1️⃣ First update transaction with paymentIntentId
           await Transaction.findByIdAndUpdate(transactionId, {
@@ -88,7 +89,13 @@ export const handleStripeWebhook = async (req, res) => {
 
           // 🔥 Send invoice
           // await processAndSendInvoice(transaction);
-          await EmailService.sendOneTimeInvoice(transactionId);
+          const userEmail = await getUserEmailById(transaction.userId);
+
+          await EmailService.sendOneTimeInvoice({
+            userId: transaction.userId,
+            userEmail,
+            transactionId
+          });
 
           console.log("✅ One-time payment successful:", transactionId);
         }
@@ -101,14 +108,10 @@ export const handleStripeWebhook = async (req, res) => {
           const transactionId = session.metadata.transactionId;
           const stripeSubscriptionId = session.subscription;
 
-          console.log("👉 👉 👉 👉 First stripeSubscriptionId - subscription ID:", session.subscription);
-
           if (!stripeSubscriptionId) {
             console.error("Missing Stripe subscription ID");
             break;
           }
-
-          console.log("👉 👉 👉 👉 First subscription session:", session.id);
 
           // 1️⃣ Attach subscription + session ID to transaction
           const txn = await Transaction.findByIdAndUpdate(transactionId, {
@@ -118,10 +121,6 @@ export const handleStripeWebhook = async (req, res) => {
               ...session.metadata,   // ⭐ stores cycle here
             },
           });
-
-          console.log("💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 ");
-          console.log("INSIDE THE FIRST SUBSCRIPTION TRSANSX - look for validUntil and invoiceNumber-string : ", txn)
-          console.log("💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 ");
 
           // 2️⃣ Mark as paid (same as one-time)
           const transaction = await markTransactionPaid({
@@ -143,10 +142,17 @@ export const handleStripeWebhook = async (req, res) => {
 
           // 4️⃣ Send invoice
           // await processAndSendInvoice(transaction);
-          await EmailService.sendSubscriptionInvoice(transactionId);
+
+          const userEmail = await getUserEmailById(txn.userId);
+
+          await EmailService.sendSubscriptionInvoice({
+            userId: transaction.userId,
+            userEmail,
+            transactionId
+          });
 
           console.log("✅ First subscription fully processed:", transaction._id);
-          console.log("👉 👉 👉 👉 ✅ Subscription upserted:", stripeSubscriptionId);
+          console.log("✅ Subscription upserted:", stripeSubscriptionId);
         }
 
         break;
@@ -254,7 +260,15 @@ export const handleStripeWebhook = async (req, res) => {
         await updateUserAfterPurchase(paidTransaction, stripeSubscriptionId);
 
         // ✅ 4️⃣ Send renewal invoice email
-        await processAndSendInvoice(paidTransaction);
+        // await processAndSendInvoice(paidTransaction);
+
+        const userEmail = await getUserEmailById(renewalTransaction.userId);
+
+        await EmailService.sendSubscriptionInvoice({
+          userId: transaction.userId,
+          userEmail,
+          transactionId
+        });
 
         console.log("🔁 Subscription renewed:", stripeSubscriptionId);
 
@@ -299,15 +313,19 @@ export const handleStripeWebhook = async (req, res) => {
 
         // console.log("👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 👉 ")
         console.log("subscribe data from cancellation trigger:", subscriptionData)
-        
 
         // log Stripe cancellation immediately
         console.warn("🚫 Subscription cancelled:", subscription.id);
 
         // only run side-effects if DB record exists (no early break)
         if (subscriptionData) {
-          // await processAndSendCancellationInvoice(subscriptionData);
-          await EmailService.sendSubscriptionCancelled(subscriptionData)
+
+          const userEmail = await getUserEmailById(subscriptionData.userId);
+          await EmailService.sendSubscriptionCancelled({
+            userId: subscriptionData.userId,
+            userEmail,
+            subscriptionData
+          });
         }
         break;
       }
