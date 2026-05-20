@@ -4,6 +4,12 @@ import { preparePasswordResetData, preparePasswordResetEmailFormat } from "../te
 import { sendMail } from "./email.mailer.service.js";
 import { EMAIL_SENDERS } from "../utils/email.identify.js";
 
+import { Transaction } from "../../../models/Transaction.js";
+import {
+  prepareInvoiceData, generateInvoiceBuffer,
+  prepareInvoiceEmailFormat, prepareSubscriptionInvoiceData
+} from "../templates/invoice/index.js"
+
 // ===================================================================
 // 🔐 REGISTRATION EMAIL HANDLER
 // ===================================================================
@@ -12,10 +18,7 @@ export const processAndSendRegistrationEmail = async ( payload ) => {
 
   try {
     console.log(`\n📨 [${jobTag}] Job started`);
-    console.log(`🔎 [${jobTag}] Payload received:`, payload);
-
-    // 1️⃣ Fetch user from DB
-    // console.log(`🗄️ [${jobTag}] Fetching user from MongoDB → ID: ${payload.id}`);
+    console.log(`🔎 [${jobTag}] Payload received:`);
 
     const user = await User.findById(payload.id)
       .select("name email username")
@@ -27,7 +30,6 @@ export const processAndSendRegistrationEmail = async ( payload ) => {
     }
 
     // 2️⃣ Prepare dynamic data for template
-
     const data = await prepareRegistrationData(user);
 
     if (!data) {
@@ -36,7 +38,6 @@ export const processAndSendRegistrationEmail = async ( payload ) => {
     }
 
     // 3️⃣ Build email template (subject + html + text)
-
     const emailContent = prepareRegistrationEmailFormat(data);
 
     if (!emailContent) {
@@ -106,12 +107,6 @@ export const processAndSendPasswordResetEmail = async ({ userId, resetToken }) =
 // ===================================================================
 // 🔐 ONE TIME INVOICE EMAIL HANDLER
 // ===================================================================
-
-import { Transaction } from "../../../models/Transaction.js";
-import { prepareInvoiceData, generateInvoiceBuffer, 
-  prepareInvoiceEmailFormat, prepareSubscriptionInvoiceData 
-} from "../templates/invoice/index.js"
-
 export const processAndSendOneTimeInvoiceEmail = async ({ transactionId }) => {
   const jobTag = "ONE_TIME_INVOICE_EMAIL";
 
@@ -182,7 +177,7 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
     // 1️⃣ fetch subscription
     console.log(`📥 [${jobTag}] Fetching transcation from database...`);
     const transaction = await Transaction.findById(transactionId).lean();
-    // console.log("INSIDE transcation: ", transaction)
+
     if (!transaction) {
       console.warn(`⚠️ [${jobTag}] Subscription not found. Exiting job.`);
       return;
@@ -190,9 +185,8 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
 
     // 2️⃣ Prepare invoice data
     console.log(`🧾 [${jobTag}] Preparing subscription invoice data...`);
-    // const invoiceData = await prepareSubscriptionInvoiceData(transaction);
+
     const invoiceData = await prepareInvoiceData(transaction);
-    // console.log("INVOICE DATA:", invoiceData);
 
     if (!invoiceData) {
       console.warn(`⚠️ [${jobTag}] Invoice data preparation failed. Exiting job.`);
@@ -296,9 +290,6 @@ import { prepareArtistApprovedData, prepareArtistApprovedEmailTemplate } from ".
 export const processAndSendArtistApprovedEmail = async (payload) => {
   const jobTag = "ARTIST_APPROVED_EMAIL";
 
-  // console.log("💥 💥 💥 💥");
-  console.log("this is from artist approval payload: ", payload)
-
   try {
     console.log(`\n📨 [${jobTag}] Job started`);
     console.log(`🔎 [${jobTag}] Payload received:`, payload);
@@ -326,6 +317,6 @@ export const processAndSendArtistApprovedEmail = async (payload) => {
 
   } catch (err) {
     console.error(`💥 [${jobTag}] Job failed:`, err);
-    throw err; // allows BullMQ retries
+    throw err;
   }
 };

@@ -45,7 +45,6 @@ async function pollQueue() {
         const job = JSON.parse(message.Body);
 
         console.log("\n📩 Job received:", job.jobName);
-        console.log("\n📩 Job received all:", job);
 
         // ⚠️ IMPORTANT: jobId lives inside payload
         const jobId = job.payload.jobId;

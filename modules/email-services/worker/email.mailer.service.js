@@ -10,10 +10,9 @@ export const sendMail = async (to, emailContent, sender) => {
   }
 
   const safeSender = sender || EMAIL_SENDERS.INFO;
-  console.log("SAFE SNDER:", safeSender);
-  // const fromEmail = `${safeSender.name} <${process.env.SES_FROM_EMAIL}>`;
-  const fromEmail = `${safeSender.name} <${safeSender.email}>`;
+  console.log("📨 SAFE SENDER:", safeSender); 
 
+  const fromEmail = `${safeSender.name} <${safeSender.email}>`;
   const hasAttachments = emailContent.attachments?.length > 0;
 
   console.log("📨 Sending email via SES →", to);
@@ -33,8 +32,7 @@ export const sendMail = async (to, emailContent, sender) => {
         },
       },
     });
-      
-    // console.log("❌ ❌ MAILER is down, uncomment it. ❌ ❌")
+    
     await sesClient.send(command);
     
     console.log("✅ SES email sent (no attachment)");
@@ -67,7 +65,6 @@ export const sendMail = async (to, emailContent, sender) => {
     RawMessage: { Data: info.message },
   });
 
-  // console.log("❌ ❌ MAILER is down, uncomment it. ❌ ❌")
   await sesClient.send(rawCommand);
 
   console.log("✅ SES email sent WITH attachment");
