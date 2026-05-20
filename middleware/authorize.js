@@ -1,5 +1,6 @@
 import { UnauthorizedError } from "../errors/index.js";
 import {ForbiddenError} from "../errors/index.js";
+import { User } from "../models/User.js"
 
 
 export const authorizeRoles = (...allowedRoles) => {

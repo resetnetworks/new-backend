@@ -74,6 +74,11 @@ const schema = new mongoose.Schema(
         trim: true,
       },
     ],
+    
+    lastLoginAt: {
+    type: Date,
+    default: null
+    },
 
     artistId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -110,5 +115,8 @@ schema.index({ preferredGenres: 1 });
 
 // 📊 Time-based analytics
 schema.index({ createdAt: -1 });
+
+
+schema.index({ lastLoginAt: -1 });
 
 export const User = mongoose.model("User", schema);

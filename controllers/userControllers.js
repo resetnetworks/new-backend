@@ -9,9 +9,7 @@ import { shapeUserResponse } from "../dto/user.dto.js";
 import Session from "../models/Session.js";
 import { log } from "console";
 import { Subscription } from "../models/Subscription.js";
-
 import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
-
 import { EmailService } from "../modules/email-services/email.service.js";
 
 
@@ -157,6 +155,11 @@ export const loginUser = async (req, res) => {
   const subscribedArtistIds = subscriptions.map(
     (sub) => sub.artistId
   );
+  
+  await User.updateOne(
+   { _id: user._id },
+   { $set: { lastLoginAt: new Date() } }
+);
 
   // 4️⃣ Shape response
   const userResponse = {

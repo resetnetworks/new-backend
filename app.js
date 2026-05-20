@@ -46,10 +46,9 @@ import searchRoutes from "./routes/searchRoutes.js";
 import discoverRoutes from "./routes/discoverRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
-import streamRoutes from "./routes/streamRoutes.js";
+import streamRoutes from "./modules/stream/stream.routes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
-import uploadRoutes2 from "./routes/uploadRoutes2.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 
 // --------------------
@@ -73,6 +72,8 @@ import favoriteArtistRoutes from "./routes/favoriteArtistRoutes.js";
 
 import emailQueueRoute from "./modules/email-services/queue/email.queue.route.js"
 import awsEmail from "./modules/email-services/queue/sqs.routes.js"
+import audienceRoute from "./modules/audience/audience.routes.js"
+
 
 // --------------------
 // App Setup
@@ -111,10 +112,6 @@ app.use(
   })
 );
 
-app.use(rateLimit({ windowMs: 5 * 60 * 1000, max: 300 }));
-app.use(helmet());
-app.use(httpLogger);
-
 // --------------------
 // Webhooks (BEFORE body parser)
 // --------------------
@@ -131,6 +128,12 @@ app.post(
 );
 
 app.use("/api/v2/webhooks", webhookRoutesv2);
+
+app.use(rateLimit({ windowMs: 5 * 60 * 1000, max: 300 }));
+app.use(helmet());
+app.use(httpLogger);
+
+
 
 // --------------------
 // Body & Security Middleware
@@ -163,7 +166,6 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/stream", streamRoutes);
 
 app.use("/api/artist/dashboard", artistDashboardRoutes);
-app.use("/api/uploads", uploadRoutes2);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/user/dashboard", userDashboardRoutes);
 
@@ -173,7 +175,7 @@ app.use("/api/user/dashboard", userDashboardRoutes);
 app.use("/api/v2/artist", artistApplicationRoutes);
 app.use("/api/v2/admin", adminArtistRoutes);
 
-app.use("/api/v2/uploads", uploadRoutes);
+app.use("/api/uploads", uploadRoutes);
 app.use("/api/v2/monetize", monetizeRoutes);
 
 app.use("/api/v2/artist", artistPayoutRoutes);
@@ -186,6 +188,7 @@ app.use("/api/favorite-artists", favoriteArtistRoutes);
 
 app.use("/api/queue", emailQueueRoute)
 app.use("/api/aws", awsEmail)
+app.use("/api/audience", audienceRoute)
 
 
 
