@@ -74,6 +74,8 @@ import emailQueueRoute from "./modules/email-services/queue/email.queue.route.js
 import awsEmail from "./modules/email-services/queue/sqs.routes.js"
 import audienceRoute from "./modules/audience/audience.routes.js"
 
+import uploadRoutes2 from "./routes/uploadRoutes2.js"
+
 
 // --------------------
 // App Setup
@@ -175,7 +177,7 @@ app.use("/api/user/dashboard", userDashboardRoutes);
 app.use("/api/v2/artist", artistApplicationRoutes);
 app.use("/api/v2/admin", adminArtistRoutes);
 
-app.use("/api/uploads", uploadRoutes);
+app.use("/api/uploads", uploadRoutes2);
 app.use("/api/v2/monetize", monetizeRoutes);
 
 app.use("/api/v2/artist", artistPayoutRoutes);
