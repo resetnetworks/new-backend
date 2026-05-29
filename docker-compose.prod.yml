@@ -10,6 +10,15 @@ services:
     depends_on:
       - redis
 
+  email-worker:
+    image: resetnetworks/new-music-backend:${TAG}
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    command: npm run email-worker
+
   redis:
     image: redis:7
     container_name: redis
