@@ -254,6 +254,11 @@ export const createRazorpaySubscription = async (req, res) => {
     }
 
       const amount = getSubscriptionAmount(artist.subscriptionPlans[0], "INR");
+      
+       // ✅ Hardcoded first-payment discount
+      // ✅ First payment ₹100 discount
+  
+
 
     // ✅ Create Razorpay subscription
     const subscription = await razorpay.subscriptions.create({
@@ -265,6 +270,8 @@ export const createRazorpaySubscription = async (req, res) => {
         artistId: artistId.toString(),
         cycle,
       },
+       // ✅ Discount applied ONLY to first invoice
+        offer_id: "offer_StvBdUu4BEp947",
     });
 
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
