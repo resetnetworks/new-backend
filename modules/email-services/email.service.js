@@ -34,14 +34,14 @@ export const EmailService = {
       payload,
     });
 
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
-    
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
     return EmailProducer.addJob(
       EMAIL_JOBS.USER_WELCOME,
       enrichedPayload
     );
   },
-  
+
   async sendPasswordReset(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.PASSWORD_RESET,
@@ -50,14 +50,14 @@ export const EmailService = {
       toEmail: payload.userEmail,
       payload,
     });
-    
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.PASSWORD_RESET,
       enrichedPayload
     );
   },
-  
+
   async sendArtistApproved(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.ARTIST_APPROVED,
@@ -66,14 +66,14 @@ export const EmailService = {
       toEmail: payload.userEmail,
       payload,
     });
-    
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.ARTIST_APPROVED,
       enrichedPayload
     );
   },
-  
+
   // Payments / Billing
   async sendOneTimeInvoice(payload) {
     const enrichedPayload = await sendEmailJob({
@@ -83,14 +83,14 @@ export const EmailService = {
       toEmail: payload.userEmail,
       payload,
     });
-    
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.INVOICE_ONE_TIME_PAYMENT,
       enrichedPayload
     );
   },
-  
+
   async sendSubscriptionInvoice(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.INVOICE_SUBSCRIPTION_STARTED,
@@ -99,14 +99,14 @@ export const EmailService = {
       toEmail: payload.userEmail,
       payload,
     });
-    
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.INVOICE_SUBSCRIPTION_STARTED,
       enrichedPayload
     );
   },
-  
+
   async sendSubscriptionCancelled(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.SUBSCRIPTION_CANCELLED,
@@ -115,8 +115,8 @@ export const EmailService = {
       toEmail: payload.userEmail,
       payload,
     });
-    
-    console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
+
+    // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.SUBSCRIPTION_CANCELLED,
       enrichedPayload
