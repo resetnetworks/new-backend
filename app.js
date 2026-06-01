@@ -205,6 +205,8 @@ app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
 
+console.log(process.memoryUsage());
+
 
 
 export default app;
