@@ -24,7 +24,10 @@ import {
 import { buildCdnUrl } from "../utils/cdn/cdn.js";
 import logger from "../utils/logger.js";
 
-
+import {
+  sendAlbumUploadedNotification,
+  enqueueNewAlbumReleaseEvent,
+} from "../modules/notification-service/notification.service.js";
 
 
 const ALLOWED_ACCESS_TYPES = ["free", "subscription", "purchase-only"];
@@ -65,6 +68,43 @@ export const createAlbumController = async (req, res) => {
     artistId,
     payload: req.body,
   });
+
+  console.log("______INSIDE ALBUM", album);
+
+  // ================================================
+  // Triggered Album Upload Notification to artist
+  // ================================================
+  try {
+    await sendAlbumUploadedNotification({
+      userId: req.user._id,
+      albumTitle: album.title,
+    });
+
+    console.log("🔔 Album upload notification queued");
+  } catch (notificationErr) {
+    console.error(
+      "⚠️ Failed to queue album upload notification:",
+      notificationErr
+    );
+  }
+
+  // ================================================
+  // Triggered Album Fan-Out Event - for subscribers
+  // ================================================
+  try {
+    await enqueueNewAlbumReleaseEvent({
+      artistId,
+      artistName: req.user.name,
+      albumId: album._id,
+      albumTitle: album.title,
+    });
+
+    console.log(
+      "🚀 Album release fan-out event queued"
+    );
+  } catch (eventErr) {
+    console.error("⚠️ Failed to queue album fan-out event:", eventErr);
+  }
 
   res.status(StatusCodes.CREATED).json({
     success: true,

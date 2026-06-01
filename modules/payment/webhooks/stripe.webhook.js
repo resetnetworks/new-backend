@@ -8,6 +8,13 @@ import { processAndSendInvoice, processAndSendCancellationInvoice } from "../../
 import { EmailService } from "../../email-services/email.service.js";
 import { getUserEmailById } from "../../../utils/userEmailLookup.service.js";
 
+import {
+  sendSongPurchaseSuccessNotification,
+  sendNewSongPurchaseNotification,
+  sendNewArtistSubscriberNotification,
+  sendArtistSubscriptionSuccessNotification
+} from "../../notification-service/notification.service.js";
+
 const PLATFORM_FEE_PERCENT = 0.15;
 
 export const handleStripeWebhook = async (req, res) => {
@@ -69,7 +76,7 @@ export const handleStripeWebhook = async (req, res) => {
             paymentIntentId,
           });
 
-          // console.log("👉 👉 👉 👉 👉 markTransactionPaid result :", transaction);
+          // console.log("👉 👉 👉 👉 👉 INVOICE markTransactionPaid result :", transaction);
 
           if (!transaction) {
             console.log("❌ ❌ ❌ ❌ Transaction already processed or not found");
@@ -95,6 +102,21 @@ export const handleStripeWebhook = async (req, res) => {
             userId: transaction.userId,
             userEmail,
             transactionId
+          });
+
+          await sendSongPurchaseSuccessNotification({
+            userId: transaction.userId,
+            amount: transaction.amount,
+            transactionId: transaction._id,
+            itemId: transaction.itemId,
+            itemType: transaction.itemType,
+          });
+          
+          await sendNewSongPurchaseNotification({
+            artistId: transaction.artistId,
+            buyerId: transaction.userId,
+            itemId: transaction.itemId,
+            itemType: transaction.itemType,
           });
 
           console.log("✅ One-time payment successful:", transactionId);
@@ -128,6 +150,8 @@ export const handleStripeWebhook = async (req, res) => {
             stripeSubscriptionId,
           });
 
+          // console.log("===============SUBSCS TRANSCATINON: ", transaction);
+
           if (!transaction) {
             console.log("Subscription already processed or not found:", transactionId);
             break;
@@ -149,6 +173,19 @@ export const handleStripeWebhook = async (req, res) => {
             userId: transaction.userId,
             userEmail,
             transactionId
+          });
+
+          await sendArtistSubscriptionSuccessNotification({
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            itemId: transaction.itemId,
+            itemType: transaction.itemType,
+          });
+
+          await sendNewArtistSubscriberNotification({
+            artistId: transaction.artistId,
+            subscriberId: transaction.userId,
+            itemId: transaction.itemId,
           });
 
           console.log("✅ First subscription fully processed:", transaction._id);
