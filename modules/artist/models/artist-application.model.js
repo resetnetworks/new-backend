@@ -11,6 +11,11 @@ import { ROLE_PERMISSIONS } from "../../../permissions/rolePermissions.js";
 
 import { EmailService } from "../../email-services/email.service.js";
 
+import {
+  sendArtistApplicationApprovedNotification,
+  sendArtistApplicationRejectedNotification,
+} from "../../notification-service/notification.service.js";
+
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
 const DOCUMENT_TYPES = ["gov_id", "proof_of_address", "tax_id", "portfolio", "other"];
@@ -289,6 +294,19 @@ const workspaceDoc = workspace[0];
       console.error("⚠️ Failed to queue artist approval email:", emailErr);
     }
 
+    // ===================================================
+    // 🎉 Trigger Artist Approved Notification
+    // ===================================================
+    try {
+      await sendArtistApplicationApprovedNotification({
+        userId: user._id,
+      });
+
+      console.log("🔔 Artist approval notification queued");
+    } catch (notificationErr) {
+      console.error("⚠️ Failed to queue artist approval notification:", notificationErr);
+    }
+
     return { artist, updatedApplication };
 
   } catch (err) {
@@ -325,6 +343,20 @@ artistApplicationSchema.methods.markRejected = async function (
 
     await session.commitTransaction();
     session.endSession();
+
+    // ===================================================
+    // 🎉 Trigger Artist Rejection Notification
+    // ===================================================
+    try {
+      await sendArtistApplicationRejectedNotification({
+        userId: application.userId,
+        reason: notes || null,
+      });
+
+      console.log("🔔 Artist rejection notification queued");
+    } catch (notificationErr) {
+      console.error( "⚠️ Failed to queue artist rejection notification:", notificationErr);
+    }
 
     return updatedApplication;
   } catch (err) {

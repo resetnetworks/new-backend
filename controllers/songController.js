@@ -21,6 +21,11 @@ import {
 } from "../services/index.js";
 
 
+import {
+  sendSongUploadedNotification,
+  enqueueNewSongReleaseEvent,
+} from "../modules/notification-service/notification.service.js";
+
 
 const ALLOWED_ACCESS_TYPES = ["free", "subscription", "purchase-only"];
 
@@ -262,6 +267,52 @@ export const createSongController = async (req, res) => {
     
    
   });
+
+  // ================================================
+  // Triggered Song Upload Notification
+  // ================================================
+  if (!song.albumOnly) {
+    try {
+      await sendSongUploadedNotification({
+        userId: req.user._id,
+        songTitle: song.title,
+      });
+
+      console.log("🔔 Song upload notification queued");
+    } catch (notificationErr) {
+      console.error(
+        "⚠️ Failed to queue song upload notification:",
+        notificationErr
+      );
+    }
+  }
+
+  console.log("this is in inside song-Controler req.body", req.body);
+  // console.log("req.user", req.user);
+  console.log("this is in inside song-Controler  song.....", song);
+
+  // ================================================
+  // Triggered Fan-Out Event For Singles Only
+  // ================================================
+  if (!song.albumOnly) {
+    try {
+      await enqueueNewSongReleaseEvent({
+        artistId,
+        artistName: req.user.name,
+        songId: song._id,
+        songTitle: song.title,
+      });
+
+      console.log(
+        "🚀 Single song release fan-out event queued"
+      );
+    } catch (eventErr) {
+      console.error(
+        "⚠️ Failed to queue single song fan-out event:",
+        eventErr
+      );
+    }
+  }
 
   /* -------------------- Business event log -------------------- */
   // req.log.info(

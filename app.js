@@ -76,6 +76,8 @@ import audienceRoute from "./modules/audience/audience.routes.js"
 
 import uploadRoutes2 from "./routes/uploadRoutes2.js"
 
+import notificationRoutes from "./modules/notification-service/api/notification.routes.js";
+
 
 // --------------------
 // App Setup
@@ -191,6 +193,8 @@ app.use("/api/favorite-artists", favoriteArtistRoutes);
 app.use("/api/queue", emailQueueRoute)
 app.use("/api/aws", awsEmail)
 app.use("/api/audience", audienceRoute)
+
+app.use("/api/v2/notifications", notificationRoutes );
 
 
 
