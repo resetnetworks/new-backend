@@ -4,6 +4,7 @@ import express from "express";
 import { authenticateUser } from "../middleware/authenticate.js";
 import { authorizeRoles } from "../middleware/authorize.js";
 import { isArtistMonetized } from "../middleware/isMonetized.js";
+import { injectWorkspaceContext } from "../middleware/injectWorkspaceContext.js";
 import validate from "../middleware/validate.js";
 
 /* ===================== Controllers ===================== */
@@ -91,6 +92,7 @@ router.get(
 router.post(
   "/",
   authenticateUser,
+  injectWorkspaceContext("uploadSong"),
   authorizeRoles("artist"),
   isArtistMonetized,
   createSongValidator,
@@ -101,6 +103,7 @@ router.post(
 router.patch(
   "/:id",
   authenticateUser,
+  injectWorkspaceContext("editSong"),
   authorizeRoles("artist"),
   updateSongValidator,
   validate,
@@ -110,6 +113,7 @@ router.patch(
 router.delete(
   "/:id",
   authenticateUser,
+  injectWorkspaceContext("deleteSong"),
   songIdValidator,
   validate,
   deleteSong

@@ -6,6 +6,7 @@ import express from "express";
 import { authenticateUser } from "../middleware/authenticate.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { authorizeRoles } from "../middleware/authorize.js";
+import { injectWorkspaceContext } from "../middleware/injectWorkspaceContext.js";
 
 import validate from "../middleware/validate.js";
 
@@ -39,6 +40,7 @@ const router = express.Router();
 router.patch(
   "/me",
   authenticateUser,
+  injectWorkspaceContext("manageTeam"),
   authorizeRoles("artist"),
   updateArtistValidator,
   validate,
@@ -51,6 +53,7 @@ router.patch(
 router.get(
   "/profile/me",
   authenticateUser,
+  injectWorkspaceContext(),
   authorizeRoles("artist"),
   getArtistProfile
 );

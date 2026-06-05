@@ -2,15 +2,17 @@ import nodemailer from "nodemailer";
 
 export const sendEmail = async ({ to, subject, html }) => {
   const transporter = nodemailer.createTransport({
-    service: "gmail", // or your provider
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    }
-  });
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
   await transporter.sendMail({
-    from: `"Music Platform" <${process.env.EMAIL_USER}>`,
+    from: `"Music Platform" <${process.env.SMTP_USER}>`,
     to,
     subject,
     html
