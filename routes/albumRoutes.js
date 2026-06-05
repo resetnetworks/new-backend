@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateUser } from "../middleware/authenticate.js";
 import { authorizeRoles } from "../middleware/authorize.js";
+import { injectWorkspaceContext } from "../middleware/injectWorkspaceContext.js";
 
 import {
   createAlbumController,
@@ -29,6 +30,7 @@ const router = express.Router();
 router.post(
   "/",
   authenticateUser,
+  injectWorkspaceContext("uploadSong"),
   authorizeRoles("artist"),
   createAlbumValidator,
   validate,
@@ -39,6 +41,7 @@ router.post(
 router.patch(
   "/:id",
   authenticateUser,
+  injectWorkspaceContext("editSong"),
   authorizeRoles("artist"),
   updateAlbumValidator,
   validate,
