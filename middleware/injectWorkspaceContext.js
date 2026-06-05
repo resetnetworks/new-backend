@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import { Workspace } from "../modules/workspace/workspace.model.js";
+import { WorkspaceMember } from "../modules/workspace/workspaceMember.model.js";
 
 export const injectWorkspaceContext = (requiredPermission) => {
   return async (req, res, next) => {
