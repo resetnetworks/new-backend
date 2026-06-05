@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 export const injectWorkspaceContext = (requiredPermission) => {
   return async (req, res, next) => {
     try {
