@@ -1,7 +1,7 @@
 // coupon.artist.service.js
 
 import { Coupon } from "./coupon.model.js";
-import { BadRequestError, ForbiddenError } from "../../utils/errors.js";
+import { BadRequestError, ForbiddenError } from "../../errors/index.js";
 
 /* -------------------- Create -------------------- */
 export const createArtistCoupon = async ({

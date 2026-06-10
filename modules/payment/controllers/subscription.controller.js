@@ -109,6 +109,26 @@ export const createSubscriptionCheckout = async (req, res) => {
       artistShare,
     });
     
+    
+  let promotionCodeId = null;
+
+// if (couponCode) {
+//   const promotionCodes =
+//     await stripe.promotionCodes.list({
+//       code: couponCode.toUpperCase(),
+//       active: true,
+//       limit: 1,
+//     });
+
+//   if (!promotionCodes.data.length) {
+//     return res.status(400).json({
+//       message: "Invalid coupon code",
+//     });
+//   }
+
+//   promotionCodeId =
+//     promotionCodes.data[0].id;
+// }
    
 
     // 5️⃣ Get Stripe customer
