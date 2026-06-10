@@ -270,8 +270,7 @@ export const createRazorpaySubscription = async (req, res) => {
         artistId: artistId.toString(),
         cycle,
       },
-       // ✅ Discount applied ONLY to first invoice
-        offer_id: "offer_StvBdUu4BEp947",
+       
     });
 
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);

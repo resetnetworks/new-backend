@@ -8,16 +8,24 @@ import {
   disableArtistCouponController,
 } from "./coupon.artist.controller.js";
 
-import { protect, authorizeRoles } from "../../middlewares/auth.middleware.js";
+// import { protect, authorizeRoles } from "../../middlewares/auth.middleware.js";
+// import createStripeCoupon from "./createStripeCoupon.js"
 
 const router = express.Router();
 
 /* -------------------- Artist Only -------------------- */
-router.use(protect, authorizeRoles("artist"));
+// router.use(protect, authorizeRoles("artist"));
 
 router.post("/", createArtistCouponController);
 router.get("/", getArtistCouponsController);
 router.patch("/:id", updateArtistCouponController);
 router.delete("/:id", disableArtistCouponController);
+// router.post(
+//   "/stripe",
+ 
+//   // authorizePermissions("admin"),
+//   createArtistCouponController
+
+// );
 
 export default router;
