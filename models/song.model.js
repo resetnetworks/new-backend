@@ -58,7 +58,7 @@ const songSchema = new mongoose.Schema(
       type: String,
       trim: true,
       uppercase: true,
-      index: true,
+      // index: true,
     },
 
     releaseDate: {
@@ -145,7 +145,7 @@ const songSchema = new mongoose.Schema(
       type: String,
       enum: ["draft", "uploading", "uploaded", "processing", "ready", "failed"],
       default: "draft",
-      index: true,
+      // index: true,
     },
 
     /* ======================================================

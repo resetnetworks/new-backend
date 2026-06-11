@@ -46,7 +46,7 @@ const albumSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       match: [/^[a-z0-9-]+$/, "Slug must be URL-friendly"],
-      index: true,
+      // index: true,
     },
 
     description: {

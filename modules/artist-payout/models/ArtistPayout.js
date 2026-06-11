@@ -6,7 +6,7 @@ const artistPayoutSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Artist",
       required: true,
-      index: true,
+      // index: true,
     },
 
     amount: {

@@ -31,7 +31,7 @@ const uploadSessionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Artist",
       required: true,
-      index: true,
+      // index: true,
     },
 
     /**
@@ -126,7 +126,7 @@ const uploadSessionSchema = new mongoose.Schema(
       type: String,
       enum: ["initiated", "uploading", "completed", "aborted", "failed"],
       default: "initiated",
-      index: true,
+      // index: true,
     },
 
     // NEW — exact completion time
