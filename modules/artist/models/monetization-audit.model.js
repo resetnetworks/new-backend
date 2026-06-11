@@ -2,7 +2,9 @@
 import mongoose from "mongoose";
 
 const monetizationAuditSchema = new mongoose.Schema({
-  artistId: { type: mongoose.Schema.Types.ObjectId, ref: "Artist", required: true, index: true },
+  artistId: { type: mongoose.Schema.Types.ObjectId, ref: "Artist", required: true, 
+    // index: true 
+  },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   operation: { type: String, required: true }, // setup_pricing, update_pricing, reconcile, delete_remote_plan
   gateway: { type: String, enum: ["stripe", "razorpay", "paypal", "none"], default: "none" },
