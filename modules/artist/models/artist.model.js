@@ -111,7 +111,7 @@ const artistSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
+      // index: true,
     },
 
     /* ---------- Identity ---------- */
@@ -130,7 +130,7 @@ const artistSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       match: [/^[a-z0-9-]+$/, "Slug must be URL-friendly"],
-      index: true,
+      // index: true,
     },
 
     /* ---------- Profile ---------- */
@@ -234,7 +234,7 @@ const artistSchema = new mongoose.Schema(
       type: String,
       enum: ["admin", "self"],
       default: "self",
-      index: true,
+      // index: true,
     },
 
     approvalStatus: {
@@ -247,14 +247,14 @@ const artistSchema = new mongoose.Schema(
     roles: {
       type: [String],
       default: ["artist"],
-      index: true,
+      // index: true,
     },
 
     payoutProfileId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ArtistPayoutProfile",
       default: null,
-      index: true,
+      // index: true,
     },
 
     /* ---------- Upload Controls ---------- */
@@ -296,7 +296,6 @@ const artistSchema = new mongoose.Schema(
    INDEXES
    =========================== */
 
-artistSchema.index({ slug: 1 }, { unique: true });
 artistSchema.index({ name: 1 });
 artistSchema.index({ country: 1, approvalStatus: 1 });
 artistSchema.index({ approvalStatus: 1, createdAt: -1 });

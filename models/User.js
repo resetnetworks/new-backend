@@ -94,7 +94,7 @@ const schema = new mongoose.Schema(
    ====================================================== */
 
 // 🔐 Authentication & login
-schema.index({ email: 1 }, { unique: true });
+// schema.index({ email: 1 }, { unique: true });
 schema.index({ googleId: 1 }, { sparse: true });
 
 // 🔑 Password reset flow

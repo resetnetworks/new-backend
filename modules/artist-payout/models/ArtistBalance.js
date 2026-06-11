@@ -42,12 +42,6 @@ const artistBalanceSchema = new mongoose.Schema(
    INDEXES (PRODUCTION CRITICAL)
    ====================================================== */
 
-// 🔑 ONE balance row per artist (O(1) balance fetch)
-artistBalanceSchema.index(
-  { artistId: 1 },
-  { unique: true }
-);
-
 // 💸 Admin payout scans (who has money to pay)
 artistBalanceSchema.index(
   { availableBalance: -1 }
