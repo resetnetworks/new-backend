@@ -7,12 +7,26 @@ export const createSubscriptionPlans = async (artistName, basePrice, cycle, conv
   const { razorpay, paypal } = cycle;
   const INRAmount = getSubscriptionAmount({ price: basePrice, convertedPrices }, "INR");
   // Parallel API calls
-  const [razorpayPlanId, paypalPlans] = await Promise.all([
+  const [razorpayPlanId, paypalPlans, stripePlan] = await Promise.all([
     razorpayProvider.createPlan(artistName, INRAmount, razorpay.interval, razorpay.period, basePrice.currency),
     paypalProvider.createPlans(artistName, basePrice, convertedPrices, paypal.interval_unit, paypal.interval_count),
+
+    stripeProvider.createPlans(
+      artistName,
+      basePrice,
+      convertedPrices,
+      cycle.stripe.interval,
+      cycle.stripe.interval_count
+    )
   ]);
 
-  return { stripePriceId: null, razorpayPlanId, paypalPlans };
+  // return { stripePriceId: null, razorpayPlanId, paypalPlans };
+  return {
+    stripeProductId: stripePlan.productId,
+    stripePlans: stripePlan.stripePlans,
+    razorpayPlanId,
+    paypalPlans
+  };
 };
 
 
@@ -29,10 +43,15 @@ export const updateSubscriptionPlans = async (artist, newPrice, intervals, newCy
   };
 
   // Update external providers if price or cycle changed
-  const [stripePriceId, razorpayPlanId, paypalPlans] = await Promise.all([
-    (newPrice !== undefined || intervals) 
-      ? stripeProvider.createPlan(artist.name, newPrice ?? plan.price, cycleIntervals.stripe.interval, cycleIntervals.stripe.interval_count)
-      : plan.stripePriceId,
+  const [stripePlan, razorpayPlanId, paypalPlans] = await Promise.all([
+    (newPrice !== undefined || intervals)
+      ? stripeProvider.createPlan(
+        artist.name,
+        newPrice ?? plan.basePrice,
+        cycleIntervals.stripe.interval,
+        cycleIntervals.stripe.interval_count
+      )
+      : null,
     (newPrice !== undefined || intervals)
       ? razorpayProvider.createPlan(artist.name, newPrice ?? plan.price, cycleIntervals.razorpay.interval, cycleIntervals.razorpay.period)
       : plan.razorpayPlanId,
@@ -42,10 +61,23 @@ export const updateSubscriptionPlans = async (artist, newPrice, intervals, newCy
   ]);
 
   // Update local plan
-  plan.cycle = newCycleLabel;
+  // plan.cycle = newCycleLabel;
+  // plan.price = newPrice ?? plan.price;
+  // plan.stripePriceId = stripePriceId;
+  // plan.razorpayPlanId = razorpayPlanId;
+  // plan.paypalPlans = paypalPlans;
+
+  // Update local plan
+  plan.cycle = newCycleLabel ?? plan.cycle;
   plan.price = newPrice ?? plan.price;
-  plan.stripePriceId = stripePriceId;
+
+  if (stripePlan) {
+    plan.stripeProductId = stripePlan.productId;
+    plan.stripePriceId = stripePlan.priceId;
+  }
+
   plan.razorpayPlanId = razorpayPlanId;
   plan.paypalPlans = paypalPlans;
-};
 
+  return plan;
+};

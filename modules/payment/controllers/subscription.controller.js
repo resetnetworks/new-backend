@@ -108,41 +108,53 @@ export const createSubscriptionCheckout = async (req, res) => {
       platformFee,
       artistShare,
     });
-    
-    
-  let promotionCodeId = null;
 
-// if (couponCode) {
-//   const promotionCodes =
-//     await stripe.promotionCodes.list({
-//       code: couponCode.toUpperCase(),
-//       active: true,
-//       limit: 1,
-//     });
 
-//   if (!promotionCodes.data.length) {
-//     return res.status(400).json({
-//       message: "Invalid coupon code",
-//     });
-//   }
+    let promotionCodeId = null;
 
-//   promotionCodeId =
-//     promotionCodes.data[0].id;
-// }
-   
+    // if (couponCode) {
+    //   const promotionCodes =
+    //     await stripe.promotionCodes.list({
+    //       code: couponCode.toUpperCase(),
+    //       active: true,
+    //       limit: 1,
+    //     });
+
+    //   if (!promotionCodes.data.length) {
+    //     return res.status(400).json({
+    //       message: "Invalid coupon code",
+    //     });
+    //   }
+
+    //   promotionCodeId =
+    //     promotionCodes.data[0].id;
+    // }
+
 
     // 5️⃣ Get Stripe customer
     const stripeCustomerId = await getOrCreateStripeCustomer(user);
 
+    // 👉 Find matching stripe plan for the selected currency
+    const stripePlan = plan.stripePlans?.find((sp) => sp.currency === selectedCurrency);
+
+    if (!stripePlan || !stripePlan.stripePriceId) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Stripe plan not available in selected currency",
+      });
+    }
+
+    const exactStripePriceId = stripePlan.stripePriceId;
+
     // 6️⃣ Create Checkout session (subscription mode)
     const session = await createSubscriptionCheckoutSession({
-      amount,
-      currency: normalizedCurrency,
+      // amount,
+      // currency: normalizedCurrency,
       userId: user._id.toString(),
       artistId,
       cycle,
       transactionId: transaction._id.toString(),
       stripeCustomerId,
+      stripePriceId: exactStripePriceId,
     });
 
     return res.status(StatusCodes.OK).json({
