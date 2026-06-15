@@ -22,7 +22,8 @@ export const monetizeArtistService = async ({artistId, basePrice, cycle, created
     artist.subscriptionPlans.push({
       cycle: intervals.cycleLabel,
       basePrice,
-      stripePriceId: plans.stripePriceId,
+      stripeProductId: plans.stripeProductId,
+      stripePlans: plans.stripePlans,
       razorpayPlanId: plans.razorpayPlanId,
       paypalPlans: plans.paypalPlans,
       convertedPrices

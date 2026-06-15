@@ -53,25 +53,26 @@ export const createCheckoutSession = async ({
 
 
 export const createSubscriptionCheckoutSession = async ({
-  amount,
-  currency,
+  // amount,
+  // currency,
   userId,
   artistId,
   cycle,
   transactionId,
   stripeCustomerId,
+  stripePriceId
 }) => {
-  const interval = cycleToInterval(cycle).stripe;
+  // const interval = cycleToInterval(cycle).stripe;
 
   // 1️⃣ Create price
-  const price = await stripe.prices.create({
-    unit_amount: formatAmount(amount, currency),
-    currency: currency.toLowerCase(),
-    recurring: interval,
-    product_data: {
-      name: "Artist Subscription",
-    },
-  });
+  // const price = await stripe.prices.create({
+  //   unit_amount: formatAmount(amount, currency),
+  //   currency: currency.toLowerCase(),
+  //   recurring: interval,
+  //   product_data: {
+  //     name: "Artist Subscription",
+  //   },
+  // });
 
   // 2️⃣ Create checkout session
   return stripe.checkout.sessions.create({
@@ -82,7 +83,8 @@ export const createSubscriptionCheckoutSession = async ({
 
     line_items: [
       {
-        price: price.id,
+        // price: price.id,
+        price: stripePriceId, // Use the ID passed from the controller
         quantity: 1,
       },
     ],

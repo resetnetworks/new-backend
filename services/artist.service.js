@@ -21,7 +21,7 @@ export const createArtistService = async ({ name, bio, location, imageUrl, baseP
     artist.subscriptionPlans.push({
       cycle: intervals.cycleLabel,
       basePrice,
-      stripePriceId: plans.stripePriceId,
+      stripePlans: plans.stripePlans,
       razorpayPlanId: plans.razorpayPlanId,
       paypalPlans: plans.paypalPlans,
       convertedPrices
