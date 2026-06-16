@@ -35,6 +35,27 @@ export const stripeProvider = {
       productId: product.id,
       stripePlans
     };
-  }
+  },
 
+  async createPricesForExistingProduct(productId, basePrice, convertedPrices, interval, interval_count) {
+    const allPrices = [basePrice, ...(convertedPrices || [])];
+
+    const stripePlans = await Promise.all(
+      allPrices.map(async (p) => {
+        const price = await stripe.prices.create({
+          product: productId,
+          currency: p.currency.toLowerCase(),
+          unit_amount: formatAmount(p.amount, p.currency.toLowerCase()),
+          recurring: { interval, interval_count },
+        });
+
+        return {
+          currency: p.currency.toUpperCase(),
+          stripePriceId: price.id
+        };
+      })
+    );
+
+    return stripePlans;
+  }
 };
