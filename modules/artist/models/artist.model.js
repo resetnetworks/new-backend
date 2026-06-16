@@ -58,12 +58,25 @@ const subscriptionPlanSchema = new mongoose.Schema(
       default: null,
     },
 
-    stripePriceId: {
+    // stripePriceId: {
+    //   type: String,
+    //   trim: true,
+    //   default: null,
+    // },
+
+    stripeProductId: {
       type: String,
       trim: true,
       default: null,
     },
 
+    stripePlans: [
+      {
+        currency: { type: String, uppercase: true },
+        stripePriceId: { type: String },
+      },
+    ],
+    
     paypalPlans: [
       {
         currency: { type: String, uppercase: true },

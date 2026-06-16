@@ -302,9 +302,9 @@ export const handleStripeWebhook = async (req, res) => {
         const userEmail = await getUserEmailById(renewalTransaction.userId);
 
         await EmailService.sendSubscriptionInvoice({
-          userId: transaction.userId,
+          userId: paidTransaction.userId,
           userEmail,
-          transactionId
+          transactionId: paidTransaction._id
         });
 
         console.log("🔁 Subscription renewed:", stripeSubscriptionId);

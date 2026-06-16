@@ -80,6 +80,7 @@ import notificationRoutes from "./modules/notification-service/api/notification.
 
 import artistCouponRoutes from "./modules/coupon/coupon.artist.routes.js"
 
+import priceChangeRoutes from "./modules/price-change/routes/paymentRoute.js";
 
 // --------------------
 // App Setup
@@ -200,6 +201,7 @@ app.use("/api/coupon/artist", artistCouponRoutes)
 
 app.use("/api/v2/notifications", notificationRoutes );
 
+app.use("/api/v2/payment", priceChangeRoutes);
 
 
 // --------------------
