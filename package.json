@@ -9,9 +9,9 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test jest --runInBand",
     "test:watch": "NODE_ENV=test jest --watch",
     "test:coverage": "NODE_ENV=test jest --coverage --runInBand",
-    "email-worker": "node modules/email-services/worker/email.worker.js"
+    "email-worker": "node modules/email-services/worker/email.worker.js",
+    "stripe-worker": "node modules/payment/workers/stripeMigration.worker.js"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",

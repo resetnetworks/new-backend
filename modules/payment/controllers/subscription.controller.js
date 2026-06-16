@@ -68,8 +68,8 @@ export const createSubscriptionCheckout = async (req, res) => {
       selectedCurrency === plan.basePrice.currency
         ? plan.basePrice
         : plan.convertedPrices?.find(
-            (p) => p.currency === selectedCurrency
-          );
+          (p) => p.currency === selectedCurrency
+        );
 
     if (!priceEntry) {
       return res.status(StatusCodes.BAD_REQUEST).json({
@@ -169,3 +169,55 @@ export const createSubscriptionCheckout = async (req, res) => {
     });
   }
 };
+
+import { convertCurrencies } from "../../../utils/convertCurrencies.js";
+import { cycleToInterval } from "../../../utils/cycleToInterval.js";
+import { stripeProvider } from "../../../providers/stripeProvider.js";
+import { addStripeMigrationJob } from "../queue/stripeMigration.queue.js";
+
+export const updateStripePricing = async (artistId, subscriptionPrice, cycle) => {
+  if (!artistId) throw new Error("No artist profile found");
+  if (!subscriptionPrice || !cycle) throw new Error("subscriptionPrice and cycle are required");
+
+  const artist = await Artist.findById(artistId);
+  if (!artist || !artist.subscriptionPlans?.length) {
+    throw new Error("Artist monetization not set up yet");
+  }
+
+  const planIndex = artist.subscriptionPlans.findIndex(p => p.cycle === cycle);
+  if (planIndex === -1) {
+    throw new Error("Plan for this cycle not found");
+  }
+
+  const plan = artist.subscriptionPlans[planIndex];
+  if (!plan.stripeProductId) {
+    throw new Error("Stripe product ID not found for this plan");
+  }
+
+  // 1. Convert currencies
+  const basePrice = { currency: "USD", amount: subscriptionPrice };
+  const convertedPrices = await convertCurrencies(basePrice.currency, basePrice.amount);
+  
+  // 2. Generate new Stripe Prices under existing product
+  const intervals = cycleToInterval(cycle);
+  const newStripePlans = await stripeProvider.createPricesForExistingProduct(
+    plan.stripeProductId,
+    basePrice,
+    convertedPrices,
+    intervals.stripe.interval,
+    intervals.stripe.interval_count
+  );
+
+  // 3. Update the database
+  artist.subscriptionPlans[planIndex].basePrice = basePrice;
+  artist.subscriptionPlans[planIndex].convertedPrices = convertedPrices;
+  artist.subscriptionPlans[planIndex].stripePlans = newStripePlans;
+  await artist.save();
+
+  // 4. Trigger background migration
+  await addStripeMigrationJob(artistId.toString(), newStripePlans);
+
+  return newStripePlans;
+};
+
+
