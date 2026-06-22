@@ -12,7 +12,7 @@ import { Subscription } from "../models/Subscription.js";
 import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 import { EmailService } from "../modules/email-services/email.service.js";
 
-import {sendWelcomeNotification,} from "../modules/notification-service/notification.service.js";
+import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
 
 
 
@@ -24,7 +24,7 @@ import {sendWelcomeNotification,} from "../modules/notification-service/notifica
 // ===================================================================
 export const registerUser = async (req, res) => {
   const { name, email, password, dob } = req.body;
- 
+
   //  email = email.toLowerCase();
   // :1️⃣ Check for existing user
   const existingUser = await User.findOne({ email }).lean();
@@ -63,6 +63,12 @@ export const registerUser = async (req, res) => {
     email: user.email,
     role: user.role,
   })
+
+  // notification - for prod.
+  await sendWelcomeNotification({
+    userId: user.id,
+    name: user.name,
+  });
 
   // :🔟 Return shaped user + token
   res.status(StatusCodes.CREATED).json({
@@ -144,7 +150,7 @@ export const loginUser = async (req, res) => {
   // });
   // :jigsaw: Shape user response (remove sensitive fields)
   // 
-   // 2️⃣ Fetch active subscriptions
+  // 2️⃣ Fetch active subscriptions
   const subscriptions = await Subscription.find({
     userId: user._id,
     status: "active",
@@ -157,16 +163,17 @@ export const loginUser = async (req, res) => {
   const subscribedArtistIds = subscriptions.map(
     (sub) => sub.artistId
   );
-  
-  await User.updateOne(
-   { _id: user._id },
-   { $set: { lastLoginAt: new Date() } }
-);
 
-  await sendWelcomeNotification({
-    userId: user._id,
-    name: user.name,
-  });
+  await User.updateOne(
+    { _id: user._id },
+    { $set: { lastLoginAt: new Date() } }
+  );
+
+  // notification - testing for local
+  // await sendWelcomeNotification({
+  //   userId: user._id,
+  //   name: user.name,
+  // });
 
   // 4️⃣ Shape response
   const userResponse = {
@@ -306,7 +313,7 @@ export const logoutUser = async (req, res) => {
 // @access  Private
 // ===================================================================
 export const likeSong = async (req, res) => {
-  
+
   const user = await User.findById(req.user._id);
   if (!user) {
     throw new NotFoundError("User not found");
