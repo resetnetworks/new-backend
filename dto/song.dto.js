@@ -24,14 +24,15 @@ export const shapeSongResponse = (
     copyright: song.copyright || "",
 
     // 🎤 Artist (stable shape)
-    artist:
-      typeof song.artist === "object"
+    artist: song.artist
+      ? typeof song.artist === "object"
         ? {
             _id: song.artist._id,
             name: song.artist.name,
             slug: song.artist.slug
           }
-        : song.artist,
+        : song.artist
+      : null,
 
     // 💿 Album (stable shape)
     album: song.album
