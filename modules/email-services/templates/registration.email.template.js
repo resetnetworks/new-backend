@@ -35,20 +35,19 @@ export const prepareRegistrationEmailFormat = (data) => {
     return null;
   }
 
-  const subject = `Welcome to ${data.app.name} 🎵`;
+  const subject = `Welcome to ${data.app.name} Streaming Platform 🎵`;
 
   const text = `
 Hi ${data.user.name},
 
 ${data.app.name}
 
-Here, you’ll find a carefully curated world of ambient, instrumental, and experimental sound.
-Just music that helps you slow down, focus, motivate, inspire and reset.
+Here you’ll find a carefully curated world of ambient, techno, IDM, classical, experimental sounds and much more. We’re continuously expanding our catalog
 
 Start exploring:
 • Discover artists, support directly
-• Soundscapes for focus, rest, and reflection
 • Your own space to listen, uninterrupted
+• Actually listen (wild concept, we know)
 
 Visit: ${data.app.url}
 
@@ -103,31 +102,23 @@ Need help? ${data.app.supportEmail}
         color: transparent;
       ">
         ${data.app.name}
-      </span>
+      </span> Streaming Platform
     </h2>
 
     <p>
-    Here, you’ll find a carefully curated world of ambient, instrumental, and experimental sound.
-    Just music that helps you slow down, focus, motivate, inspire and reset.
+    Here you’ll find a carefully curated world of ambient, techno, IDM, classical, experimental sounds and much more. We’re continuously expanding our catalog.
     </p>
 
     <div style="text-align:center;margin:35px;">
-    <a href="${data.app.url}" style="background:#3B82F6;color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;">
-    Start exploring
+    <a href="${data.app.url}" style="background:linear-gradient(45deg, #0F3272 0%, #1A5DB4 60%, #3380FF 100%);box-shadow:0 12px 32px rgba(51,128,255,0.35);color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;">
+    Start streaming
     </a>
     </div>
 
     <b>Start exploring:</b>
     <ul>
     <li>Discover artists, support directly (We’re trying to make a real difference here in artists’ lives)</li>
-    <li>Soundscapes for focus, rest, and reflection</li>
     <li>Your own space to listen, uninterrupted</li>
-    </ul>
-
-    <b>What you can do here:</b>
-    <ul>
-    <li>Find music that doesn’t fight for attention</li>
-    <li>Discover artists you probably won’t hear anywhere else</li>
     <li>Actually listen (wild concept, we know)</li>
     </ul>
 

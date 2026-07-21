@@ -13,7 +13,7 @@ import {
 // ===================================================================
 // 🔐 REGISTRATION EMAIL HANDLER
 // ===================================================================
-export const processAndSendRegistrationEmail = async ( payload ) => {
+export const processAndSendRegistrationEmail = async (payload ) => {
   const jobTag = "USER_WELCOME_EMAIL";
 
   try {
@@ -45,7 +45,7 @@ export const processAndSendRegistrationEmail = async ( payload ) => {
       return;
     }
 
-    await sendMail(user.email, emailContent, EMAIL_SENDERS.INFO);
+    await sendMail(user.email, emailContent, EMAIL_SENDERS.NO_REPLY);
 
     console.log(`\n🎉 [${jobTag}] Email successfully sent → ${user.email} 🎉\n`);
 
@@ -93,7 +93,7 @@ export const processAndSendPasswordResetEmail = async ({ userId, resetToken }) =
     }
 
     // 4️⃣ Send email
-    await sendMail(user.email, emailContent, EMAIL_SENDERS.SUPPORT);
+    await sendMail(user.email, emailContent, EMAIL_SENDERS.NO_REPLY);
 
     console.log(`\n🎉 [${jobTag}] Email successfully sent → ${user.email} 🎉\n`);
 
@@ -224,7 +224,6 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
   }
 };
 
-
 // ===================================================================
 // 🔕 SUBSCRIPTION CANCELLED EMAIL HANDLER
 // ===================================================================
@@ -232,13 +231,13 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
 import { Artist } from "../../../models/Artist.js";
 import { prepareSubscriptionCancelledEmailTemplate } from "../templates/subscription.cancelled.template.js";
 
-export const processAndSendSubscriptionCancelledEmail = async ( payload ) => {
+export const processAndSendSubscriptionCancelledEmail = async (payload) => {
   const jobTag = "SUBSCRIPTION_CANCELLED_EMAIL";
 
   try {
     console.log(`\n📨 [${jobTag}] Job started`);
     console.log(`🔎 [${jobTag}] Payload:`, payload);
-    
+
     const {
       userId,
       userEmail,
