@@ -15,4 +15,8 @@ export const EMAIL_SENDERS = {
     name: "Reset Artists",
     email: "artists@musicreset.com",
   },
+  NO_REPLY: {
+    name: "Reset Music",
+    email: "no-reply@musicreset.com",
+  }
 };

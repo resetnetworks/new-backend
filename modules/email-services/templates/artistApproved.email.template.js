@@ -91,7 +91,7 @@ Need help? ${data.app.supportEmail}
     <p>Hi ${data.user.name},</p>
 
     <h2 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#000000;">
-      You're officially an Artist 🎉
+      Your Artist Account is Now Live
     </h2>
 
     <p style="margin-top:8px;color:#334155;">
@@ -100,7 +100,7 @@ Need help? ${data.app.supportEmail}
 
     <p style="margin-bottom:6px;"><b>Let's get started:</b></p>
     <ul style="margin:0 0 24px;padding-left:20px;color:#334155;">
-      <li style="margin-bottom:8px;">Distribute your music — singles, EPs, albums, DJ mixes. It's <b>completely free.</b></li>
+      <li style="margin-bottom:8px;">Distribute your music — singles, EPs, albums, DJ mixes. <b>Unlimited FREE Distribution.</b></li>
       <li style="margin-bottom:8px;">Activate monetisation</li>
       <li style="margin-bottom:8px;">Reach a global audience</li>
     </ul>
@@ -112,11 +112,12 @@ Need help? ${data.app.supportEmail}
       <li style="margin-bottom:8px;">Request payouts at any time</li>
     </ul>
 
-    <div style="text-align:center;margin:35px 0;">
-      <a href="${data.artist.dashboardUrl}" style="background:#3B82F6;color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
+        <div style="text-align:center;margin:35px 0;">
+      <a href="${data.artist.dashboardUrl}" style="background:linear-gradient(45deg, #0F3272 0%, #1A5DB4 60%, #3380FF 100%);box-shadow:0 12px 32px rgba(51,128,255,0.35);color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
         Open Artist Dashboard
       </a>
     </div>
+
 
     <p>We're excited to have you onboard 💜</p>
 
