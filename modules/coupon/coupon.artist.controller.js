@@ -10,6 +10,7 @@ import {
 /* -------------------- Create -------------------- */
 export const createArtistCouponController = async (req, res) => {
   const artistId = req.user.artistId;
+  
 
   const result = await createArtistCoupon({
     artistId,
@@ -61,6 +62,21 @@ export const disableArtistCouponController = async (req, res) => {
   const artistId = req.user.artistId;
 
   const result = await disableArtistCoupon({
+    artistId,
+    couponId: req.params.id,
+  });
+
+  res.json({
+    success: true,
+    data: result,
+  });
+};
+
+/* -------------------- Enable -------------------- */
+export const enableArtistCouponController = async (req, res) => {
+  const artistId = req.user.artistId;
+
+  const result = await enableArtistCoupon({
     artistId,
     couponId: req.params.id,
   });

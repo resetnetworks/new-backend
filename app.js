@@ -79,6 +79,9 @@ import uploadRoutes2 from "./routes/uploadRoutes2.js"
 import notificationRoutes from "./modules/notification-service/api/notification.routes.js";
 
 import artistCouponRoutes from "./modules/coupon/coupon.artist.routes.js"
+import path from "path";
+import migrationRoutes from "./modules/migration/routes/migration.routes.js";
+
 
 import priceChangeRoutes from "./modules/price-change/routes/paymentRoute.js";
 
@@ -89,6 +92,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 
 const app = express();
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // --------------------
 // Rate Limiters
@@ -200,6 +204,7 @@ app.use("/api/audience", audienceRoute)
 app.use("/api/coupon/artist", artistCouponRoutes)
 
 app.use("/api/v2/notifications", notificationRoutes );
+app.use("/migration", migrationRoutes);
 
 app.use("/api/v2/payment", priceChangeRoutes);
 

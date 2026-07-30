@@ -1,0 +1,108 @@
+{
+  "info": {
+    "_postman_id": "9ce64fd9-819e-41dd-b7e9-f23abe4dfe58",
+    "name": "reset-music",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "coupon",
+      "item": [
+        {
+          "name": "createCoupon",
+          "id": "c535710e-dad5-4722-b237-89632107f10e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "getAllCoupon",
+          "id": "ff712c2e-3113-4b8c-a9df-8c409d394bbe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "getCouponById",
+          "id": "710cc4b0-e72c-46dd-b137-4697ff4b919e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "53129044-a578-47fb-b070-ad9f33d10dbd"
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "login",
+          "id": "e69ee018-d8b1-4061-a31c-1ce542f26349",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "signup",
+          "id": "c977e36b-b88e-40c3-a17b-0c59ab9dd53f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "id": "b3619ad5-b637-4a8a-9f56-83fb00477d47",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "721ad31e-aecc-45ba-b7a9-03ff92c13391"
+    },
+    {
+      "name": "New Folder",
+      "item": [],
+      "id": "30c40060-1bb9-4893-ad21-358917802854"
+    },
+    {
+      "name": "New Folder",
+      "item": [],
+      "id": "79f91b63-82f9-43f5-8e96-5e5312df33b0"
+    },
+    {
+      "name": "New Folder",
+      "item": [],
+      "id": "87a6ea35-0430-47b7-8290-dbf77917737c"
+    }
+  ]
+}

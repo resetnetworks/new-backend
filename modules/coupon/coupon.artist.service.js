@@ -1,76 +1,89 @@
 // coupon.artist.service.js
 
 import { Coupon } from "./coupon.model.js";
+import { providerDiscountMap } from "./providerDiscountMap.js";
 import { BadRequestError, ForbiddenError } from "../../errors/index.js";
 
 /* -------------------- Create -------------------- */
 export const createArtistCoupon = async ({
   artistId,
+  createdBy,
   payload,
 }) => {
   const {
     code,
-    type,
-    value,
+    discountType,
+    discountValue,
     maxDiscount,
-    applicableTo,
-    minOrderAmount,
+    appliesTo,
+    eligibility,
     usageLimit,
     perUserLimit,
-    validFrom,
-    validUntil,
-    firstTimeOnly,
+    minimumPurchase,
+    startsAt,
+    expiresAt,
   } = payload;
 
-  /* -------------------- STRICT RULES -------------------- */
+  /* -------------------- Authorization -------------------- */
 
   if (!artistId) {
     throw new ForbiddenError("Artist not authorized");
   }
 
-  if (applicableTo === "all") {
-    throw new BadRequestError(
-      "Artists cannot create global coupons"
-    );
-  }
-
   /* -------------------- Validation -------------------- */
 
-  if (type === "percentage" && value > 100) {
-    throw new BadRequestError("Percentage cannot exceed 100");
-  }
-
-  if (validFrom && validUntil && validFrom > validUntil) {
+  if (startsAt && expiresAt && new Date(startsAt) > new Date(expiresAt)) {
     throw new BadRequestError("Invalid date range");
   }
 
-  /* -------------------- Unique Code -------------------- */
+  /* -------------------- Duplicate Code -------------------- */
 
-  const existing = await Coupon.findOne({ code });
+  const existing = await Coupon.findOne({
+    artistId,
+    code: code.toUpperCase(),
+  });
 
   if (existing) {
     throw new BadRequestError("Coupon code already exists");
   }
 
-  /* -------------------- Create -------------------- */
+  /* -------------------- Provider Mapping -------------------- */
+
+  let providerIds = {};
+
+  if (discountType === "percentage") {
+    providerIds = providerDiscountMap[discountValue];
+
+    if (!providerIds) {
+      throw new BadRequestError(
+        `No payment provider mapping found for ${discountValue}% discount`
+      );
+    }
+  }
+
+  /* -------------------- Create Coupon -------------------- */
 
   const coupon = await Coupon.create({
     code,
-    type,
-    value,
-    maxDiscount,
-    applicableTo,
-    artistId, // 🔥 forced
+    artistId,
 
-    minOrderAmount,
+    discountType,
+    discountValue,
+    maxDiscount,
+
+    appliesTo,
+    eligibility,
+
     usageLimit,
     perUserLimit,
-    validFrom,
-    validUntil,
-    firstTimeOnly,
+    minimumPurchase,
 
-    createdBy: "artist",
-    createdById: artistId,
+    startsAt,
+    expiresAt,
+
+    providerIds,
+
+    createdBy,
   });
 
   return coupon;
@@ -82,18 +95,21 @@ export const getArtistCoupons = async ({
   page = 1,
   limit = 10,
 }) => {
+  const skip = (page - 1) * limit;
+
   const query = {
     artistId,
-    createdBy: "artist",
   };
 
-  const coupons = await Coupon.find(query)
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .lean();
+  const [coupons, total] = await Promise.all([
+    Coupon.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
 
-  const total = await Coupon.countDocuments(query);
+    Coupon.countDocuments(query),
+  ]);
 
   return {
     data: coupons,
@@ -101,11 +117,14 @@ export const getArtistCoupons = async ({
       total,
       page,
       limit,
+      totalPages: Math.ceil(total / limit),
     },
   };
 };
 
 /* -------------------- Update -------------------- */
+
+
 export const updateArtistCoupon = async ({
   artistId,
   couponId,
@@ -117,15 +136,75 @@ export const updateArtistCoupon = async ({
     throw new BadRequestError("Coupon not found");
   }
 
-  /* -------------------- Ownership Check -------------------- */
+  /* -------------------- Ownership -------------------- */
+
   if (String(coupon.artistId) !== String(artistId)) {
     throw new ForbiddenError("Not your coupon");
   }
 
-  /* -------------------- Prevent dangerous updates -------------------- */
-  delete updates.usedCount;
-  delete updates.createdBy;
+  /* -------------------- Protected Fields -------------------- */
+
   delete updates.artistId;
+  delete updates.createdBy;
+  delete updates.usedCount;
+  delete updates.providerIds;
+
+  /* -------------------- Validate Dates -------------------- */
+
+  const startsAt = updates.startsAt ?? coupon.startsAt;
+  const expiresAt = updates.expiresAt ?? coupon.expiresAt;
+
+  if (
+    startsAt &&
+    expiresAt &&
+    new Date(startsAt) > new Date(expiresAt)
+  ) {
+    throw new BadRequestError("Invalid date range");
+  }
+
+  /* -------------------- Duplicate Code -------------------- */
+
+  if (
+    updates.code &&
+    updates.code.toUpperCase() !== coupon.code
+  ) {
+    const existing = await Coupon.findOne({
+      artistId,
+      code: updates.code.toUpperCase(),
+      _id: { $ne: couponId },
+    });
+
+    if (existing) {
+      throw new BadRequestError("Coupon code already exists");
+    }
+
+    updates.code = updates.code.toUpperCase();
+  }
+
+  /* -------------------- Provider Mapping -------------------- */
+
+  const discountType =
+    updates.discountType ?? coupon.discountType;
+
+  const discountValue =
+    updates.discountValue ?? coupon.discountValue;
+
+  if (discountType === "percentage") {
+    const providerIds =
+      providerDiscountMap[discountValue];
+
+    if (!providerIds) {
+      throw new BadRequestError(
+        `No payment provider mapping found for ${discountValue}% discount`
+      );
+    }
+
+    updates.providerIds = providerIds;
+  } else {
+    updates.providerIds = {};
+  }
+
+  /* -------------------- Update -------------------- */
 
   Object.assign(coupon, updates);
 
@@ -133,6 +212,7 @@ export const updateArtistCoupon = async ({
 
   return coupon;
 };
+
 
 /* -------------------- Disable -------------------- */
 export const disableArtistCoupon = async ({
@@ -149,7 +229,40 @@ export const disableArtistCoupon = async ({
     throw new ForbiddenError("Not your coupon");
   }
 
+  if (!coupon.isActive) {
+    throw new BadRequestError("Coupon is already disabled");
+  }
+
   coupon.isActive = false;
+
+  await coupon.save();
+
+  return coupon;
+};
+
+
+/* -------------------- Enable -------------------- */
+export const enableArtistCoupon = async ({
+  artistId,
+  couponId,
+}) => {
+  const coupon = await Coupon.findById(couponId);
+
+  if (!coupon) {
+    throw new BadRequestError("Coupon not found");
+  }
+
+  /* -------------------- Ownership -------------------- */
+  if (String(coupon.artistId) !== String(artistId)) {
+    throw new ForbiddenError("Not your coupon");
+  }
+
+  if (coupon.isActive) {
+    throw new BadRequestError("Coupon is already enabled");
+  }
+
+  coupon.isActive = true;
+
   await coupon.save();
 
   return coupon;

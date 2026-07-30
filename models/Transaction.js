@@ -49,6 +49,8 @@ const transactionSchema = new mongoose.Schema(
     },
 
     currency: { type: String, required: true },
+    
+    
 
     platformFee: { type: Number, required: true },
     artistShare: { type: Number, required: true },
@@ -58,6 +60,34 @@ const transactionSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
+    
+    originalAmount: {
+      type: Number,
+    },
+
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    coupon: {
+    couponId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon",
+    },
+
+    code: String,
+
+    discountType: String,
+
+    discountValue: Number,
+
+    discountAmount: Number,
+
+    originalAmount: Number,
+
+    finalAmount: Number,
+},
 
     paymentIntentId: String,      // Stripe
     razorpayOrderId: String,      // Razorpay
@@ -70,7 +100,7 @@ const transactionSchema = new mongoose.Schema(
     stripeInvoiceId: String,     // required for payments from stripe
     
     processing: {
-  earnings: {
+    earnings: {
     status: {
       type: String,
       enum: ["pending", "done", "failed"],

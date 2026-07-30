@@ -8,6 +8,9 @@ import connectDb from './database/db.js';
 import app from './app.js';
 import gracefulShutdown from './middleware/gracefulShutdown.js';
 
+// Boot up migration worker
+import "./modules/migration/workers/migration.worker.js";
+
 const port = process.env.PORT || 4000;
 let server;
 

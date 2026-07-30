@@ -72,58 +72,221 @@ clientSecret: stripePayment.client_secret,
 
 
 // ✅ Razorpay One-Time Payment (Song/Album)
+// export const createRazorpayOrder = async (req, res) => {
+//   const { itemType, itemId, currency  } = req.body;
+//   const userId = req.user._id;
+
+//   if (!["song", "album"].includes(itemType)) {
+//     throw new BadRequestError("Invalid item type. Must be 'song' or 'album'.");
+//   }
+
+//   // ✅ Get artistId (optional but useful for records)
+//   let artistId;
+//   if (itemType === "song") {
+//     const song = await Song.findById(itemId).select("artist");
+//     if (!song) throw new NotFoundError("Song not found");
+//     artistId = song.artist;
+//   } else if (itemType === "album") {
+//     const album = await Album.findById(itemId).select("artist");
+//     if (!album) throw new NotFoundError("Album not found");
+//     artistId = album.artist;
+//   }
+//     const subscription = await Subscription.findOne({
+//         userId,
+//         artistId,
+//         status: { $in: ["active"] }, 
+//       });
+  
+//    if (!subscription) 
+//      return res.status(400).json({ "message" : "No active subscription found for this artist.", artistId });
+
+//   // ✅ Create Razorpay Order
+// const razorpayOrder = await createRazorpayOrderUtil(amount, userId, itemType, itemId, {}, currency);
+  
+
+// const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
+// const artistShare = amount - platformFee;
+  
+  
+//   // ✅ Save Transaction in DB
+//   await Transaction.create({
+//     userId,
+//     itemType,
+//     itemId,
+//     artistId,
+//     amount,
+//     platformFee,
+//     artistShare,
+//     currency,
+//     gateway: "razorpay",
+//     status: "pending",
+//     razorpayOrderId: razorpayOrder.id,
+//   });
+  
+//   return res.status(201).json({ success: true, order: razorpayOrder });
+// };
+
+
+const getPriceByCurrency = (basePrice, convertedPrices = [], currency) => {
+  if (basePrice?.currency === currency) {
+    return basePrice.amount;
+  }
+
+  const converted = convertedPrices.find(
+    (p) => p.currency === currency
+  );
+
+  if (!converted) {
+    throw new BadRequestError(
+      `Price not available in ${currency}`
+    );
+  }
+
+  return converted.amount;
+};
+
 export const createRazorpayOrder = async (req, res) => {
-  const { itemType, itemId, amount, currency  } = req.body;
+  const { itemType, itemId, currency, couponCode } = req.body;
   const userId = req.user._id;
 
   if (!["song", "album"].includes(itemType)) {
-    throw new BadRequestError("Invalid item type. Must be 'song' or 'album'.");
+    throw new BadRequestError(
+      "Invalid item type. Must be 'song' or 'album'."
+    );
   }
 
-  // ✅ Get artistId (optional but useful for records)
+  let item;
   let artistId;
+  let originalAmount;
+
+  /* --------------------------------------------------
+   * Fetch item & price from DB
+   * -------------------------------------------------- */
   if (itemType === "song") {
-    const song = await Song.findById(itemId).select("artist");
-    if (!song) throw new NotFoundError("Song not found");
-    artistId = song.artist;
-  } else if (itemType === "album") {
-    const album = await Album.findById(itemId).select("artist");
-    if (!album) throw new NotFoundError("Album not found");
-    artistId = album.artist;
+    item = await Song.findById(itemId).select(
+      "artist basePrice convertedPrices"
+    );
+
+    if (!item) {
+      throw new NotFoundError("Song not found");
+    }
+
+    artistId = item.artist;
+
+    originalAmount = getPriceByCurrency(
+      item.basePrice,
+      item.convertedPrices,
+      currency
+    );
+  } else {
+    item = await Album.findById(itemId).select(
+      "artist basePrice convertedPrices"
+    );
+
+    if (!item) {
+      throw new NotFoundError("Album not found");
+    }
+
+    artistId = item.artist;
+
+    originalAmount = getPriceByCurrency(
+      item.basePrice,
+      item.convertedPrices,
+      currency
+    );
   }
-    const subscription = await Subscription.findOne({
-        userId,
-        artistId,
-        status: { $in: ["active"] }, 
-      });
-  
-      if (!subscription) 
-         return res.status(400).json({ "message" : "No active subscription found for this artist.", artistId });
 
-  // ✅ Create Razorpay Order
-const razorpayOrder = await createRazorpayOrderUtil(amount, userId, itemType, itemId, {}, currency);
-  
+  /* --------------------------------------------------
+   * User must have active subscription
+   * -------------------------------------------------- */
+  const subscription = await Subscription.findOne({
+    userId,
+    artistId,
+    status: "active",
+  });
 
-const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
-const artistShare = amount - platformFee;
-  
-  
-  // ✅ Save Transaction in DB
+  if (!subscription) {
+    return res.status(400).json({
+      message: "No active subscription found for this artist.",
+      artistId,
+    });
+  }
+
+  /* --------------------------------------------------
+   * Coupon
+   * -------------------------------------------------- */
+  let amount = originalAmount;
+
+  let couponSnapshot = {
+    id: null,
+    code: null,
+    percentage: null,
+  };
+
+  let discountAmount = 0;
+
+  if (couponCode) {
+    const coupon = await applyCoupon({
+      code: couponCode,
+      userId,
+      amount: originalAmount,
+      type: itemType,
+      artistId,
+    });
+
+    amount = coupon.finalAmount;
+    discountAmount = coupon.discount;
+
+    couponSnapshot = {
+      id: coupon.couponId,
+      code: coupon.code,
+      percentage: ((coupon.discount / originalAmount) * 100).toFixed(2),
+    };
+  }
+
+  /* --------------------------------------------------
+   * Razorpay Order
+   * -------------------------------------------------- */
+  const razorpayOrder = await createRazorpayOrderUtil(
+    amount,
+    userId,
+    itemType,
+    itemId,
+    {},
+    currency
+  );
+
+  const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
+  const artistShare = amount - platformFee;
+
+  /* --------------------------------------------------
+   * Transaction
+   * -------------------------------------------------- */
   await Transaction.create({
     userId,
     itemType,
     itemId,
     artistId,
+
     amount,
+    originalAmount,
+    discountAmount,
+
+    coupon: couponSnapshot,
+
     platformFee,
     artistShare,
+
     currency,
     gateway: "razorpay",
     status: "pending",
     razorpayOrderId: razorpayOrder.id,
   });
-  
-  return res.status(201).json({ success: true, order: razorpayOrder });
+
+  return res.status(201).json({
+    success: true,
+    order: razorpayOrder,
+  });
 };
 
 

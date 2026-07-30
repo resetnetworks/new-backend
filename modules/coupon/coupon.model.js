@@ -1,85 +1,155 @@
-// modules/coupon/coupon.model.js
 import mongoose from "mongoose";
 
 const couponSchema = new mongoose.Schema(
   {
+    /* -------------------- Coupon -------------------- */
     code: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
+    },
+
+    /* -------------------- Owner -------------------- */
+    artistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Artist",
+      required: true,
       index: true,
     },
 
     /* -------------------- Discount -------------------- */
-    type: {
+    discountType: {
       type: String,
-      enum: ["percentage", "flat"],
+      enum: ["percentage", "fixed"],
+      default: "percentage",
       required: true,
     },
 
-    value: {
+    discountValue: {
       type: Number,
       required: true,
+      min: 1,
+      validate: {
+        validator: function (value) {
+          if (this.discountType === "percentage") {
+            return value <= 100;
+          }
+          return true;
+        },
+        message: "Percentage discount cannot exceed 100%.",
+      },
     },
 
-    maxDiscount: Number,
+    // Used only for percentage discounts
+    maxDiscount: {
+      type: Number,
+      default: null,
+    },
 
-    /* -------------------- Applicability -------------------- */
-    applicableTo: {
+    /* -------------------- Applies To -------------------- */
+    appliesTo: {
+      type: [
+        {
+          type: String,
+          enum: ["song", "album", "subscription"],
+        },
+      ],
+      required: true,
+      validate: [(v) => v.length > 0, "At least one target is required."],
+    },
+
+    /* -------------------- Eligibility -------------------- */
+    eligibility: {
       type: String,
-      enum: ["subscription", "song", "album", "all"],
-      default: "all",
-      index: true,
+      enum: [
+        "everyone",
+        "first_purchase",
+        "first_subscription",
+      ],
+      default: "everyone",
     },
 
-    artistId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Artist",
-      default: null, // null = platform-wide
-      index: true,
+    /* -------------------- Usage -------------------- */
+    usageLimit: {
+      type: Number,
+      default: 0, // 0 = unlimited
+      min: 0,
     },
-
-    /* -------------------- Constraints -------------------- */
-    minOrderAmount: Number,
-
-    usageLimit: Number,     // global limit
-    perUserLimit: Number,   // per user
 
     usedCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
-    /* -------------------- Time -------------------- */
-    validFrom: Date,
-    validUntil: Date,
+    perUserLimit: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
 
-    /* -------------------- Flags -------------------- */
+    minimumPurchase: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    /* -------------------- Validity -------------------- */
+    startsAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    expiresAt: Date,
+
+    /* -------------------- Status -------------------- */
     isActive: {
       type: Boolean,
       default: true,
       index: true,
     },
 
-    firstTimeOnly: {
-      type: Boolean,
-      default: false,
+    /* -------------------- Payment Provider Mapping -------------------- */
+    providerIds: {
+      stripe: {
+        couponId: String,
+      },
+
+      razorpay: {
+        offerId: String,
+      },
+
+      paypal: {
+        couponId: String,
+      },
     },
 
+    /* -------------------- Audit -------------------- */
     createdBy: {
-    type: String,
-    enum: ["admin", "artist"],
-    required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-
-    createdById: {
-    type: mongoose.Schema.Types.ObjectId,
-    refPath: "createdBy",
-    }
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
+
+/* -------------------- Indexes -------------------- */
+
+// Each artist can reuse common coupon names
+couponSchema.index(
+  { artistId: 1, code: 1 },
+  { unique: true }
+);
+
+// Fast coupon validation
+couponSchema.index({
+  artistId: 1,
+  isActive: 1,
+  expiresAt: 1,
+});
 
 export const Coupon = mongoose.model("Coupon", couponSchema);
