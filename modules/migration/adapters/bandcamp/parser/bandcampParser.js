@@ -122,11 +122,17 @@ export function parseAlbumHtml(html, albumUrl) {
     });
   }
 
+  let title =
+    $('meta[property="og:title"]').attr("content") ||
+    $("h2.trackTitle, h1").first().text().trim() ||
+    null;
+
+  if (title && title.includes(", by ")) {
+    title = title.split(", by ")[0].trim();
+  }
+
   return {
-    title:
-      $('meta[property="og:title"]').attr("content") ||
-      $("h2.trackTitle, h1").first().text().trim() ||
-      null,
+    title,
     description:
       $('meta[property="og:description"]').attr("content") ||
       $('meta[name="description"]').attr("content") ||
