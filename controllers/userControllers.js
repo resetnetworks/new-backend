@@ -1,24 +1,22 @@
 import { User } from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
-import { sendMail } from "../utils/sendResetPassMail.js";
 import crypto from "crypto";
 import { StatusCodes } from 'http-status-codes';
 import { BadRequestError, UnauthorizedError, } from "../errors/index.js";
 import { shapeUserResponse } from "../dto/user.dto.js";
 import Session from "../models/Session.js";
-import { log } from "console";
 import { Subscription } from "../models/Subscription.js";
 import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 import { EmailService } from "../modules/email-services/email.service.js";
 
 import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
-
+import redis, { setCached, getCached } from "../utils/redisClient.js";
 
 
 
 // ===================================================================
-// @desc    Register a new user
+// @desc    Request Registration OTP
 // @route   POST /api/users/register
 // @access  Public
 // ===================================================================
@@ -32,28 +30,65 @@ export const registerUser = async (req, res) => {
     throw new BadRequestError("User already exists");
   }
 
-  // :2️⃣ Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
+  // :2️⃣ Generate 6-digit OTP
+  const otp = crypto.randomInt(100000, 999999).toString();
 
-  // :3️⃣ Create new user
-  const user = await User.create({
+  // :3️⃣ Store in Redis with 10-minute TTL (600 seconds)
+  const redisKey = `registration_otp:${email}`;
+  await setCached(redisKey, { name, email, password, dob, otp }, 600);
+
+  // :4️⃣ Send Email with OTP via Background Job
+  await EmailService.sendRegistrationOtp({
     name,
     email,
-    dob,
-    password: hashedPassword,
+    otp
   });
 
 
+  console.log("\n\n========================================\n");
+  console.log("OTP for registration: ", otp);
+  console.log("\n========================================\n\n");
 
-  // :6️⃣ Generate JWT (same as login)
+  res.status(StatusCodes.OK).json({
+    message: "Verification OTP sent to your email",
+  });
+};
+
+// ===================================================================
+// @desc    Verify Registration OTP and Create User
+// @route   POST /api/users/verify-registration
+// @access  Public
+// ===================================================================
+export const verifyRegistration = async (req, res) => {
+  const { email, otp } = req.body;
+
+  const redisKey = `registration_otp:${email}`;
+  const cachedData = await getCached(redisKey);
+
+  if (!cachedData) {
+    throw new BadRequestError("OTP expired or not found. Please request a new one.");
+  }
+
+  if (cachedData.otp !== otp) {
+    throw new BadRequestError("Invalid OTP.");
+  }
+
+  // :1️⃣ Hash password
+  const hashedPassword = await bcrypt.hash(cachedData.password, 10);
+
+  // :2️⃣ Create new user
+  const user = await User.create({
+    name: cachedData.name,
+    email: cachedData.email,
+    dob: cachedData.dob,
+    password: hashedPassword,
+  });
+
+  // :3️⃣ Generate JWT
   const rawToken = generateToken(user, res);
-
-  // :7️⃣ Hash token before storing in session collection
   const hashedToken = await bcrypt.hash(rawToken, 10);
 
-
-
-  // :9️⃣ Shape user response (remove sensitive data)
+  // :4️⃣ Shape user response
   const shapedUser = shapeUserResponse(user.toObject());
 
   // sending registration email.
@@ -70,7 +105,10 @@ export const registerUser = async (req, res) => {
     name: user.name,
   });
 
-  // :🔟 Return shaped user + token
+  // :5️⃣ Clear the OTP from Redis
+  await redis.del(redisKey);
+
+  // :6️⃣ Return shaped user + token
   res.status(StatusCodes.CREATED).json({
     user: shapedUser,
     token: rawToken,
@@ -456,4 +494,95 @@ export const getRecentlyPlayed = async (req, res) => {
   res.json({
     songs: data?.songs || []
   });
+};
+
+
+export const changeEmail = async (req, res) => {
+  const { email, newEmail } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) throw new BadRequestError("User not found");
+
+  // 1️⃣ Generate 6-digit OTP
+  const otp = crypto.randomInt(100000, 999999).toString();
+
+  // 2️⃣ Store in Redis with 5-minute TTL (300 seconds)
+  const redisKey = `email_change:${user._id}`;
+  await setCached(redisKey, { oldEmail: email, newEmail, otp }, 300);
+
+  // 3️⃣ Send Email with OTP to newEmail via Background Job
+  await EmailService.sendEmailChange({
+    userId: user._id,
+    newEmail,
+    otp
+  });
+
+  return res.status(StatusCodes.OK).json({ message: "Verification OTP sent to your new email." });
+}
+
+export const verifyEmailChange = async (req, res) => {
+  const { email, otp } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) throw new BadRequestError("User not found");
+
+  const redisKey = `email_change:${user._id}`;
+  const cachedData = await getCached(redisKey);
+
+  if (!cachedData) {
+    throw new BadRequestError("OTP expired or not found. Please request a new one.");
+  }
+
+  if (cachedData.otp !== otp) {
+    throw new BadRequestError("Invalid OTP.");
+  }
+
+  // 4️⃣ Update user's email
+  user.email = cachedData.newEmail;
+  await user.save();
+
+  // 5️⃣ Clear the OTP from Redis
+  await redis.del(redisKey);
+
+  // 6️⃣ Logout the user (clear cookie / session)
+  res.cookie("token", "", {
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return res.status(StatusCodes.OK).json({ message: "Email changed successfully. Please log in again with your new email." });
+}
+
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+  if (newPassword !== confirmNewPassword) {
+    throw new BadRequestError("New passwords do not match.");
+  }
+
+  // Need to get user with password explicitly selected
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user) {
+    throw new BadRequestError("User not found.");
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    throw new BadRequestError("Incorrect current password.");
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  await user.save();
+
+  // Logout the user (clear cookie / session)
+  res.cookie("token", "", {
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return res.status(StatusCodes.OK).json({ message: "Password changed successfully. Please log in again with your new password." });
 };

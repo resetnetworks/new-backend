@@ -28,7 +28,7 @@ export const getAudienceController = async (
       });
 
       let users = audience;
-      console.log(users)
+      // console.log(users)
 
       // For artist subscribers populate case
       if (filter === "artist_subscribers") {

@@ -17,7 +17,7 @@ export const getArtistApplicationForAdminController = async (req, res, next) => 
 
     return res.status(200).json({
       success: true,
-      application: artistApplicationAdminDTO(application),
+      application: await artistApplicationAdminDTO(application),
     });
   } catch (err) {
     next(err);
@@ -86,7 +86,7 @@ export const approveArtistApplicationController = async (req, res, next) => {
       success: true,
       message: "Artist application approved successfully.",
       artist: artistDTO(artist),
-      application: artistApplicationAdminDTO(updatedApplication),
+      application: await artistApplicationAdminDTO(updatedApplication),
     });
   } catch (err) {
     next(err);
@@ -144,7 +144,7 @@ export const rejectArtistApplicationController = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Artist application rejected.",
-      application: artistApplicationAdminDTO(updatedApplication),
+      application: await artistApplicationAdminDTO(updatedApplication),
     });
   } catch (err) {
     next(err);
@@ -209,7 +209,7 @@ export const requestMoreInfoArtistApplicationController = async (req, res, next)
     return res.status(200).json({
       success: true,
       message: "Requested more information from the artist.",
-      application: artistApplicationAdminDTO(updatedApplication),
+      application: await artistApplicationAdminDTO(updatedApplication),
     });
   } catch (err) {
     next(err);
