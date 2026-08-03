@@ -42,6 +42,12 @@ const migrationAlbumSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ["DRAFT", "PUBLISHED"],
+      default: "DRAFT",
+      index: true,
+    },
   },
   {
     timestamps: true,

@@ -3,9 +3,20 @@ import { migrationService } from "../services/migration.service.js";
 import { migrationJobRepository } from "../repositories/migrationJob.repository.js";
 import { migrationAlbumRepository } from "../repositories/migrationAlbum.repository.js";
 import { migrationTrackRepository } from "../repositories/migrationTrack.repository.js";
+import MigrationJob from "../models/migrationJob.model.js";
+import MigrationAlbum from "../models/migrationAlbum.model.js";
+import MigrationTrack from "../models/migrationTrack.model.js";
 
 export const postBandcampMigration = async (req, res) => {
-  const { url, workspaceId } = req.body;
+  const { url } = req.body;
+  const workspaceId = req.user?.workspaceId || req.body.workspaceId;
+
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
 
   try {
     const job = await migrationService.createMigration(workspaceId, url, "bandcamp");
@@ -100,8 +111,19 @@ export const postImportMigration = async (req, res) => {
 };
 
 export const getDraftAlbums = async (req, res) => {
+  const workspaceId = req.user?.workspaceId;
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
+
   try {
-    const albums = await migrationAlbumRepository.findAll();
+    const jobs = await MigrationJob.find({ workspaceId });
+    const jobIds = jobs.map((j) => j._id);
+    const albums = await MigrationAlbum.find({ migrationJobId: { $in: jobIds }, status: "DRAFT" }).sort({ createdAt: -1 });
+
     return res.status(StatusCodes.OK).json({
       success: true,
       data: albums,
@@ -116,14 +138,31 @@ export const getDraftAlbums = async (req, res) => {
 
 export const getDraftAlbumDetails = async (req, res) => {
   const { id } = req.params;
+  const workspaceId = req.user?.workspaceId;
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
+
   try {
-    const album = await migrationAlbumRepository.findById(id);
+    const album = await MigrationAlbum.findById(id);
     if (!album) {
       return res.status(StatusCodes.NOT_FOUND).json({
         success: false,
         message: "Draft album not found",
       });
     }
+
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
+    if (!job) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: "Access denied: This album does not belong to your workspace",
+      });
+    }
+
     const tracks = await migrationTrackRepository.findByAlbumId(id);
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -142,18 +181,36 @@ export const getDraftAlbumDetails = async (req, res) => {
 
 export const patchDraftAlbum = async (req, res) => {
   const { id } = req.params;
+  const workspaceId = req.user?.workspaceId;
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
+
   try {
-    const album = await migrationAlbumRepository.update(id, req.body);
+    const album = await MigrationAlbum.findById(id);
     if (!album) {
       return res.status(StatusCodes.NOT_FOUND).json({
         success: false,
         message: "Draft album not found",
       });
     }
+
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
+    if (!job) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: "Access denied: This album does not belong to your workspace",
+      });
+    }
+
+    const updated = await migrationAlbumRepository.update(id, req.body);
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Draft album updated successfully",
-      data: album,
+      data: updated,
     });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
@@ -165,23 +222,49 @@ export const patchDraftAlbum = async (req, res) => {
 
 export const patchDraftTrack = async (req, res) => {
   const { id } = req.params;
-  try {
-    const updateData = { ...req.body };
-    if (updateData.audioKey) {
-      updateData.audioStatus = "READY";
-    }
+  const workspaceId = req.user?.workspaceId;
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
 
-    const track = await migrationTrackRepository.update(id, updateData);
+  try {
+    const track = await MigrationTrack.findById(id);
     if (!track) {
       return res.status(StatusCodes.NOT_FOUND).json({
         success: false,
         message: "Draft track not found",
       });
     }
+
+    const album = await MigrationAlbum.findById(track.migrationAlbumId);
+    if (!album) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "Associated album not found",
+      });
+    }
+
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
+    if (!job) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: "Access denied: This track does not belong to your workspace",
+      });
+    }
+
+    const updateData = { ...req.body };
+    if (updateData.audioKey) {
+      updateData.audioStatus = "READY";
+    }
+
+    const updatedTrack = await migrationTrackRepository.update(id, updateData);
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Draft track updated successfully",
-      data: track,
+      data: updatedTrack,
     });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
@@ -193,8 +276,32 @@ export const patchDraftTrack = async (req, res) => {
 
 export const publishDraftAlbum = async (req, res) => {
   const { id } = req.params;
-  const userId = req.user?._id || req.user?.id || req.body.userId;
+  const workspaceId = req.user?.workspaceId;
+  const userId = req.user?._id || req.user?.id;
+  if (!workspaceId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: "Missing workspace context. Please check x-workspace-id header.",
+    });
+  }
+
   try {
+    const album = await MigrationAlbum.findById(id);
+    if (!album) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        success: false,
+        message: "Draft album not found",
+      });
+    }
+
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
+    if (!job) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: "Access denied: This album does not belong to your workspace",
+      });
+    }
+
     const result = await migrationService.publishAlbumToProduction(id, userId);
     return res.status(StatusCodes.OK).json({
       success: true,

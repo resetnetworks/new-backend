@@ -268,6 +268,7 @@ export const publishAlbumToProduction = async (albumId, userId) => {
               bio: artist.bio || "",
               location: artist.location || "",
               coverImageKey: await copyAssetToProduction(artist.image),
+              createdBy: userId,
             },
           ],
           { session }
@@ -321,6 +322,10 @@ export const publishAlbumToProduction = async (albumId, userId) => {
 
     albumDoc[0].songs = songIds;
     await albumDoc[0].save({ session });
+
+    // Mark the draft album as PUBLISHED
+    album.status = "PUBLISHED";
+    await album.save({ session });
 
     if (job) {
       await migrationJobRepository.updateStatus(job._id, "IMPORTED", 100, "COMPLETED");
