@@ -285,6 +285,9 @@ export const publishDraftAlbum = async (req, res) => {
     });
   }
 
+  const payload = req.body;
+
+
   try {
     const album = await MigrationAlbum.findById(id);
     if (!album) {
@@ -294,7 +297,7 @@ export const publishDraftAlbum = async (req, res) => {
       });
     }
 
-    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId, payload });
     if (!job) {
       return res.status(StatusCodes.FORBIDDEN).json({
         success: false,

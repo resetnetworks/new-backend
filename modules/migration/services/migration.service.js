@@ -206,7 +206,7 @@ const copyAssetToProduction = async (oldKey) => {
   return oldKey;
 };
 
-export const publishAlbumToProduction = async (albumId, userId) => {
+export const publishAlbumToProduction = async (albumId, userId, payload) => {
   const album = await migrationAlbumRepository.findById(albumId);
   if (!album) throw new Error("Draft album not found");
 
@@ -223,7 +223,36 @@ export const publishAlbumToProduction = async (albumId, userId) => {
   if (missingAudioTracks.length > 0) {
     const titles = missingAudioTracks.map((t) => `"${t.title}"`).join(", ");
     throw new Error(`Cannot publish: The following tracks are missing audio files: ${titles}`);
+
   }
+
+  const {
+
+    accessType = "subscription",
+    basePrice,
+
+  } = payload;
+
+  // --- Pricing rules ---
+  const isPurchaseOnly = accessType === "purchase-only";
+
+  if (isPurchaseOnly && !basePrice) {
+    throw new BadRequestError("Base price is required for purchase-only albums");
+  }
+
+  if (!isPurchaseOnly && basePrice) {
+    throw new BadRequestError("Pricing not allowed for this access type");
+  }
+
+  let convertedPrices = [];
+
+  if (isPurchaseOnly) {
+    convertedPrices = await convertCurrencies(
+      basePrice.currency,
+      basePrice.amount
+    );
+  }
+
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -289,6 +318,14 @@ export const publishAlbumToProduction = async (albumId, userId) => {
         {
           title: album.title,
           artist: artistId,
+          accessType,
+          basePrice: isPurchaseOnly
+            ? {
+              amount: Number(basePrice.amount),
+              currency: basePrice.currency,
+            }
+            : null,
+          convertedPrices,
           description: album.description || "",
           releaseDate: album.releaseDate || new Date(),
           genres: album.genres || [],
