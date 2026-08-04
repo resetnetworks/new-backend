@@ -134,6 +134,9 @@ export function parseAlbumHtml(html, albumUrl) {
   return {
     title,
     description:
+      $(".tralbum-about").text().trim() ||
+      $(".about-text").text().trim() ||
+      $(".about").text().trim() ||
       $('meta[property="og:description"]').attr("content") ||
       $('meta[name="description"]').attr("content") ||
       null,

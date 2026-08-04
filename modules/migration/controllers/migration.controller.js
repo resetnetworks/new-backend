@@ -96,7 +96,8 @@ export const postImportMigration = async (req, res) => {
   const userId = req.user?._id || req.user?.id || req.body.userId;
 
   try {
-    const result = await migrationService.importMigration(id, userId);
+    const { releases } = req.body;
+    const result = await migrationService.importMigration(id, userId, releases);
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Data imported into production successfully",
@@ -297,7 +298,7 @@ export const publishDraftAlbum = async (req, res) => {
       });
     }
 
-    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId, payload });
+    const job = await MigrationJob.findOne({ _id: album.migrationJobId, workspaceId });
     if (!job) {
       return res.status(StatusCodes.FORBIDDEN).json({
         success: false,
@@ -305,7 +306,7 @@ export const publishDraftAlbum = async (req, res) => {
       });
     }
 
-    const result = await migrationService.publishAlbumToProduction(id, userId);
+    const result = await migrationService.publishAlbumToProduction(id, userId, payload);
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Draft album and tracks published to production successfully",
@@ -334,4 +335,3 @@ export const migrationController = {
 };
 
 export default migrationController;
-

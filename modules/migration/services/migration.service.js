@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import { migrationJobRepository } from "../repositories/migrationJob.repository.js";
 import { migrationArtistRepository } from "../repositories/migrationArtist.repository.js";
@@ -11,6 +12,7 @@ import { Album } from "../../../models/album.model.js";
 import { Song } from "../../../models/song.model.js";
 import { Workspace } from "../../workspace/workspace.model.js";
 import config from "../config.js";
+import { convertCurrencies } from "../../../utils/convertCurrencies.js";
 
 
 
@@ -75,7 +77,7 @@ export const cancelMigration = async (jobId) => {
   return updatedJob;
 };
 
-export const importMigration = async (jobId, userId) => {
+export const importMigration = async (jobId, userId, releases = []) => {
   const job = await migrationJobRepository.findById(jobId);
   if (!job) throw new Error("Migration job not found");
   if (job.status !== "READY") {
@@ -148,6 +150,9 @@ export const importMigration = async (jobId, userId) => {
     }
 
     for (const malb of migrationAlbums) {
+      const isPurchaseOnly = malb.accessType === "purchase-only";
+      const basePrice = malb.price || 0;
+      
       const albumDoc = await Album.create(
         [
           {
@@ -157,7 +162,10 @@ export const importMigration = async (jobId, userId) => {
             coverImageKey: malb.coverImage || "",
             genre: malb.genres,
             releaseDate: malb.releaseDate || new Date(),
-            accessType: "subscription",
+            accessType: malb.accessType || "subscription",
+            ...(isPurchaseOnly && basePrice > 0 ? { 
+              basePrice: { amount: basePrice, currency: 'USD' } 
+            } : {})
           },
         ],
         { session }
@@ -226,12 +234,8 @@ export const publishAlbumToProduction = async (albumId, userId, payload) => {
 
   }
 
-  const {
-
-    accessType = "subscription",
-    basePrice,
-
-  } = payload;
+  const accessType = album.accessType || "subscription";
+  const basePrice = album.price || 0;
 
   // --- Pricing rules ---
   const isPurchaseOnly = accessType === "purchase-only";
@@ -248,8 +252,8 @@ export const publishAlbumToProduction = async (albumId, userId, payload) => {
 
   if (isPurchaseOnly) {
     convertedPrices = await convertCurrencies(
-      basePrice.currency,
-      basePrice.amount
+      'USD',
+      basePrice
     );
   }
 
@@ -319,10 +323,10 @@ export const publishAlbumToProduction = async (albumId, userId, payload) => {
           title: album.title,
           artist: artistId,
           accessType,
-          basePrice: isPurchaseOnly
+          basePrice: isPurchaseOnly && basePrice > 0
             ? {
-              amount: Number(basePrice.amount),
-              currency: basePrice.currency,
+              amount: Number(basePrice),
+              currency: 'USD',
             }
             : null,
           convertedPrices,
@@ -390,3 +394,5 @@ export const migrationService = {
 
 
 export default migrationService;
+
+
