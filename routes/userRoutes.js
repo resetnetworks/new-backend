@@ -14,7 +14,8 @@ import {
   forgotPassword,
   resetPassword,
   googleAuthCallback,
-  getRecentlyPlayed
+  getRecentlyPlayed,
+  refreshSession,
 
 } from "../controllers/userControllers.js";
 
@@ -71,6 +72,9 @@ router.get(
   passport.authenticate("google", { session: false, failureRedirect: "/login" }),
   googleAuthCallback
 );
+
+
+router.post("/refresh-session", refreshSession);
 
 router.get("/recently-played", authenticateUser, getRecentlyPlayed);
 
