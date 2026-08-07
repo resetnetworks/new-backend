@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
@@ -13,6 +14,7 @@ import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 import { EmailService } from "../modules/email-services/email.service.js";
 
 import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
+
 
 
 
