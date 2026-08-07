@@ -12,6 +12,10 @@ import { migrationPersistenceService } from "../services/persistence.service.js"
 import { assetDownloaderService } from "../services/downloader.service.js";
 import { migrationQueue } from "../jobs/migration.queue.js";
 
+// Spotify imports
+import { scrapeArtistPage, scrapeAlbumPage } from "../adapters/spotify/spotifyClient.js";
+import { normalizeSpotifyData } from "../adapters/spotify/spotifyNormalizer.js";
+
 const CONCURRENCY = 1;
 
 export const migrationWorker = new Worker(
@@ -32,9 +36,33 @@ export const migrationWorker = new Worker(
 
     try {
       if (step === "scrape") {
-        await migrationJobRepository.updateStatus(jobId, "SCRAPING", 10, "Scraping Bandcamp pages");
+        let rawData;
+        const isSpotify = dbJob.source === "spotify" || dbJob.sourceUrl.includes("spotify.com");
 
-        const rawData = await bandcampScraperService.scrapeArtist(dbJob.sourceUrl);
+        if (isSpotify) {
+          await migrationJobRepository.updateStatus(jobId, "SCRAPING", 10, "Scraping Spotify pages");
+          const artistProfile = await scrapeArtistPage(dbJob.sourceUrl);
+          const albums = [];
+          for (const albumUrl of artistProfile.albumUrls) {
+            try {
+              const albumDetails = await scrapeAlbumPage(albumUrl);
+              albums.push(albumDetails);
+            } catch (err) {
+              console.error(`[SpotifyScraper] Failed to fetch album ${albumUrl}:`, err.message);
+            }
+          }
+          rawData = {
+            artist: {
+              name: artistProfile.name,
+              bio: artistProfile.bio,
+              image: artistProfile.image,
+            },
+            albums,
+          };
+        } else {
+          await migrationJobRepository.updateStatus(jobId, "SCRAPING", 10, "Scraping Bandcamp pages");
+          rawData = await bandcampScraperService.scrapeArtist(dbJob.sourceUrl);
+        }
 
         await migrationSourceRepository.create({
           migrationJobId: jobId,
@@ -49,8 +77,15 @@ export const migrationWorker = new Worker(
         const sourceData = await migrationSourceRepository.findByJobId(jobId);
         if (!sourceData) throw new Error("No raw scrape data found to normalize");
 
-        const parsed = bandcampParserService.parseData(sourceData.rawData);
-        const normalized = bandcampNormalizerService.normalize(parsed, jobId);
+        let normalized;
+        const isSpotify = dbJob.source === "spotify" || dbJob.sourceUrl.includes("spotify.com");
+
+        if (isSpotify) {
+          normalized = normalizeSpotifyData(sourceData.rawData, jobId);
+        } else {
+          const parsed = bandcampParserService.parseData(sourceData.rawData);
+          normalized = bandcampNormalizerService.normalize(parsed, jobId);
+        }
 
         await migrationPersistenceService.saveNormalizedData(jobId, normalized);
 

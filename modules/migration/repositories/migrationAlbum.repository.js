@@ -17,7 +17,7 @@ const update = async (id, updateData) => {
 };
 
 const findAll = async () => {
-  return await MigrationAlbum.find().sort({ createdAt: -1 });
+  return await MigrationAlbum.find({ status: "DRAFT" }).sort({ createdAt: -1 });
 };
 
 export const migrationAlbumRepository = {

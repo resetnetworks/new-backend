@@ -28,6 +28,7 @@ export async function fetchHtml(url) {
             </script>
           </head>
           <body>
+            <div class="tralbum-about">Mock Album Description</div>
             <div data-tralbum='{"trackinfo":[{"title":"Mock Track 1","track_num":1,"duration":210,"lyrics":"Hello World","credits":"Credits 1"}]}'></div>
           </body>
         </html>

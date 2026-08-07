@@ -6,8 +6,8 @@ export const createBandcampMigrationValidator = [
     .notEmpty().withMessage("URL is required")
     .isURL().withMessage("Must be a valid URL")
     .custom((val) => {
-      if (!val.includes("bandcamp.com")) {
-        throw new Error("Only Bandcamp artist URLs are supported at this time");
+      if (!val.includes("bandcamp.com") && !val.includes("spotify.com")) {
+        throw new Error("Only Bandcamp or Spotify artist URLs are supported");
       }
       return true;
     }),

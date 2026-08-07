@@ -17,8 +17,13 @@ import {
   migrationIdValidator,
 } from "../validators/migration.validator.js";
 import validateRequest from "../../../middleware/validate.js";
+import { authenticateUser } from "../../../middleware/authenticate.js";
+import { injectWorkspaceContext } from "../../../middleware/injectWorkspaceContext.js";
 
 const router = express.Router();
+
+// Authenticate and inject workspace context for all migration routes
+router.use(authenticateUser, injectWorkspaceContext());
 
 // --- Core Migration Job Management ---
 router.post(

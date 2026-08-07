@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
@@ -13,6 +14,7 @@ import { RecentlyPlayed } from "../models/RecentlyPlayed.js";
 import { EmailService } from "../modules/email-services/email.service.js";
 
 import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
+
 
 
 
@@ -457,3 +459,46 @@ export const getRecentlyPlayed = async (req, res) => {
     songs: data?.songs || []
   });
 };
+
+
+
+
+// ===================================================================
+// @desc    Refresh user session and renew JWT cookie/token
+// @route   POST /api/users/refresh-session
+// @access  Public (verifies token manually)
+// ===================================================================
+export const refreshSession = async (req, res) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies.token;
+
+  if (!token) {
+    throw new UnauthorizedError("No token provided");
+  }
+
+  let decodedData;
+  try {
+    decodedData = jwt.verify(token, process.env.jwt_secret);
+  } catch (err) {
+    throw new UnauthorizedError("Invalid session token");
+  }
+
+  if (!decodedData || !decodedData.id) {
+    throw new BadRequestError("Invalid token payload");
+  }
+
+  const user = await User.findById(decodedData.id).select("-password");
+
+  if (!user) {
+    throw new BadRequestError("User not found");
+  }
+
+  // Issue a fresh token with current role and roleVersion
+  const newToken = generateToken(user, res);
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    user: shapeUserResponse(user),
+    token: newToken
+  });
+};
+
