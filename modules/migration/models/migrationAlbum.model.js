@@ -42,6 +42,21 @@ const migrationAlbumSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ["DRAFT", "PUBLISHED"],
+      default: "DRAFT",
+      index: true,
+    },
+    accessType: {
+      type: String,
+      enum: ["free", "subscription", "purchase-only"],
+      default: "subscription",
+    },
+    price: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

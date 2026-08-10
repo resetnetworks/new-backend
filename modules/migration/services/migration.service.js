@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import { migrationJobRepository } from "../repositories/migrationJob.repository.js";
 import { migrationArtistRepository } from "../repositories/migrationArtist.repository.js";
@@ -11,6 +12,7 @@ import { Album } from "../../../models/album.model.js";
 import { Song } from "../../../models/song.model.js";
 import { Workspace } from "../../workspace/workspace.model.js";
 import config from "../config.js";
+import { convertCurrencies } from "../../../utils/convertCurrencies.js";
 
 
 
@@ -75,7 +77,7 @@ export const cancelMigration = async (jobId) => {
   return updatedJob;
 };
 
-export const importMigration = async (jobId, userId) => {
+export const importMigration = async (jobId, userId, releases = []) => {
   const job = await migrationJobRepository.findById(jobId);
   if (!job) throw new Error("Migration job not found");
   if (job.status !== "READY") {
@@ -148,6 +150,9 @@ export const importMigration = async (jobId, userId) => {
     }
 
     for (const malb of migrationAlbums) {
+      const isPurchaseOnly = malb.accessType === "purchase-only";
+      const basePrice = malb.price || 0;
+      
       const albumDoc = await Album.create(
         [
           {
@@ -157,7 +162,10 @@ export const importMigration = async (jobId, userId) => {
             coverImageKey: malb.coverImage || "",
             genre: malb.genres,
             releaseDate: malb.releaseDate || new Date(),
-            accessType: "subscription",
+            accessType: malb.accessType || "subscription",
+            ...(isPurchaseOnly && basePrice > 0 ? { 
+              basePrice: { amount: basePrice, currency: 'USD' } 
+            } : {})
           },
         ],
         { session }
@@ -206,7 +214,7 @@ const copyAssetToProduction = async (oldKey) => {
   return oldKey;
 };
 
-export const publishAlbumToProduction = async (albumId, userId) => {
+export const publishAlbumToProduction = async (albumId, userId, payload) => {
   const album = await migrationAlbumRepository.findById(albumId);
   if (!album) throw new Error("Draft album not found");
 
@@ -223,7 +231,32 @@ export const publishAlbumToProduction = async (albumId, userId) => {
   if (missingAudioTracks.length > 0) {
     const titles = missingAudioTracks.map((t) => `"${t.title}"`).join(", ");
     throw new Error(`Cannot publish: The following tracks are missing audio files: ${titles}`);
+
   }
+
+  const accessType = album.accessType || "subscription";
+  const basePrice = album.price || 0;
+
+  // --- Pricing rules ---
+  const isPurchaseOnly = accessType === "purchase-only";
+
+  if (isPurchaseOnly && !basePrice) {
+    throw new BadRequestError("Base price is required for purchase-only albums");
+  }
+
+  if (!isPurchaseOnly && basePrice) {
+    throw new BadRequestError("Pricing not allowed for this access type");
+  }
+
+  let convertedPrices = [];
+
+  if (isPurchaseOnly) {
+    convertedPrices = await convertCurrencies(
+      'USD',
+      basePrice
+    );
+  }
+
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -268,6 +301,7 @@ export const publishAlbumToProduction = async (albumId, userId) => {
               bio: artist.bio || "",
               location: artist.location || "",
               coverImageKey: await copyAssetToProduction(artist.image),
+              createdBy: userId,
             },
           ],
           { session }
@@ -288,6 +322,14 @@ export const publishAlbumToProduction = async (albumId, userId) => {
         {
           title: album.title,
           artist: artistId,
+          accessType,
+          basePrice: isPurchaseOnly && basePrice > 0
+            ? {
+              amount: Number(basePrice),
+              currency: 'USD',
+            }
+            : null,
+          convertedPrices,
           description: album.description || "",
           releaseDate: album.releaseDate || new Date(),
           genres: album.genres || [],
@@ -322,6 +364,10 @@ export const publishAlbumToProduction = async (albumId, userId) => {
     albumDoc[0].songs = songIds;
     await albumDoc[0].save({ session });
 
+    // Mark the draft album as PUBLISHED
+    album.status = "PUBLISHED";
+    await album.save({ session });
+
     if (job) {
       await migrationJobRepository.updateStatus(job._id, "IMPORTED", 100, "COMPLETED");
     }
@@ -348,3 +394,5 @@ export const migrationService = {
 
 
 export default migrationService;
+
+
