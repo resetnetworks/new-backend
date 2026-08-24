@@ -10,6 +10,7 @@ import {
   getAlbumByIdController,
   updateAlbumController,
   getAlbumsByArtistController,
+  getRandomizedAlbumFeedController,
 } from "../controllers/albumController.js";
 
 import {
@@ -67,6 +68,9 @@ router.get("/", getAllAlbumsController);
 
 // Get all albums (no pagination – dropdowns/admin tools)
 router.get("/find-all", getAllAlbumsWithoutPaginationController);
+
+// randomized_system_v2 — "New Albums For You" feed
+router.get("/feed/randomized", getRandomizedAlbumFeedController);
 
 // Get albums by artist
 router.get("/artist/:artistId", getAlbumsByArtistController);
