@@ -6,6 +6,7 @@ import validate from "../middleware/validate.js";
 
 import {
   registerUser,
+  verifyRegistration,
   loginUser,
   myProfile,
   logoutUser,
@@ -15,12 +16,16 @@ import {
   resetPassword,
   googleAuthCallback,
   getRecentlyPlayed,
+  changeEmail,
+  verifyEmailChange,
+  changePassword,
   refreshSession,
 
 } from "../controllers/userControllers.js";
 
 import {
   registerValidation,
+  verifyRegistrationValidation,
   loginValidation,
   updateGenresValidation,
   likeSongValidation,
@@ -31,6 +36,7 @@ const router = express.Router();
 
 // 🧾 Auth & Profile
 router.post("/register", registerValidation, validate, registerUser);
+router.post("/verify-registration", verifyRegistrationValidation, validate, verifyRegistration);
 router.post("/login", loginValidation, validate, loginUser);
 router.get("/me", authenticateUser, myProfile);
 router.post("/logout", authenticateUser, logoutUser);
@@ -78,6 +84,12 @@ router.post("/refresh-session", refreshSession);
 
 router.get("/recently-played", authenticateUser, getRecentlyPlayed);
 
+// 📧 Change Email
+router.post("/change-email", authenticateUser, changeEmail);
+router.post("/verify-email-change", authenticateUser, verifyEmailChange);
+
+// 🔑 Change Password
+router.post("/change-password", authenticateUser, changePassword);
 
 
 export default router;

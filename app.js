@@ -204,6 +204,7 @@ app.use("/api/audience", audienceRoute)
 app.use("/api/coupon/artist", artistCouponRoutes)
 
 app.use("/api/v2/notifications", notificationRoutes );
+
 app.use("/api/migration", migrationRoutes);
 
 app.use("/api/v2/payment", priceChangeRoutes);

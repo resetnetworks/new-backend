@@ -3,6 +3,64 @@ import { Song } from "../models/song.model.js";
 import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
 import mongoose from "mongoose";
+import { getCached, setCached } from "../utils/redisClient.js";
+
+// ─── randomized_system_v2 ────────────────────────────────────────────────────
+const RANDOMIZED_IDS_KEY = "randomized_system_v2:album_ids";
+const RANDOMIZED_FEED_TTL = 20*60; // 20MIN
+
+// Fisher-Yates shuffle — O(n), in-place
+const shuffleArray = (arr) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+export const getRandomizedAlbumFeedService = async ({ page, limit }) => {
+  // 1️⃣ Try Redis first
+  let shuffledIds = await getCached(RANDOMIZED_IDS_KEY);
+
+  // 2️⃣ Cache miss → build the shuffled ID list from DB
+  if (!shuffledIds) {
+    const allAlbums = await Album.find({ isDeleted: { $ne: true } })
+      .select("_id")
+      .lean();
+
+    const ids = allAlbums.map((a) => a._id.toString());
+    shuffledIds = shuffleArray(ids);
+
+    // Store only the ID array — tiny payload
+    await setCached(RANDOMIZED_IDS_KEY, shuffledIds, RANDOMIZED_FEED_TTL);
+  }
+
+  const total = shuffledIds.length;
+
+  // 3️⃣ Slice the IDs for the requested page
+  const skip = (page - 1) * limit;
+  const pageIds = shuffledIds.slice(skip, skip + limit);
+
+  if (pageIds.length === 0) {
+    return { albums: [], total };
+  }
+
+  // 4️⃣ Batch-fetch full album objects for this page only
+  const albumsFromDb = await Album.find({ _id: { $in: pageIds } })
+    .populate("artist", "name slug")
+    .lean();
+
+  // 5️⃣ Re-apply shuffled order — MongoDB $in doesn't guarantee it
+  const albumMap = new Map(
+    albumsFromDb.map((album) => [album._id.toString(), album])
+  );
+  const albums = pageIds
+    .map((id) => albumMap.get(id))
+    .filter(Boolean); // guard against stale IDs
+
+  return { albums, total };
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const createAlbumService = async ({ artistId, payload }) => {
   const {
@@ -50,24 +108,24 @@ export const createAlbumService = async ({ artistId, payload }) => {
     }
   }
 
-    /* -------------------- Genre resolution -------------------- */
-  const genreArray =  Array.isArray(genre)
-      ? genre
-      : genre.split(",").map((g) => g.trim());
+  /* -------------------- Genre resolution -------------------- */
+  const genreArray = Array.isArray(genre)
+    ? genre
+    : genre.split(",").map((g) => g.trim());
 
   // --- Persist ---
   const album = await Album.create({
     title,
     description,
     artist: artistId,
-    genre:genreArray,
+    genre: genreArray,
     releaseDate,
     accessType,
     basePrice: isPurchaseOnly
       ? {
-          amount: Number(basePrice.amount),
-          currency: basePrice.currency,
-        }
+        amount: Number(basePrice.amount),
+        currency: basePrice.currency,
+      }
       : null,
     convertedPrices,
     coverImageKey,
@@ -229,8 +287,8 @@ export const getAlbumByIdService = async (identifier, user) => {
       const hasAccess = user
         ? await hasAccessToSong(user, song)
         : false;
- 
-       
+
+
       return {
         _id: song._id,
         title: song.title,
@@ -239,7 +297,7 @@ export const getAlbumByIdService = async (identifier, user) => {
         coverImageKey: song.coverImageKey,
         slug: song.slug,
         audioKey: hasAccess ? song.audioKey : null,
-        
+
       };
     })
   );

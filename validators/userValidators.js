@@ -7,6 +7,11 @@ export const registerValidation = [
   body("dob").optional().isISO8601().toDate().withMessage("DOB must be a valid date"),
 ];
 
+export const verifyRegistrationValidation = [
+  body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
+  body("otp").isLength({ min: 6, max: 6 }).withMessage("Invalid OTP format"),
+];
+
 export const loginValidation = [
   body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
   body("password").notEmpty().withMessage("Password is required"),

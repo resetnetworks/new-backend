@@ -1,11 +1,8 @@
+// 🔹 Build registration OTP data
+export const prepareRegistrationOtpData = async (name, email, otp) => {
+  if (!email || !otp) return null;
 
-// 🔹 Build password reset email data
-export const preparePasswordResetData = async (user, resetToken) => {
-  if (!user || !resetToken) return null;
-
-  console.log("\nPreparing password reset email data for user:", user.email);
-
-  const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  console.log("\nPreparing registration OTP template data for user:", email);
 
   return {
     app: {
@@ -16,14 +13,13 @@ export const preparePasswordResetData = async (user, resetToken) => {
     },
 
     user: {
-      id: user._id.toString(),
-      name: user.name || "Artist",
-      email: user.email,
+      name: name || "Music Lover",
+      email: email,
     },
 
-    reset: {
-      url: resetURL,
-      expiryMinutes: 15,
+    verification: {
+      otp: otp,
+      expiryMinutes: 10,
       requestDate: new Date(),
       formattedDate: new Date().toLocaleDateString("en-IN"),
     },
@@ -31,26 +27,26 @@ export const preparePasswordResetData = async (user, resetToken) => {
 };
 
 
-// 🔹 Generate password reset email subject + body
-export const preparePasswordResetEmailFormat = (data) => {
+// 🔹 Generate registration OTP subject + body
+export const prepareRegistrationOtpEmailFormat = (data) => {
   if (!data) {
-    console.warn("⚠️ PasswordResetEmail: Missing template data");
+    console.warn("⚠️ RegistrationOtpTemplate: Missing template data");
     return null;
   }
 
-  const subject = `Reset your ${data.app.name} password`;
+  const subject = `Verify your email address for ${data.app.name}`;
 
   const text = `
 Hi ${data.user.name},
 
-We received a request to reset your password.
+Thank you for registering at ${data.app.name}! 
 
-Reset your password:
-${data.reset.url}
+Your email verification code is:
+${data.verification.otp}
 
-⚠️ This secure link expires in ${data.reset.expiryMinutes} minutes.
+⚠️ This code will expire in ${data.verification.expiryMinutes} minutes.
 
-If you did not request this, please ignore this email — your password has not been changed.
+If you did not attempt to register an account, please ignore this email.
 
 Need help? ${data.app.supportEmail}
 
@@ -88,36 +84,35 @@ Need help? ${data.app.supportEmail}
     </tr>
     </table>
 
-    <table style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
+    <table style="background:white;border-radius:16px;margin-top:-40px;padding:50px;width:100%; max-width:800px;">
     <tr><td style="color:#0f172a;font-size:16px;line-height:1.8;">
 
     <p>Hi ${data.user.name},</p>
 
     <h2 style="margin:0;font-size:28px;font-weight:700;color:#000000;">
-      Reset your password
+      Welcome to ${data.app.name}!
     </h2>
 
     <p>
-    We received a request to reset your password.
-    Click the button below to securely choose a new one.
+    We are excited to have you on board. Please use the verification code below to confirm your email and complete your registration.
     </p>
 
-    <div style="text-align:center;margin:35px 0;">
-      <a href="${data.reset.url}" style="display:inline-block;background:linear-gradient(45deg,#0F3272 0%,#1A5DB4 60%,#3380FF 100%);box-shadow:0 12px 32px rgba(51,128,255,0.35);color:#ffffff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
-        Reset password
-      </a>
+    <div style="text-align:center;margin:35px;">
+      <div style="background:#F1F5F9;color:#0F172A;padding:14px 26px;border-radius:8px;font-weight:bold;font-size:32px;letter-spacing:8px;border: 1px solid #E2E8F0;display:inline-block;">
+        ${data.verification.otp}
+      </div>
     </div>
 
     <p style="font-size:14px;color:#334155;">
-    This secure link will expire in <b>${data.reset.expiryMinutes} minutes</b>.
+    This secure code will expire in <b>${data.verification.expiryMinutes} minutes</b>.
     </p>
 
     <p style="font-size:14px;color:#334155;">
-    If you didn’t request a password reset, you can safely ignore this email.
+    If you didn’t request to sign up, you can safely ignore this email.
     </p>
-
-    <p style="margin-top:40px;">— Team ${data.app.name}</p>
     
+    <p style="margin-top:40px;">— Team ${data.app.name}</p>
+
     <p style="font-size:13px;color:#64748b;margin-top:25px;">
       Need help? Contact us at <b>${data.app.supportEmail}</b>
     </p>

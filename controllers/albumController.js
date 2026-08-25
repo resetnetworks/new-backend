@@ -20,6 +20,7 @@ import {
   getAllAlbumsService,
   getAlbumByIdService,
   getAllAlbumsWithoutPaginationService,
+  getRandomizedAlbumFeedService,
 } from "../services/index.js";
 import { buildCdnUrl } from "../utils/cdn/cdn.js";
 import logger from "../utils/logger.js";
@@ -151,6 +152,27 @@ export const getAllAlbumsController = async (req, res) => {
     },
   });
 };
+
+
+// ─── randomized_system_v2 ────────────────────────────────────────────────────
+export const getRandomizedAlbumFeedController = async (req, res) => {
+  const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
+  const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 10;
+
+  const { albums, total } = await getRandomizedAlbumFeedService({ page, limit });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: albums.map(shapeAlbumResponse),
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 
 export const getAlbumByIdController = async (req, res) => {

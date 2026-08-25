@@ -42,6 +42,21 @@ export const EmailService = {
     );
   },
 
+  async sendRegistrationOtp(payload) {
+    const enrichedPayload = await sendEmailJob({
+      jobType: EMAIL_JOBS.USER_REGISTRATION_OTP,
+      subject: "Verify Your Email Address",
+      userId: payload.userId, // userId might not be present initially, let's omit it for OTP or use email string if required
+      toEmail: payload.email,
+      payload,
+    });
+
+    return EmailProducer.addJob(
+      EMAIL_JOBS.USER_REGISTRATION_OTP,
+      enrichedPayload
+    );
+  },
+
   async sendPasswordReset(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.PASSWORD_RESET,
@@ -54,6 +69,21 @@ export const EmailService = {
     // console.log("✅ ✅ ✅ ✅ ENRICHED PAYLOAD:", enrichedPayload);
     return EmailProducer.addJob(
       EMAIL_JOBS.PASSWORD_RESET,
+      enrichedPayload
+    );
+  },
+
+  async sendEmailChange(payload) {
+    const enrichedPayload = await sendEmailJob({
+      jobType: EMAIL_JOBS.EMAIL_CHANGE,
+      subject: "Verify Your New Email Address",
+      userId: payload.userId,
+      toEmail: payload.newEmail,
+      payload,
+    });
+
+    return EmailProducer.addJob(
+      EMAIL_JOBS.EMAIL_CHANGE,
       enrichedPayload
     );
   },

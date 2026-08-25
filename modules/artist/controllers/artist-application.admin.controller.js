@@ -1,5 +1,5 @@
 import { artistApplicationService } from "../services/artist-application.service.js";
-import { artistApplicationAdminDTO } from "../dto/artist-application-admin.dto.js"; // we will create this DTO next
+import { artistApplicationAdminDTO } from "../dto/artist-application-admin.dto.js";
 
 /**
  * GET /api/v2/admin/artist-applications
@@ -24,10 +24,9 @@ export const listArtistApplicationsForAdminController = async (req, res, next) =
       limit,
     });
 
-    // Map using admin DTO (allows exposing admin-only fields like adminNotes, documents, taxInfo)
-    const applications = Array.isArray(result.applications)
-      ? result.applications.map((app) => artistApplicationAdminDTO(app))
-      : [];
+    const applications = await Promise.all(
+      (result.applications || []).map((app) => artistApplicationAdminDTO(app))
+    );
 
     return res.status(200).json({
       success: true,

@@ -1,6 +1,7 @@
 import { User } from "../../../models/User.js";
 import { prepareRegistrationData, prepareRegistrationEmailFormat } from "../templates/registration.email.template.js";
 import { preparePasswordResetData, preparePasswordResetEmailFormat } from "../templates/passwordReset.email.template.js";
+import { prepareEmailChangeData, prepareEmailChangeEmailFormat } from "../templates/emailChange.email.template.js";
 import { sendMail } from "./email.mailer.service.js";
 import { EMAIL_SENDERS } from "../utils/email.identify.js";
 
@@ -57,6 +58,52 @@ export const processAndSendRegistrationEmail = async (payload ) => {
 
 
 // ===================================================================
+// 🔐 REGISTRATION OTP EMAIL HANDLER
+// ===================================================================
+import { prepareRegistrationOtpData, prepareRegistrationOtpEmailFormat } from "../templates/registrationOtp.email.template.js";
+
+export const processAndSendRegistrationOtpEmail = async (payload) => {
+  const jobTag = "REGISTRATION_OTP_EMAIL";
+
+  try {
+    console.log(`\n📨 [${jobTag}] Job started`);
+    console.log(`🔎 [${jobTag}] Payload received:`, { email: payload.email });
+
+    const { name, email, otp } = payload;
+
+    if (!email || !otp) {
+      console.warn(`⚠️ [${jobTag}] Missing email or otp. Aborting.`);
+      return;
+    }
+
+    // 2️⃣ Prepare template data
+    const data = await prepareRegistrationOtpData(name, email, otp);
+
+    if (!data) {
+      console.warn(`⚠️ [${jobTag}] Failed to prepare email data. Aborting.`);
+      return;
+    }
+
+    // 3️⃣ Build email content
+    const emailContent = prepareRegistrationOtpEmailFormat(data);
+
+    if (!emailContent) {
+      console.warn(`⚠️ [${jobTag}] Template generation failed. Aborting.`);
+      return;
+    }
+
+    // 4️⃣ Send email
+    await sendMail(email, emailContent, EMAIL_SENDERS.NO_REPLY);
+
+    console.log(`\n🎉 [${jobTag}] Email successfully sent → ${email} 🎉\n`);
+
+  } catch (err) {
+    console.error(`❌ [${jobTag}] Job failed:`, err);
+    throw err;
+  }
+};
+
+// ===================================================================
 // 🔐 PASSWORD RESET EMAIL HANDLER
 // ===================================================================
 export const processAndSendPasswordResetEmail = async ({ userId, resetToken }) => {
@@ -98,11 +145,65 @@ export const processAndSendPasswordResetEmail = async ({ userId, resetToken }) =
     console.log(`\n🎉 [${jobTag}] Email successfully sent → ${user.email} 🎉\n`);
 
   } catch (err) {
-    console.error(`💥 [${jobTag}] Job failed:`, err);
+    console.error(`❌ [${jobTag}] Job failed:`, err);
     throw err; // IMPORTANT → enables BullMQ retries
   }
 };
 
+
+// ===================================================================
+// 🔐 EMAIL CHANGE EMAIL HANDLER
+// ===================================================================
+export const processAndSendEmailChangeEmail = async (payload) => {
+  const jobTag = "EMAIL_CHANGE_EMAIL";
+
+  try {
+    console.log(`\n📨 [${jobTag}] Job started`);
+    console.log(`🔎 [${jobTag}] Payload received:`, payload);
+
+    const { userId, newEmail, otp } = payload;
+
+    if (!userId || !newEmail || !otp) {
+      console.warn(`⚠️ [${jobTag}] Missing userId, newEmail or otp. Aborting.`);
+      return;
+    }
+
+    // 1️⃣ Fetch user from DB
+    const user = await User.findById(userId)
+      .select("name email")
+      .lean();
+
+    if (!user) {
+      console.warn(`⚠️ [${jobTag}] User not found. Skipping email.`);
+      return;
+    }
+
+    // 2️⃣ Prepare template data
+    const data = await prepareEmailChangeData(user, newEmail, otp);
+
+    if (!data) {
+      console.warn(`⚠️ [${jobTag}] Failed to prepare email data. Aborting.`);
+      return;
+    }
+
+    // 3️⃣ Build email content
+    const emailContent = prepareEmailChangeEmailFormat(data);
+
+    if (!emailContent) {
+      console.warn(`⚠️ [${jobTag}] Template generation failed. Aborting.`);
+      return;
+    }
+
+    // 4️⃣ Send email
+    await sendMail(newEmail, emailContent, EMAIL_SENDERS.NO_REPLY);
+
+    console.log(`\n🎉 [${jobTag}] Email successfully sent → ${newEmail} 🎉\n`);
+
+  } catch (err) {
+    console.error(`❌ [${jobTag}] Job failed:`, err);
+    throw err; // enables BullMQ retries
+  }
+};
 
 // ===================================================================
 // 🔐 ONE TIME INVOICE EMAIL HANDLER
