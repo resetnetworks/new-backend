@@ -18,7 +18,7 @@ import {
   getRecentlyPlayed,
   changeEmail,
   verifyEmailChange,
-  changePassword
+  changePassword,
   refreshSession,
 
 } from "../controllers/userControllers.js";
