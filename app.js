@@ -81,7 +81,6 @@ import notificationRoutes from "./modules/notification-service/api/notification.
 import artistCouponRoutes from "./modules/coupon/coupon.artist.routes.js"
 import path from "path";
 import migrationRoutes from "./modules/migration/routes/migration.routes.js";
-import documentVerificationRoutes from "./modules/document-verification/routes/documentVerification.routes.js";
 
 
 import priceChangeRoutes from "./modules/price-change/routes/paymentRoute.js";
@@ -207,7 +206,6 @@ app.use("/api/coupon/artist", artistCouponRoutes)
 app.use("/api/v2/notifications", notificationRoutes );
 
 app.use("/api/migration", migrationRoutes);
-app.use("/api/document-verification", documentVerificationRoutes);
 
 app.use("/api/v2/payment", priceChangeRoutes);
 
