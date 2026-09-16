@@ -38,7 +38,7 @@ Hi ${data.user.name},
 Thank you for signing up with us for Reset Music Streaming Platform.
 
 Let's get started:
-• Distribute your music — singles, EPs, albums, DJ mixes. It's completely free.
+• Distribute your music - singles, EPs, albums, DJ mixes. It's completely free.
 • Activate monetisation
 • Reach a global audience
 
@@ -46,6 +46,10 @@ From here, you can:
 • Manage your releases
 • Customize your Artist Page
 • Request payouts at any time
+
+🎵 Already have your music on Bandcamp?
+Bring your existing discography to Reset — without uploading everything manually.
+Simply provide your Bandcamp artist URL, and we'll extract your available releases so you can review and import them into your Reset Artist account.
 
 Open your dashboard:
 ${data.artist.dashboardUrl}
@@ -85,7 +89,7 @@ Need help? ${data.app.supportEmail}
     </tr>
     </table>
 
-    <table style="background:white;border-radius:16px;margin-top:-40px;padding:50px;">
+    <table style="background:white;border-radius:16px;margin-top:-40px;padding:40px;width:100%;max-width:760px;box-sizing:border-box;">
     <tr><td style="color:#0f172a;font-size:16px;line-height:1.8;">
 
     <p>Hi ${data.user.name},</p>
@@ -112,11 +116,36 @@ Need help? ${data.app.supportEmail}
       <li style="margin-bottom:8px;">Request payouts at any time</li>
     </ul>
 
-        <div style="text-align:center;margin:35px 0;">
+    <div style="text-align:center;margin:35px 0;">
       <a href="${data.artist.dashboardUrl}" style="background:linear-gradient(45deg, #0F3272 0%, #1A5DB4 60%, #3380FF 100%);box-shadow:0 12px 32px rgba(51,128,255,0.35);color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
         Open Artist Dashboard
       </a>
     </div>
+
+    <hr style="border:none; border-top:1px solid #e2e8f0; margin:10px 0 35px 0;" />
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+      <tr>
+        <td style="background-color:#f8fafc; border-radius:12px; padding:24px; border:1px solid #e2e8f0;">
+          <h3 style="margin:0 0 12px; font-size:18px; color:#0f172a;">🎵 Already have your music on Bandcamp?</h3>
+          <p style="margin:0 0 12px; color:#334155; font-size:15px;">
+            Bring your existing discography to Reset — <b>without uploading everything manually.</b>
+          </p>
+          <p style="margin:0 0 20px; color:#334155; font-size:15px; line-height:1.6;">
+            Simply provide your <b>Bandcamp artist URL</b>, and we'll extract your available releases so you can review and import them into your Reset Artist account.
+          </p>
+
+          <div style="text-align:center;margin:35px 0;">
+            <a href="${data.artist.dashboardUrl}" style="background:linear-gradient(45deg, #0F3272 0%, #1A5DB4 60%, #3380FF 100%);box-shadow:0 12px 32px rgba(51,128,255,0.35);color:#fff;padding:14px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px;">
+              Import Music from Bandcamp
+            </a>
+          </div>
+
+        </td>
+      </tr>
+    </table>
+
+    
 
 
     <p>We're excited to have you onboard 💜</p>
