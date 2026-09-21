@@ -100,6 +100,7 @@ export const createStripeCheckout = async (req, res) => {
       amount,
       currency: normalizedCurrency,
       userId,
+      artistId: artistId ? artistId.toString() : null,
       itemId,
       itemType,
       transactionId: transaction._id.toString(),
