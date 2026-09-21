@@ -6,11 +6,16 @@ export const createCheckoutSession = async ({
   amount,
   currency,
   userId,
+  artistId,
   itemId,
   itemType,
   transactionId,
   stripeCustomerId,
 }) => {
+  const returnBaseUrl = artistId
+    ? `${process.env.FRONTEND_URL}/artist/${artistId}`
+    : `${process.env.FRONTEND_URL}/payment`;
+
   return stripe.checkout.sessions.create({
     mode: "payment",
 
@@ -34,6 +39,7 @@ export const createCheckoutSession = async ({
     metadata: {
       transactionId,
       userId,
+      artistId: artistId || "",
       itemId,
       itemType,
     },
@@ -42,12 +48,15 @@ export const createCheckoutSession = async ({
       metadata: {
         transactionId,
         userId,
+        artistId: artistId || "",
         itemId,
       },
     },
 
-    success_url: `${process.env.FRONTEND_URL}/payment/success`,
-    cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`,
+    // success_url: `${process.env.FRONTEND_URL}/payment/success`,
+    // cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`,
+    success_url: `${returnBaseUrl}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${returnBaseUrl}?payment=cancel`,
   });
 };
 
@@ -62,17 +71,9 @@ export const createSubscriptionCheckoutSession = async ({
   stripeCustomerId,
   stripePriceId
 }) => {
-  // const interval = cycleToInterval(cycle).stripe;
-
-  // 1️⃣ Create price
-  // const price = await stripe.prices.create({
-  //   unit_amount: formatAmount(amount, currency),
-  //   currency: currency.toLowerCase(),
-  //   recurring: interval,
-  //   product_data: {
-  //     name: "Artist Subscription",
-  //   },
-  // });
+  const returnBaseUrl = artistId
+    ? `${process.env.FRONTEND_URL}/artist/${artistId}`
+    : `${process.env.FRONTEND_URL}/subscription`;
 
   // 2️⃣ Create checkout session
   return stripe.checkout.sessions.create({
@@ -106,7 +107,9 @@ export const createSubscriptionCheckoutSession = async ({
       },
     },
 
-    success_url: `${process.env.FRONTEND_URL}/subscription/success`,
-    cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
+    // success_url: `${process.env.FRONTEND_URL}/subscription/success`,
+    // cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
+    success_url: `${returnBaseUrl}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${returnBaseUrl}?subscription=cancel`,
   });
 };

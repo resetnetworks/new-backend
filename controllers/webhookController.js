@@ -15,12 +15,18 @@ import { transactionRepository } from "../repositories/transaction.js";
 import { subscriptionRepository } from "../repositories/subscription.js";
 import { userRepository } from "../repositories/user.js";
 import {processAndSendInvoice} from "../services/invoiceService.js";
-
-
+import { EmailService } from "../modules/email-services/email.service.js";
+import { getUserEmailById } from "../utils/userEmailLookup.service.js";
+import {
+  sendSongPurchaseSuccessNotification,
+  sendNewSongPurchaseNotification,
+  sendNewArtistSubscriberNotification,
+  sendArtistSubscriptionSuccessNotification,
+} from "../modules/notification-service/notification.service.js";
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 
@@ -222,9 +228,34 @@ export const razorpayWebhook = async (req, res) => {
         if (transaction) {
           await updateUserAfterPurchase(transaction, subscriptionId);
           console.log("✅ Subscription payment processed:", subscriptionId);
+
+          // 📧 Send Subscription Invoice via EmailService Queue
+          // await processAndSendInvoice(transaction);
+          try {
+            const userEmail = await getUserEmailById(transaction.userId);
+            await EmailService.sendSubscriptionInvoice({
+              userId: transaction.userId,
+              userEmail,
+              transactionId: transaction._id,
+            });
+            console.log("📧 Subscription invoice queued for email:", userEmail);
+
+            await sendArtistSubscriptionSuccessNotification({
+              userId: transaction.userId,
+              artistId: transaction.artistId,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+            });
+
+            await sendNewArtistSubscriberNotification({
+              artistId: transaction.artistId,
+              subscriberId: transaction.userId,
+              itemId: transaction.itemId,
+            });
+          } catch (emailErr) {
+            console.error("⚠️ Failed to dispatch subscription email/notification:", emailErr.message);
+          }
         }
-        await processAndSendInvoice(transaction);
-        console.log("📧 Invoice emailed to user for subscription:", subscriptionId);
 
         return res.status(200).json({ status: "subscription payment processed" });
       }
@@ -244,8 +275,35 @@ export const razorpayWebhook = async (req, res) => {
         if (transaction) {
           await updateUserAfterPurchase(transaction, paymentId);
           console.log("✅ One-time purchase completed:", type, itemId);
-          await processAndSendInvoice(transaction);
-          console.log("📧 Invoice emailed to user for one-time purchase:", type, itemId);
+
+          // 📧 Send One-Time Invoice via EmailService Queue
+          // await processAndSendInvoice(transaction);
+          try {
+            const userEmail = await getUserEmailById(transaction.userId);
+            await EmailService.sendOneTimeInvoice({
+              userId: transaction.userId,
+              userEmail,
+              transactionId: transaction._id,
+            });
+            console.log("📧 One-time invoice queued for email:", userEmail);
+
+            await sendSongPurchaseSuccessNotification({
+              userId: transaction.userId,
+              amount: transaction.amount,
+              transactionId: transaction._id,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+            });
+
+            await sendNewSongPurchaseNotification({
+              artistId: transaction.artistId,
+              buyerId: transaction.userId,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+            });
+          } catch (emailErr) {
+            console.error("⚠️ Failed to dispatch one-time purchase email/notification:", emailErr.message);
+          }
         }
       } else {
         console.warn("⚠️ Missing metadata for one-time payment.");
@@ -291,13 +349,29 @@ export const razorpayWebhook = async (req, res) => {
           break;
 
         case "cancelled":
-        case "halted":
-          await Subscription.findOneAndUpdate(
+        case "halted": {
+          const subscriptionData = await Subscription.findOneAndUpdate(
             { externalSubscriptionId: subId },
-            { status: "cancelled" }
+            { status: "cancelled", isRecurring: false },
+            { new: true }
           );
           console.log("❌ Subscription cancelled/halted:", subId);
+
+          if (subscriptionData) {
+            try {
+              const userEmail = await getUserEmailById(subscriptionData.userId);
+              await EmailService.sendSubscriptionCancelled({
+                userId: subscriptionData.userId,
+                userEmail,
+                subscriptionData,
+              });
+              console.log("📧 Subscription cancellation email queued for:", userEmail);
+            } catch (cancelEmailErr) {
+              console.error("⚠️ Failed to dispatch subscription cancellation email:", cancelEmailErr.message);
+            }
+          }
           break;
+        }
 
         default:
           console.log("ℹ️ Subscription event ignored:", subId, "status:", status);

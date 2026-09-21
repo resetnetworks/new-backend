@@ -164,8 +164,11 @@ const generateInvoiceBuffer = (invoice) => {
 
 // 🔹 Send invoice email
 const sendInvoiceEmail = async (to, invoiceBuffer, invoiceNumber, subject) => {
+  const port = Number(process.env.SMTP_PORT) || 587;
   const transporter = nodemailer.createTransport({
-    service: "gmail", // replace with SES/SMTP in prod
+    host: process.env.SMTP_HOST || "smtp.hostinger.com",
+    port,
+    secure: port === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
