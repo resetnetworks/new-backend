@@ -8,6 +8,7 @@ import {
   processAndSendSubscriptionCancelledEmail,
   processAndSendArtistApprovedEmail,
   processAndSendEmailChangeEmail,
+  processAndSendArtistApplicationSubmittedEmail,
 } from "./email.handlers.js";
 
 let globalEmailCounter = 0;
@@ -40,6 +41,11 @@ export const handleEmailJob = async (job) => {
       console.log(`\n👉 👉 👉 👉 You are in jobDispatcher : ${globalEmailCounter} 👈 👈 👈 👈`)
       console.log("Processing EMAIL_CHANGE email")
       return processAndSendEmailChangeEmail(payload);
+
+    case EMAIL_JOBS.ARTIST_APPLICATION_SUBMITTED:
+      console.log(`\n👉 👉 👉 👉 You are in jobDispatcher : ${globalEmailCounter} 👈 👈 👈 👈`)
+      console.log("Processing ARTIST_APPLICATION_SUBMITTED email")
+      return processAndSendArtistApplicationSubmittedEmail(payload);
 
     case EMAIL_JOBS.ARTIST_APPROVED:
       console.log(`\n👉 👉 👉 👉 You are in jobDispatcher : ${globalEmailCounter} 👈 👈 👈 👈`)

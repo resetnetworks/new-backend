@@ -1,6 +1,7 @@
 import { artistApplicationService } from "../services/artist-application.service.js";
 import { artistApplicationDTO } from "../dto/artist-application.dto.js";
 import { artistApplicationPublicDTO } from "../dto/artist-application.dto.js"; // // optional
+import { EmailService } from "../../email-services/email.service.js";
 
 /**
  * POST /api/v2/artist/apply
@@ -20,13 +21,38 @@ export const submitArtistApplicationController = async (req, res, next) => {
       samples: req.body.samples,
       country: req.body.country,
     
-
-    
     };
     payload.documents.push({url:req.files.documents[0].location, filename:req.files.documents[0].key, docType:"gov_id"})
 
     // Business logic handled in service
     const application = await artistApplicationService.submit(userId, payload);
+
+    // Trigger admin notification email to info@musicreset.com
+    try {
+      let parsedContact = payload.contact;
+      if (typeof parsedContact === "string") {
+        try {
+          parsedContact = JSON.parse(parsedContact);
+        } catch (_) {}
+      }
+
+      await EmailService.sendArtistApplicationSubmitted({
+        userId,
+        toEmail: "raman101work@gmail.com",
+        applicantName: req.user?.name,
+        applicantEmail: req.user?.email,
+        stageName: payload.stageName,
+        legalName: payload.legalName,
+        bio: payload.bio,
+        country: payload.country,
+        contact: parsedContact,
+        applicationId: application._id,
+        submittedAt: application.createdAt || new Date(),
+      });
+      console.log("📨 Artist application admin notification email queued for info@musicreset.com");
+    } catch (emailErr) {
+      console.error("⚠️ Failed to queue artist application admin notification email:", emailErr);
+    }
 
     return res.status(201).json({
       success: true,
