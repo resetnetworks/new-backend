@@ -38,7 +38,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
 
       await EmailService.sendArtistApplicationSubmitted({
         userId,
-        toEmail: "raman101work@gmail.com",
+        toEmail: "info@musicreset.com",
         applicantName: req.user?.name,
         applicantEmail: req.user?.email,
         stageName: payload.stageName,
