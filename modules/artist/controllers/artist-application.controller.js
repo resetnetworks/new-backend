@@ -27,7 +27,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
     // Business logic handled in service
     const application = await artistApplicationService.submit(userId, payload);
 
-    // Trigger admin notification email to info@musicreset.com
+    // Trigger admin notification email to admin emails
     try {
       let parsedContact = payload.contact;
       if (typeof parsedContact === "string") {
@@ -36,20 +36,26 @@ export const submitArtistApplicationController = async (req, res, next) => {
         } catch (_) {}
       }
 
-      await EmailService.sendArtistApplicationSubmitted({
-        userId,
-        toEmail: "info@musicreset.com",
-        applicantName: req.user?.name,
-        applicantEmail: req.user?.email,
-        stageName: payload.stageName,
-        legalName: payload.legalName,
-        bio: payload.bio,
-        country: payload.country,
-        contact: parsedContact,
-        applicationId: application._id,
-        submittedAt: application.createdAt || new Date(),
-      });
-      console.log("📨 Artist application admin notification email queued for info@musicreset.com");
+      const adminEmails = ["info@reset93.net", "info@musicreset.com"];
+
+      await Promise.all(
+        adminEmails.map((email) =>
+          EmailService.sendArtistApplicationSubmitted({
+            userId,
+            toEmail: email,
+            applicantName: req.user?.name,
+            applicantEmail: req.user?.email,
+            stageName: payload.stageName,
+            legalName: payload.legalName,
+            bio: payload.bio,
+            country: payload.country,
+            contact: parsedContact,
+            applicationId: application._id,
+            submittedAt: application.createdAt || new Date(),
+          })
+        )
+      );
+      console.log(`📨 Artist application admin notification emails queued for: ${adminEmails.join(", ")}`);
     } catch (emailErr) {
       console.error("⚠️ Failed to queue artist application admin notification email:", emailErr);
     }
