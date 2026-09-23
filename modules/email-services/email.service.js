@@ -88,6 +88,27 @@ export const EmailService = {
     );
   },
 
+  async sendArtistApplicationSubmitted(payload) {
+    const stageName = payload.stageName || "New Artist";
+    const toEmail = payload.toEmail || "info@musicreset.com";
+
+    const enrichedPayload = await sendEmailJob({
+      jobType: EMAIL_JOBS.ARTIST_APPLICATION_SUBMITTED,
+      subject: `New Artist Application: ${stageName}`,
+      userId: payload.userId,
+      toEmail,
+      payload: {
+        ...payload,
+        toEmail,
+      },
+    });
+
+    return EmailProducer.addJob(
+      EMAIL_JOBS.ARTIST_APPLICATION_SUBMITTED,
+      enrichedPayload
+    );
+  },
+
   async sendArtistApproved(payload) {
     const enrichedPayload = await sendEmailJob({
       jobType: EMAIL_JOBS.ARTIST_APPROVED,

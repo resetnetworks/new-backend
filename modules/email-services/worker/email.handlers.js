@@ -10,6 +10,14 @@ import {
   prepareInvoiceData, generateInvoiceBuffer,
   prepareInvoiceEmailFormat, prepareSubscriptionInvoiceData
 } from "../templates/invoice/index.js"
+import { prepareRegistrationOtpData, prepareRegistrationOtpEmailFormat } from "../templates/registrationOtp.email.template.js";
+import { Artist } from "../../../models/Artist.js";
+import { prepareSubscriptionCancelledEmailTemplate } from "../templates/subscription.cancelled.template.js";
+import { prepareArtistApprovedData, prepareArtistApprovedEmailTemplate } from "../templates/artistApproved.email.template.js"
+import {
+  prepareArtistApplicationSubmittedData,
+  prepareArtistApplicationSubmittedEmailTemplate,
+} from "../templates/artistApplicationSubmitted.email.template.js";
 
 // ===================================================================
 // 🔐 REGISTRATION EMAIL HANDLER
@@ -60,8 +68,6 @@ export const processAndSendRegistrationEmail = async (payload ) => {
 // ===================================================================
 // 🔐 REGISTRATION OTP EMAIL HANDLER
 // ===================================================================
-import { prepareRegistrationOtpData, prepareRegistrationOtpEmailFormat } from "../templates/registrationOtp.email.template.js";
-
 export const processAndSendRegistrationOtpEmail = async (payload) => {
   const jobTag = "REGISTRATION_OTP_EMAIL";
 
@@ -267,7 +273,6 @@ export const processAndSendOneTimeInvoiceEmail = async ({ transactionId }) => {
 // ===================================================================
 // 🔐 SUBSCRIPTION INVOICE EMAIL HANDLER
 // ===================================================================
-
 export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) => {
   const jobTag = "SUBSCRIPTION_INVOICE_EMAIL";
 
@@ -328,10 +333,6 @@ export const processAndSendSubscriptionInvoiceEmail = async ({ transactionId }) 
 // ===================================================================
 // 🔕 SUBSCRIPTION CANCELLED EMAIL HANDLER
 // ===================================================================
-
-import { Artist } from "../../../models/Artist.js";
-import { prepareSubscriptionCancelledEmailTemplate } from "../templates/subscription.cancelled.template.js";
-
 export const processAndSendSubscriptionCancelledEmail = async (payload) => {
   const jobTag = "SUBSCRIPTION_CANCELLED_EMAIL";
 
@@ -384,9 +385,6 @@ export const processAndSendSubscriptionCancelledEmail = async (payload) => {
 // ===================================================================
 // 🎧 ARTIST APPROVED EMAIL HANDLER
 // ===================================================================
-
-import { prepareArtistApprovedData, prepareArtistApprovedEmailTemplate } from "../templates/artistApproved.email.template.js"
-
 export const processAndSendArtistApprovedEmail = async (payload) => {
   const jobTag = "ARTIST_APPROVED_EMAIL";
 
@@ -414,6 +412,46 @@ export const processAndSendArtistApprovedEmail = async (payload) => {
     await sendMail(payload.userEmail, emailContent, EMAIL_SENDERS.ARTISTS);
 
     console.log(`\n🎉 [${jobTag}] Artist Approval Email successfully sent -> ${payload.userEmail} 🎉\n`);
+
+  } catch (err) {
+    console.error(`💥 [${jobTag}] Job failed:`, err);
+    throw err;
+  }
+};
+
+
+// ===================================================================
+// 📝 ARTIST APPLICATION SUBMITTED (ADMIN NOTIFICATION) HANDLER
+// ===================================================================
+export const processAndSendArtistApplicationSubmittedEmail = async (payload) => {
+  const jobTag = "ARTIST_APPLICATION_SUBMITTED_EMAIL";
+
+  try {
+    console.log(`\n📨 [${jobTag}] Job started`);
+    console.log(`🔎 [${jobTag}] Payload received:`, payload);
+
+    const targetEmail = payload?.toEmail || "info@musicreset.com";
+
+    // 1️⃣ Prepare dynamic template data
+    const data = await prepareArtistApplicationSubmittedData(payload);
+
+    if (!data) {
+      console.warn(`⚠️ [${jobTag}] Failed to prepare email data. Aborting.`);
+      return;
+    }
+
+    // 2️⃣ Build email template
+    const emailContent = prepareArtistApplicationSubmittedEmailTemplate(data);
+
+    if (!emailContent) {
+      console.warn(`⚠️ [${jobTag}] Template generation failed. Aborting.`);
+      return;
+    }
+
+    // 3️⃣ Send email
+    await sendMail(targetEmail, emailContent, EMAIL_SENDERS.NO_REPLY);
+
+    console.log(`\n🎉 [${jobTag}] Admin Notification Email successfully sent -> ${targetEmail} 🎉\n`);
 
   } catch (err) {
     console.error(`💥 [${jobTag}] Job failed:`, err);
