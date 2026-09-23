@@ -1,4 +1,5 @@
 import { body, param } from "express-validator";
+import { ARTIST_SOCIAL_PROVIDERS } from "../constants/artistSocials.js";
 
 export const createArtistValidator = [
   body("name").trim().notEmpty().withMessage("Name is required"),
@@ -57,24 +58,28 @@ export const updateArtistValidator = [
   body("socials")
     .optional()
     .isArray({ max: 10 })
-    .withMessage("Socials must be an array"),
+    .withMessage("Socials must be an array of at most 10 items"),
 
-  // body("socials.*.platform")
-  //   .if(body("socials").exists())
-  //   .exists()
-  //   .withMessage("Social platform is required")
-  //   .isString()
-  //   .trim()
-  //   .toLowerCase()
-  //   .isLength({ min: 2, max: 50 })
-  //   .withMessage("Social platform must be 2–50 characters"),
+  body("socials.*.platform")
+    .if(body("socials").exists())
+    .notEmpty()
+    .withMessage("Social platform is required")
+    .isString()
+    .trim()
+    .toLowerCase()
+    .isIn(ARTIST_SOCIAL_PROVIDERS)
+    .withMessage(
+      `Social platform must be one of: ${ARTIST_SOCIAL_PROVIDERS.join(", ")}`
+    ),
 
-  // body("socials.*.url")
-  //   .if(body("socials").exists())
-  //   .exists()
-  //   .withMessage("Social URL is required")
-  //   .isURL({ require_protocol: true })
-  //   .withMessage("Social URL must be a valid URL"),
+  body("socials.*.url")
+    .if(body("socials").exists())
+    .notEmpty()
+    .withMessage("Social URL is required")
+    .isString()
+    .trim()
+    .isURL({ require_protocol: true })
+    .withMessage("Social URL must be a valid URL with protocol (e.g. https://)"),
 
   // Prevent empty PATCH
   body()

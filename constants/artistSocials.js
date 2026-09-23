@@ -6,5 +6,5 @@ export const ARTIST_SOCIAL_PROVIDERS = [
   "twitter",
   "facebook",
   "tiktok",
-  "linktree",
+  "bandcamp",
 ];
