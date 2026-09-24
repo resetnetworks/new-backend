@@ -17,12 +17,14 @@ export const submitArtistApplicationController = async (req, res, next) => {
       bio: req.body.bio,
       contact: req.body.contact,
       socials: req.body.socials,
-      documents: [],
+      documents: req.body.documents || [],
       samples: req.body.samples,
       country: req.body.country,
     
     };
-    payload.documents.push({url:req.files.documents[0].location, filename:req.files.documents[0].key, docType:"gov_id"})
+
+    //@deprecated TODO: remove this
+    // payload.documents.push({ url: req.files.documents[0].location, filename: req.files.documents[0].key, docType: "gov_id" })
 
     // Business logic handled in service
     const application = await artistApplicationService.submit(userId, payload);

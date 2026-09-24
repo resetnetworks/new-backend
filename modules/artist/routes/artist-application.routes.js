@@ -40,7 +40,8 @@ const router = express.Router();
  * @desc Submit an artist application
  * @access Authenticated users only
  */
-router.post("/apply", authenticateUser, songUpload, submitArtistApplicationController);
+// router.post("/apply", authenticateUser, songUpload, submitArtistApplicationController);
+router.post("/apply", authenticateUser, submitArtistApplicationController);
 
 /**
  * @route GET /api/v2/artist/application/me
