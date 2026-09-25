@@ -96,16 +96,21 @@ const artistApplicationSchema = new mongoose.Schema(
       default: [],
     },
 
-    socials:{
-      provider: {
-      type: String,
-      enum: ARTIST_SOCIAL_PROVIDERS,
+    portfolioLink: { type: String, trim: true, default: "" },
+
+    socials: {
+      type: [
+        {
+          provider: {
+            type: String,
+            enum: ARTIST_SOCIAL_PROVIDERS,
+          },
+          url: { type: String, trim: true },
+          label: { type: String },
+        },
+      ],
+      default: [],
     },
-      url: { type: String, },
-      label: {
-      type: String, // only required when provider === "custom"
-    }
-},
 
 
   

@@ -23,6 +23,7 @@ export const prepareArtistApplicationSubmittedData = async (payload) => {
       country: payload.country || "Not specified",
       contactPhone: payload.contact?.phone || payload.contact?.phoneNumber || "Not provided",
       contactEmail: payload.contact?.email || payload.applicantEmail || "Not provided",
+      portfolioLink: payload.portfolioLink || "Not provided",
       submittedAt: payload.submittedAt
         ? new Date(payload.submittedAt).toLocaleString("en-US", {
             dateStyle: "medium",
@@ -55,6 +56,7 @@ Applicant: ${data.applicant.name} (${data.applicant.email})
 Country: ${data.artist.country}
 Contact Phone: ${data.artist.contactPhone}
 Contact Email: ${data.artist.contactEmail}
+Portfolio Link: ${data.artist.portfolioLink}
 Application ID: ${data.artist.applicationId}
 Submitted: ${data.artist.submittedAt}
 
@@ -131,6 +133,16 @@ ${data.app.adminUrl}
                   <tr>
                     <td style="padding:8px 0;font-size:13px;color:#64748b;font-weight:600;">Contact Phone</td>
                     <td style="padding:8px 0;font-size:14px;color:#0f172a;">${data.artist.contactPhone}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;font-size:13px;color:#64748b;font-weight:600;">Portfolio Link</td>
+                    <td style="padding:8px 0;font-size:14px;color:#0f172a;">
+                      ${
+                        data.artist.portfolioLink && data.artist.portfolioLink !== "Not provided"
+                          ? `<a href="${data.artist.portfolioLink}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;word-break:break-all;">${data.artist.portfolioLink}</a>`
+                          : "Not provided"
+                      }
+                    </td>
                   </tr>
                   <tr>
                     <td style="padding:8px 0;font-size:13px;color:#64748b;font-weight:600;">Application ID</td>

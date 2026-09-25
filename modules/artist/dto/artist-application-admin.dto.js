@@ -36,6 +36,7 @@ export const artistApplicationAdminDTO = async (app) => {
     contact: app.contact || {},
     country: artist?.country || app.country || null,
     location: artist?.country || app.country || null,
+    portfolioLink: app.portfolioLink || null,
 
     socials: Array.isArray(app.socials)
       ? app.socials.map((s) => ({

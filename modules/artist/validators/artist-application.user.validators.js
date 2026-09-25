@@ -36,6 +36,12 @@ export const updateArtistApplicationValidator = [
     .isArray()
     .withMessage("socials must be an array"),
 
+  body("portfolioLink")
+    .optional()
+    .trim()
+    .isString()
+    .withMessage("portfolioLink must be a string"),
+
   body("documents")
     .optional()
     .isArray()

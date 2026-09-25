@@ -11,16 +11,27 @@ export const submitArtistApplicationController = async (req, res, next) => {
   try {
     const userId = req.user._id;
 
+    const portfolioLink = req.body.portfolioLink || "";
+    let socials = req.body.socials;
+    if (typeof socials === "string") {
+      try {
+        socials = JSON.parse(socials);
+      } catch (_) {}
+    }
+    if (!Array.isArray(socials)) {
+      socials = [];
+    }
+
     const payload = {
       stageName: req.body.stageName,
       legalName: req.body.legalName,
       bio: req.body.bio,
       contact: req.body.contact,
-      socials: req.body.socials,
+      portfolioLink,
+      socials,
       documents: [],
       samples: req.body.samples,
       country: req.body.country,
-    
     };
     payload.documents.push({url:req.files.documents[0].location, filename:req.files.documents[0].key, docType:"gov_id"})
 
@@ -50,6 +61,8 @@ export const submitArtistApplicationController = async (req, res, next) => {
             bio: payload.bio,
             country: payload.country,
             contact: parsedContact,
+            portfolioLink: payload.portfolioLink || "",
+            socials: payload.socials,
             applicationId: application._id,
             submittedAt: application.createdAt || new Date(),
           })
@@ -97,12 +110,21 @@ export const getMyArtistApplicationController = async (req, res, next) => {
 export const updateMyArtistApplicationController = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const portfolioLink = req.body.portfolioLink;
+    let socials = req.body.socials;
+    if (typeof socials === "string") {
+      try {
+        socials = JSON.parse(socials);
+      } catch (_) {}
+    }
+
     const updates = {
       stageName: req.body.stageName,
       legalName: req.body.legalName,
       bio: req.body.bio,
       contact: req.body.contact,
-      socials: req.body.socials,
+      portfolioLink,
+      socials,
       documents: req.body.documents,
       samples: req.body.samples,
       requestedUploadQuotaBytes: req.body.requestedUploadQuotaBytes,
