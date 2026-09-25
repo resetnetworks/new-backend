@@ -47,8 +47,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
         } catch (_) {}
       }
 
-      // const adminEmails = ["info@reset93.net", "info@musicreset.com"];
-      const adminEmails = ["raman101work@gmail.com"];
+      const adminEmails = ["info@reset93.net", "info@musicreset.com"];
 
       await Promise.all(
         adminEmails.map((email) =>
