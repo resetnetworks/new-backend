@@ -13,7 +13,7 @@ const ZERO_DECIMAL_CURRENCIES = ["JPY", "KRW", "VND", "HUF"];
 
 export const createSubscriptionCheckout = async (req, res) => {
   try {
-    const { artistId, cycle, currency = "USD" } = req.body;
+    const { artistId, cycle, currency = "USD", returnUrl } = req.body;
     const user = req.user;
 
     if (!artistId || !cycle) {
@@ -145,7 +145,7 @@ export const createSubscriptionCheckout = async (req, res) => {
 
     const exactStripePriceId = stripePlan.stripePriceId;
 
-    // 6️⃣ Create Checkout session (subscription mode)
+    // 6️⃣ Create Checkout session (embedded subscription mode)
     const session = await createSubscriptionCheckoutSession({
       // amount,
       // currency: normalizedCurrency,
@@ -155,10 +155,17 @@ export const createSubscriptionCheckout = async (req, res) => {
       transactionId: transaction._id.toString(),
       stripeCustomerId,
       stripePriceId: exactStripePriceId,
+      customReturnUrl: returnUrl,
     });
 
+    transaction.metadata = {
+      checkoutSessionId: session.id,
+    };
+    await transaction.save();
+
     return res.status(StatusCodes.OK).json({
-      checkoutUrl: session.url,
+      clientSecret: session.client_secret,
+      checkoutSessionId: session.id,
     });
 
   } catch (error) {

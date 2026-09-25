@@ -11,12 +11,19 @@ export const createCheckoutSession = async ({
   itemType,
   transactionId,
   stripeCustomerId,
+  customReturnUrl,
 }) => {
-  const returnBaseUrl = artistId
+  const returnBaseUrl = customReturnUrl
+    ? customReturnUrl
+    : artistId
     ? `${process.env.FRONTEND_URL}/artist/${artistId}`
     : `${process.env.FRONTEND_URL}/payment`;
 
+  const separator = returnBaseUrl.includes("?") ? "&" : "?";
+  const returnUrl = `${returnBaseUrl}${separator}payment=return&session_id={CHECKOUT_SESSION_ID}`;
+
   return stripe.checkout.sessions.create({
+    ui_mode: "embedded",
     mode: "payment",
 
     payment_method_types: ["card"],
@@ -53,10 +60,7 @@ export const createCheckoutSession = async ({
       },
     },
 
-    // success_url: `${process.env.FRONTEND_URL}/payment/success`,
-    // cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`,
-    success_url: `${returnBaseUrl}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${returnBaseUrl}?payment=cancel`,
+    return_url: returnUrl,
   });
 };
 
@@ -69,14 +73,21 @@ export const createSubscriptionCheckoutSession = async ({
   cycle,
   transactionId,
   stripeCustomerId,
-  stripePriceId
+  stripePriceId,
+  customReturnUrl,
 }) => {
-  const returnBaseUrl = artistId
+  const returnBaseUrl = customReturnUrl
+    ? customReturnUrl
+    : artistId
     ? `${process.env.FRONTEND_URL}/artist/${artistId}`
     : `${process.env.FRONTEND_URL}/subscription`;
 
+  const separator = returnBaseUrl.includes("?") ? "&" : "?";
+  const returnUrl = `${returnBaseUrl}${separator}subscription=return&session_id={CHECKOUT_SESSION_ID}`;
+
   // 2️⃣ Create checkout session
   return stripe.checkout.sessions.create({
+    ui_mode: "embedded",
     mode: "subscription",
 
     // payment_method_types: ["card"], // Stripe auto-detects available methods for the customer, so this is optional
@@ -107,9 +118,10 @@ export const createSubscriptionCheckoutSession = async ({
       },
     },
 
-    // success_url: `${process.env.FRONTEND_URL}/subscription/success`,
-    // cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
-    success_url: `${returnBaseUrl}?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${returnBaseUrl}?subscription=cancel`,
+    return_url: returnUrl,
   });
+};
+
+export const retrieveCheckoutSession = async (sessionId) => {
+  return stripe.checkout.sessions.retrieve(sessionId);
 };

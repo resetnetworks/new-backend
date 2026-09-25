@@ -1,4 +1,4 @@
-import { createCheckoutSession } from "../services/stripe.service.js";
+import { createCheckoutSession, retrieveCheckoutSession } from "../services/stripe.service.js";
 import { Transaction } from "../../../models/Transaction.js";
 import { Song } from "../../../models/song.model.js";
 import { Album } from "../../../models/album.model.js";
@@ -10,7 +10,7 @@ const ZERO_DECIMAL_CURRENCIES = ["JPY", "KRW", "VND", "HUF"];
 
 export const createStripeCheckout = async (req, res) => {
   try {
-    const { itemId, itemType, currency = "USD" } = req.body;
+    const { itemId, itemType, currency = "USD", returnUrl } = req.body;
     const userId = req.user._id.toString();
    
 
@@ -94,7 +94,7 @@ export const createStripeCheckout = async (req, res) => {
       artistShare,
     });
 
-    // 💳 Create Stripe Checkout session (ONE-TIME PAYMENT)
+    // 💳 Create Stripe Checkout session (EMBEDDED ONE-TIME PAYMENT)
 
     const session = await createCheckoutSession({
       amount,
@@ -104,6 +104,7 @@ export const createStripeCheckout = async (req, res) => {
       itemId,
       itemType,
       transactionId: transaction._id.toString(),
+      customReturnUrl: returnUrl,
     });
 
     // Save session ID
@@ -114,13 +115,35 @@ export const createStripeCheckout = async (req, res) => {
     await transaction.save();
 
     return res.status(200).json({
-      checkoutUrl: session.url,
+      clientSecret: session.client_secret,
+      checkoutSessionId: session.id,
     });
 
   } catch (error) {
     console.error("Stripe Checkout Error:", error);
     return res.status(500).json({
       message: "Unable to create checkout session",
+    });
+  }
+};
+
+export const getStripeSessionStatus = async (req, res) => {
+  try {
+    const { sessionId } = req.query;
+    if (!sessionId) {
+      return res.status(400).json({ message: "sessionId query param is required" });
+    }
+
+    const session = await retrieveCheckoutSession(sessionId);
+    return res.status(200).json({
+      status: session.status,
+      paymentStatus: session.payment_status,
+      customerEmail: session.customer_details?.email,
+    });
+  } catch (error) {
+    console.error("Stripe Session Status Error:", error);
+    return res.status(500).json({
+      message: "Unable to retrieve session status",
     });
   }
 };

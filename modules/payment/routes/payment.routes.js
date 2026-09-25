@@ -1,5 +1,5 @@
 import express from "express";
-import { createStripeCheckout } from "../controllers/payment.controller.js";
+import { createStripeCheckout, getStripeSessionStatus } from "../controllers/payment.controller.js";
 import { createSubscriptionCheckout } from "../controllers/subscription.controller.js";
 import { authenticateUser } from "../../../middleware/authenticate.js";
 
@@ -13,8 +13,7 @@ router.post(
 
 router.post("/stripe/subscription", authenticateUser, createSubscriptionCheckout);
 
+router.get("/stripe/session-status", authenticateUser, getStripeSessionStatus);
+
 export default router;
-
-
-// POST /api/payment/stripe/intent
 
