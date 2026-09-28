@@ -36,6 +36,17 @@ const incrementRetries = async (id) => {
   return await MigrationJob.findByIdAndUpdate(id, { $inc: { retries: 1 } }, { new: true });
 };
 
+const updateStatistics = async (id, stats) => {
+  const updateQuery = {};
+  if (stats.albumsCount !== undefined) updateQuery["statistics.albumsCount"] = stats.albumsCount;
+  if (stats.tracksCount !== undefined) updateQuery["statistics.tracksCount"] = stats.tracksCount;
+  if (stats.assetsCount !== undefined) updateQuery["statistics.assetsCount"] = stats.assetsCount;
+  if (stats.failedAlbumsCount !== undefined) updateQuery["statistics.failedAlbumsCount"] = stats.failedAlbumsCount;
+  if (stats.failedAssetsCount !== undefined) updateQuery["statistics.failedAssetsCount"] = stats.failedAssetsCount;
+
+  return await MigrationJob.findByIdAndUpdate(id, { $inc: updateQuery }, { new: true });
+};
+
 export const migrationJobRepository = {
   create,
   findById,
@@ -43,6 +54,7 @@ export const migrationJobRepository = {
   findDuplicate,
   updateStatus,
   incrementRetries,
+  updateStatistics,
 };
 
 export default migrationJobRepository;

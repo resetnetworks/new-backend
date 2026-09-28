@@ -21,7 +21,7 @@ const PLATFORM_FEE_PERCENT = 0.15;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const initiateArtistSubscription = async (req, res) => {
   const userId = req.user._id;
-  const { paymentMethodId, gateway } = req.body;
+  const { paymentMethodId, gateway, isTrial = false, trialDays = 30 } = req.body;
   const { artistId } = req.params;
   const {line1, city, state, postal_code, country} = req.body
   const address = {
@@ -36,20 +36,31 @@ export const initiateArtistSubscription = async (req, res) => {
     return res.status(400).json({ message: 'Invalid gateway' });
   }
 
+  // ✅ Check if trial was already used for this artist by this user
+  if (isTrial) {
+    const existingTrial = await Subscription.findOne({
+      userId,
+      artistId,
+      isTrialUsed: true,
+    });
+    if (existingTrial) {
+      return res.status(400).json({
+        message: 'Free trial already claimed for this artist. Please choose a paid subscription.',
+      });
+    }
+  }
+
   // ✅ Check if subscription is already in process or active
-const existingActiveSub = await Subscription.findOne({
-  userId,
-  artistId,
-  status: "active",
-  validUntil: { $gt: new Date() }, // still valid
-});
+  const existingActiveSub = await Subscription.findOne({
+    userId,
+    artistId,
+    status: { $in: ["active", "trialing"] },
+    validUntil: { $gt: new Date() }, // still valid
+  });
 
-if (existingActiveSub) {
-  return res.status(400).json({ message: 'Subscription already active.' });
-}
-
-  // const user = await User.findById(userId);
-  // const artist = await Artist.findById(artistId);
+  if (existingActiveSub) {
+    return res.status(400).json({ message: 'Subscription already active or in trial.' });
+  }
 
   const [user, artist] = await Promise.all([
     User.findById(userId),
@@ -59,56 +70,114 @@ if (existingActiveSub) {
   if (!user || !artist) {
     return res.status(404).json({ message: 'User or artist not found' });
   }
-let customerId = user.stripeCustomerId;
+  let customerId = user.stripeCustomerId;
   // Ensure customer exists or create
- if (!customerId) {
-  const customer = await stripe.customers.create({
-    email: user.email,
-    name: user.name,
-    address: address,
-  });
-  customerId = customer.id;
-  user.stripeCustomerId = customerId;
-  await user.save();
-} else {
-  // 👇 Ensure address is present even for existing customers
-  await stripe.customers.update(customerId, {
-    name: user.name,
-    address: address,
-  });
-}
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      address: address,
+    });
+    customerId = customer.id;
+    user.stripeCustomerId = customerId;
+    await user.save();
+  } else {
+    // 👇 Ensure address is present even for existing customers
+    await stripe.customers.update(customerId, {
+      name: user.name,
+      address: address,
+    });
+  }
 
   await stripe.paymentMethods.attach(paymentMethodId, {
-  customer: customerId,
-});
+    customer: customerId,
+  });
 
-// 2. Set as default for invoices
-await stripe.customers.update(customerId, {
-  invoice_settings: {
-    default_payment_method: paymentMethodId,
-  },
-});
+  // 2. Set as default for invoices
+  await stripe.customers.update(customerId, {
+    invoice_settings: {
+      default_payment_method: paymentMethodId,
+    },
+  });
 
   // Create Stripe subscription using saved payment method
- const subscription = await stripe.subscriptions.create({
-  customer: customerId,
-  items: [{ price: artist.stripePriceId }],
-  payment_behavior: 'default_incomplete', // 👈 ensures first payment must be confirmed
-  expand: ['latest_invoice.payment_intent'],
-  default_payment_method: paymentMethodId, // ✅ set default method for subscription
-  payment_settings: {
-    payment_method_types: ['card'],
-    save_default_payment_method: 'on_subscription', // ✅ important for recurring payments
-  },
-  metadata: {
-    userId: userId.toString(),
-    artistId: artistId.toString(),
-  },
-});
+  const stripeSubParams = {
+    customer: customerId,
+    items: [{ price: artist.stripePriceId }],
+    expand: ['latest_invoice.payment_intent'],
+    default_payment_method: paymentMethodId, // ✅ set default method for subscription
+    payment_settings: {
+      payment_method_types: ['card'],
+      save_default_payment_method: 'on_subscription', // ✅ important for recurring payments
+    },
+    metadata: {
+      userId: userId.toString(),
+      artistId: artistId.toString(),
+      isTrial: isTrial ? "true" : "false",
+    },
+  };
 
+  if (isTrial) {
+    stripeSubParams.trial_period_days = trialDays;
+  } else {
+    stripeSubParams.payment_behavior = 'default_incomplete'; // 👈 ensures first payment must be confirmed for paid sub
+  }
 
+  const subscription = await stripe.subscriptions.create(stripeSubParams);
 
-  // Create transaction in DB
+  if (isTrial) {
+    const trialEndsAt = new Date(
+      subscription.trial_end ? subscription.trial_end * 1000 : Date.now() + trialDays * 86400 * 1000
+    );
+
+    // ✅ Upsert trialing Subscription record in DB
+    await Subscription.findOneAndUpdate(
+      { userId, artistId },
+      {
+        userId,
+        artistId,
+        cycle: "1m",
+        startedAt: new Date(),
+        validUntil: trialEndsAt,
+        status: "trialing",
+        isTrial: true,
+        trialStartedAt: new Date(),
+        trialEndsAt: trialEndsAt,
+        isTrialUsed: true,
+        isRecurring: true,
+        gateway: "stripe",
+        externalSubscriptionId: subscription.id,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Create $0 audit transaction for trial cycle
+    await Transaction.create({
+      userId,
+      artistId,
+      itemId: artistId,
+      itemType: 'artist-subscription',
+      amount: 0,
+      platformFee: 0,
+      artistShare: 0,
+      currency: 'usd',
+      status: 'paid',
+      isTrialPeriod: true,
+      gateway: 'stripe',
+      stripeSubscriptionId: subscription.id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      isTrial: true,
+      message: 'Free trial subscription initiated. Money will be deducted at start of next cycle.',
+      subscriptionId: subscription.id,
+      trialEndsAt,
+      validUntil: trialEndsAt,
+    });
+  }
+
+  // Create transaction in DB for regular paid subscription
   const transaction = await Transaction.create({
     userId,
     artistId,
@@ -121,33 +190,26 @@ await stripe.customers.update(customerId, {
     stripeSubscriptionId: subscription.id,
   });
 
-
-let clientSecret = null;
-if (subscription.latest_invoice && !subscription.latest_invoice.payment_intent) {
-  // Set payment method on the invoice if missing
-  if (!subscription.latest_invoice.default_payment_method) {
-    await stripe.invoices.update(subscription.latest_invoice.id, {
-      default_payment_method: paymentMethodId,
+  let clientSecret = null;
+  if (subscription.latest_invoice && !subscription.latest_invoice.payment_intent) {
+    // Set payment method on the invoice if missing
+    if (!subscription.latest_invoice.default_payment_method) {
+      await stripe.invoices.update(subscription.latest_invoice.id, {
+        default_payment_method: paymentMethodId,
+      });
+    }
+    // Attempt payment
+    await stripe.invoices.pay(subscription.latest_invoice.id);
+    // Fetch the invoice again with expanded payment_intent
+    const invoice = await stripe.invoices.retrieve(subscription.latest_invoice.id, {
+      expand: ['payment_intent'],
     });
+    clientSecret = invoice.payment_intent?.client_secret || null;
+  } else {
+    clientSecret = subscription.latest_invoice?.payment_intent?.client_secret || null;
   }
-  // Attempt payment
-  await stripe.invoices.pay(subscription.latest_invoice.id);
-  // Fetch the invoice again with expanded payment_intent
-  const invoice = await stripe.invoices.retrieve(subscription.latest_invoice.id, {
-    expand: ['payment_intent'],
-  });
-  clientSecret = invoice.payment_intent?.client_secret || null;
-} else {
-  clientSecret = subscription.latest_invoice?.payment_intent?.client_secret || null;
-}
 
-  // Safely get clientSecret if available (needed for SCA)
-  //const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret || null;
-   console.log("🧾 Returning clientSecret for first invoice:", clientSecret);
-   console.log("DEBUG subscription.latest_invoice:", subscription.latest_invoice);
-   console.log("DEBUG subscription.latest_invoice.payment_intent:", subscription.latest_invoice?.payment_intent);
-
-
+  console.log("🧾 Returning clientSecret for first invoice:", clientSecret);
 
   res.status(200).json({
     message: 'Subscription initiated',
@@ -232,14 +294,34 @@ const PLAN_DURATION_MAP = {
 export const createRazorpaySubscription = async (req, res) => {
   try {
     const { artistId } = req.params;
-    const { cycle } = req.body; // "1m", "3m", "6m", "12m"
+    const { cycle, isTrial = false, trialDays = 30 } = req.body; // "1m", "3m", "6m", "12m"
     const user = req.user;
-  
 
     // Validate cycle
-    const validCycles = [ "1m", "3m", "6m", "12m"];
+    const validCycles = ["1m", "3m", "6m", "12m"];
     if (!validCycles.includes(cycle)) {
       throw new BadRequestError("Invalid subscription cycle. Use 1m, 3m, 6m, or 12m.");
+    }
+
+    if (isTrial) {
+      const existingTrial = await Subscription.findOne({
+        userId: user._id,
+        artistId,
+        isTrialUsed: true,
+      });
+      if (existingTrial) {
+        throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
+      }
+
+      const existingActiveSub = await Subscription.findOne({
+        userId: user._id,
+        artistId,
+        status: { $in: ["active", "trialing"] },
+        validUntil: { $gt: new Date() },
+      });
+      if (existingActiveSub) {
+        throw new BadRequestError("Subscription already active or in trial.");
+      }
     }
 
     // ✅ Fetch artist and the correct plan
@@ -253,36 +335,90 @@ export const createRazorpaySubscription = async (req, res) => {
       throw new NotFoundError(`No Razorpay plan found for cycle ${cycle}`);
     }
 
-      const amount = getSubscriptionAmount(artist.subscriptionPlans[0], "INR");
-      
-       // ✅ Hardcoded first-payment discount
-      // ✅ First payment ₹100 discount
-  
+    const amount = getSubscriptionAmount(artist.subscriptionPlans[0], "INR");
 
-
-    // ✅ Create Razorpay subscription
-    const subscription = await razorpay.subscriptions.create({
+    const subParams = {
       plan_id: plan.razorpayPlanId,
-      total_count: cycle === "1m" ? 12 : cycle === "3m" ? 4 : cycle === "6m" ? 2 : 12, // number of billing cycles
+      total_count: cycle === "1m" ? 12 : cycle === "3m" ? 4 : cycle === "6m" ? 2 : 12,
       customer_notify: 1,
       notes: {
         userId: user._id.toString(),
         artistId: artistId.toString(),
         cycle,
+        isTrial: isTrial ? "true" : "false",
       },
-       
-    });
+    };
+
+    let trialEndsAt = null;
+    if (isTrial) {
+      const startAt = Math.floor(Date.now() / 1000) + (trialDays * 86400);
+      subParams.start_at = startAt;
+      trialEndsAt = new Date(startAt * 1000);
+    }
+
+    // ✅ Create Razorpay subscription
+    const subscription = await razorpay.subscriptions.create(subParams);
 
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
     const artistShare = amount - platformFee;
 
-    // ✅ Save transaction as pending
+    if (isTrial) {
+      await Subscription.findOneAndUpdate(
+        { userId: user._id, artistId },
+        {
+          userId: user._id,
+          artistId,
+          cycle,
+          startedAt: new Date(),
+          validUntil: trialEndsAt,
+          status: "trialing",
+          isTrial: true,
+          trialStartedAt: new Date(),
+          trialEndsAt,
+          isTrialUsed: true,
+          isRecurring: true,
+          gateway: "razorpay",
+          externalSubscriptionId: subscription.id,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await Transaction.create({
+        userId: user._id,
+        itemType: "artist-subscription",
+        itemId: artistId,
+        artistId,
+        amount: 0,
+        platformFee: 0,
+        artistShare: 0,
+        currency: "INR",
+        gateway: "razorpay",
+        status: "paid",
+        isTrialPeriod: true,
+        metadata: {
+          razorpaySubscriptionId: subscription.id,
+          cycle,
+          isTrial: true,
+        },
+      });
+
+      return res.status(201).json({
+        success: true,
+        isTrial: true,
+        message: "Free trial subscription started. Money will be deducted at start of next cycle.",
+        subscriptionId: subscription.id,
+        cycle,
+        trialEndsAt,
+      });
+    }
+
+    // ✅ Save transaction as pending for regular sub
     await Transaction.create({
       userId: user._id,
       itemType: "artist-subscription",
       itemId: artistId,
       artistId,
-      amount, // per-cycle price (not multiplied, because Razorpay charges per cycle)
+      amount,
       platformFee,
       artistShare,
       currency: "INR",
@@ -308,8 +444,19 @@ export const createRazorpaySubscription = async (req, res) => {
 
 export const createPaypalSubscription = async (req, res) => {
   const { artistId } = req.params;
-  const { cycle, currency = "USD" } = req.body;
+  const { cycle, currency = "USD", isTrial = false, trialDays = 30 } = req.body;
   const user = req.user;
+
+  if (isTrial) {
+    const existingTrial = await Subscription.findOne({
+      userId: user._id,
+      artistId,
+      isTrialUsed: true,
+    });
+    if (existingTrial) {
+      throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
+    }
+  }
 
   const artist = await Artist.findById(artistId).select("subscriptionPlans name");
   if (!artist) throw new NotFoundError("Artist not found");
@@ -319,27 +466,33 @@ export const createPaypalSubscription = async (req, res) => {
 
   const amount = getSubscriptionAmount(artist.subscriptionPlans[0], currency);
 
-  // ✅ pick correct PayPal plan for currency
   const paypalPlan = plan.paypalPlans?.find((pp) => pp.currency === currency);
   if (!paypalPlan) throw new BadRequestError(`No PayPal plan for ${currency}`);
 
-  // ✅ Use REST API instead of SDK
   const token = await getPayPalAccessToken();
+  const paypalRequestBody = {
+    plan_id: paypalPlan.paypalPlanId,
+    application_context: {
+      brand_name: artist.name,
+      user_action: "SUBSCRIBE_NOW",
+      return_url: `${process.env.FRONTEND_URL}/paypal/sub-success`,
+      cancel_url: `${process.env.FRONTEND_URL}/paypal/sub-cancel`,
+    },
+  };
+
+  let trialEndsAt = null;
+  if (isTrial) {
+    trialEndsAt = new Date(Date.now() + trialDays * 86400 * 1000);
+    paypalRequestBody.start_time = trialEndsAt.toISOString();
+  }
+
   const response = await fetch(`${PAYPAL_API}/v1/billing/subscriptions`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      plan_id: paypalPlan.paypalPlanId,
-      application_context: {
-        brand_name: artist.name,
-        user_action: "SUBSCRIBE_NOW",
-        return_url: `${process.env.FRONTEND_URL}/paypal/sub-success`,
-        cancel_url: `${process.env.FRONTEND_URL}/paypal/sub-cancel`,
-      },
-    }),
+    body: JSON.stringify(paypalRequestBody),
   });
 
   const subscription = await response.json();
@@ -352,7 +505,58 @@ export const createPaypalSubscription = async (req, res) => {
   const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
   const artistShare = amount - platformFee;
 
-  // ✅ Save transaction in DB
+  if (isTrial) {
+    await Subscription.findOneAndUpdate(
+      { userId: user._id, artistId },
+      {
+        userId: user._id,
+        artistId,
+        cycle,
+        startedAt: new Date(),
+        validUntil: trialEndsAt,
+        status: "trialing",
+        isTrial: true,
+        trialStartedAt: new Date(),
+        trialEndsAt,
+        isTrialUsed: true,
+        isRecurring: true,
+        gateway: "paypal",
+        externalSubscriptionId: subscription.id,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    await Transaction.create({
+      userId: user._id,
+      itemType: "artist-subscription",
+      itemId: artistId,
+      artistId,
+      amount: 0,
+      platformFee: 0,
+      artistShare: 0,
+      currency,
+      gateway: "paypal",
+      status: "paid",
+      isTrialPeriod: true,
+      metadata: {
+        paypalSubscriptionId: subscription.id,
+        cycle,
+        paypalPlanId: paypalPlan.paypalPlanId,
+        isTrial: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      isTrial: true,
+      message: "Free trial subscription initiated. Money will be deducted at start of next cycle.",
+      subscriptionId: subscription.id,
+      approveUrl: approveLink,
+      trialEndsAt,
+    });
+  }
+
+  // Regular paid subscription transaction
   const transaction = await Transaction.create({
     userId: user._id,
     itemType: "artist-subscription",
@@ -370,7 +574,7 @@ export const createPaypalSubscription = async (req, res) => {
       paypalPlanId: paypalPlan.paypalPlanId,
     },
   });
-  console.log("transaction", transaction)
+  console.log("transaction", transaction);
 
   res.json({
     success: true,

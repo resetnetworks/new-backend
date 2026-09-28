@@ -2,6 +2,7 @@ import { stripeProvider } from "../providers/stripeProvider.js";
 import { razorpayProvider } from "../providers/razorpayProvider.js";
 import { paypalProvider } from "../providers/paypalProvider.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
+import { cycleToInterval } from "../utils/cycleToInterval.js";
 
 export const createSubscriptionPlans = async (artistName, basePrice, cycle, convertedPrices) => {
   const { razorpay, paypal } = cycle;
@@ -16,7 +17,7 @@ export const createSubscriptionPlans = async (artistName, basePrice, cycle, conv
       basePrice,
       convertedPrices,
       cycle.stripe.interval,
-      cycle.stripe.interval_count
+      cycle.stripe.stripe_interval_count || cycle.stripe.interval_count
     )
   ]);
 
@@ -33,47 +34,52 @@ export const createSubscriptionPlans = async (artistName, basePrice, cycle, conv
 /**
  * Update subscription plans across Stripe/Razorpay/PayPal
  */
-export const updateSubscriptionPlans = async (artist, newPrice, intervals, newCycleLabel) => {
+export const updateSubscriptionPlans = async (artist, newPrice, intervals, newCycleLabel, convertedPrices) => {
   const plan = artist.subscriptionPlans[0]; // single cycle
 
-  const cycleIntervals = intervals || {
-    stripe: { interval: plan.stripeInterval, interval_count: plan.stripeIntervalCount },
-    razorpay: { interval: plan.razorpayInterval, period: plan.razorpayPeriod },
-    paypal: { interval_unit: plan.paypalIntervalUnit, interval_count: plan.paypalIntervalCount },
-  };
+  const cycleIntervals = intervals || cycleToInterval(plan.cycle);
+  const targetPrice = newPrice ?? plan.basePrice;
+  const targetConversions = convertedPrices || plan.convertedPrices;
+
+  // Calculate Razorpay amount in INR
+  const razorpayAmount = getSubscriptionAmount({ price: targetPrice, convertedPrices: targetConversions }, "INR");
 
   // Update external providers if price or cycle changed
-  const [stripePlan, razorpayPlanId, paypalPlans] = await Promise.all([
+  const [stripePlans, razorpayPlanId, paypalPlans] = await Promise.all([
     (newPrice !== undefined || intervals)
-      ? stripeProvider.createPlan(
-        artist.name,
-        newPrice ?? plan.basePrice,
-        cycleIntervals.stripe.interval,
-        cycleIntervals.stripe.interval_count
-      )
-      : null,
+      ? (plan?.stripeProductId
+          ? stripeProvider.createPricesForExistingProduct(
+              plan.stripeProductId,
+              targetPrice,
+              targetConversions,
+              cycleIntervals.stripe.interval,
+              cycleIntervals.stripe.stripe_interval_count || cycleIntervals.stripe.interval_count
+            ).then(plans => ({ productId: plan.stripeProductId, stripePlans: plans }))
+          : stripeProvider.createPlans(
+              artist.name,
+              targetPrice,
+              targetConversions,
+              cycleIntervals.stripe.interval,
+              cycleIntervals.stripe.stripe_interval_count || cycleIntervals.stripe.interval_count
+            )
+        )
+      : { productId: plan?.stripeProductId, stripePlans: plan?.stripePlans || [] },
     (newPrice !== undefined || intervals)
-      ? razorpayProvider.createPlan(artist.name, newPrice ?? plan.price, cycleIntervals.razorpay.interval, cycleIntervals.razorpay.period)
-      : plan.razorpayPlanId,
+      ? razorpayProvider.createPlan(artist.name, razorpayAmount, cycleIntervals.razorpay.interval, cycleIntervals.razorpay.period)
+      : plan?.razorpayPlanId,
     (newPrice !== undefined || intervals)
-      ? paypalProvider.createPlans(artist.name, newPrice ?? plan.price, cycleIntervals.paypal.interval_unit, cycleIntervals.paypal.interval_count)
-      : plan.paypalPlans
+      ? paypalProvider.createPlans(artist.name, targetPrice, targetConversions, cycleIntervals.paypal.interval_unit, cycleIntervals.paypal.interval_count)
+      : plan?.paypalPlans
   ]);
 
   // Update local plan
-  // plan.cycle = newCycleLabel;
-  // plan.price = newPrice ?? plan.price;
-  // plan.stripePriceId = stripePriceId;
-  // plan.razorpayPlanId = razorpayPlanId;
-  // plan.paypalPlans = paypalPlans;
-
-  // Update local plan
   plan.cycle = newCycleLabel ?? plan.cycle;
-  plan.price = newPrice ?? plan.price;
+  plan.basePrice = targetPrice;
+  plan.convertedPrices = targetConversions;
 
-  if (stripePlan) {
-    plan.stripeProductId = stripePlan.productId;
-    plan.stripePriceId = stripePlan.priceId;
+  if (stripePlans) {
+    plan.stripeProductId = stripePlans.productId;
+    plan.stripePlans = stripePlans.stripePlans;
   }
 
   plan.razorpayPlanId = razorpayPlanId;

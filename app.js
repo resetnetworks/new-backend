@@ -50,6 +50,7 @@ import streamRoutes from "./modules/stream/stream.routes.js";
 import userDashboardRoutes from "./routes/userDashboardRoutes.js";
 import artistDashboardRoutes from "./routes/artistDashboardRoutes.js";
 import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
+import adminCopyrightRoutes from "./routes/adminCopyrightRoutes.js";
 
 // --------------------
 // API V2 Routes
@@ -179,6 +180,7 @@ app.use("/api/stream", streamRoutes);
 
 app.use("/api/artist/dashboard", artistDashboardRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/v1/admin/copyright", adminCopyrightRoutes);
 app.use("/api/user/dashboard", userDashboardRoutes);
 
 // --------------------

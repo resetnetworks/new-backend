@@ -15,7 +15,7 @@ export async function downloadUrlToBuffer(url) {
   });
 
   return {
-    buffer: Buffer.from(response.data),
+    buffer: Buffer.from(new Uint8Array(response.data)),
     contentType: response.headers["content-type"] || "image/jpeg",
   };
 }

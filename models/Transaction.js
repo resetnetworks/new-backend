@@ -55,6 +55,11 @@ const transactionSchema = new mongoose.Schema(
     platformFee: { type: Number, required: true },
     artistShare: { type: Number, required: true },
 
+    isTrialPeriod: {
+      type: Boolean,
+      default: false,
+    },
+
     status: {
       type: String,
       enum: ["pending", "paid", "failed"],

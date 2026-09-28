@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ResetMusic Ingestion Dashboard</title>
+  <title>ResetMusic - Migration & Discography Ingestion Testing Dashboard</title>
   <!-- Outfit Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,18 +11,19 @@
   
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #0f0c1b 0%, #1e1333 50%, #0d0b1a 100%);
-      --card-bg: rgba(25, 18, 44, 0.45);
+      --bg-gradient: linear-gradient(135deg, #090714 0%, #150d2a 50%, #080612 100%);
+      --card-bg: rgba(22, 16, 38, 0.65);
       --card-border: rgba(255, 255, 255, 0.08);
-      --accent-color: #a855f7;
-      --accent-glow: rgba(168, 85, 247, 0.4);
+      --accent-purple: #a855f7;
+      --accent-indigo: #6366f1;
+      --accent-glow: rgba(168, 85, 247, 0.35);
       --success-color: #10b981;
       --warning-color: #f59e0b;
       --danger-color: #ef4444;
-      --text-main: #f3f4f6;
+      --text-main: #f9fafb;
       --text-sub: #9ca3af;
-      --glass-filter: blur(16px);
-      --transition-speed: 0.3s;
+      --glass-filter: blur(20px);
+      --transition-speed: 0.25s;
     }
 
     * {
@@ -37,47 +38,91 @@
       min-height: 100vh;
       color: var(--text-main);
       overflow-x: hidden;
-      padding: 2rem 1rem;
+      padding: 2rem 1.5rem;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 0 auto;
     }
 
     /* Header styling */
     header {
       text-align: center;
-      margin-bottom: 3rem;
-      position: relative;
+      margin-bottom: 2.5rem;
     }
 
     header h1 {
-      font-size: 2.8rem;
+      font-size: 2.5rem;
       font-weight: 700;
-      letter-spacing: -1px;
-      background: linear-gradient(90deg, #c084fc, #818cf8);
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #c084fc, #818cf8, #38bdf8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
 
     header p {
       color: var(--text-sub);
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 300;
     }
 
-    /* Layout structure */
+    /* Config Bar */
+    .config-bar {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: var(--glass-filter);
+    }
+
+    .config-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .config-group label {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .config-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.5rem 0.8rem;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .config-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    /* Dashboard Layout */
     .dashboard-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 2rem;
     }
 
-    @media (min-width: 900px) {
+    @media (min-width: 960px) {
       .dashboard-grid {
-        grid-template-columns: 380px 1fr;
+        grid-template-columns: 400px 1fr;
       }
     }
 
@@ -86,97 +131,173 @@
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 20px;
-      padding: 2rem;
+      padding: 1.75rem;
       backdrop-filter: var(--glass-filter);
       -webkit-backdrop-filter: var(--glass-filter);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      transition: transform var(--transition-speed), border-color var(--transition-speed);
-    }
-
-    .panel:hover {
-      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     }
 
     .panel-title {
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       font-weight: 600;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       padding-bottom: 0.75rem;
     }
 
-    /* Form control */
     .form-group {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
 
     .form-group label {
       display: block;
       color: var(--text-sub);
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
       font-weight: 500;
     }
 
     .form-control {
       width: 100%;
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0, 0, 0, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
-      padding: 0.8rem 1rem;
+      padding: 0.75rem 1rem;
       color: var(--text-main);
-      font-size: 1rem;
-      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+      font-size: 0.95rem;
       outline: none;
+      transition: all var(--transition-speed);
     }
 
     .form-control:focus {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 10px var(--accent-glow);
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    select.form-control option {
+      background: #150d2a;
+      color: var(--text-main);
     }
 
     .btn {
       width: 100%;
-      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-indigo) 100%);
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 0.9rem 1.5rem;
-      font-size: 1rem;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
-      transition: transform 0.15s ease, opacity var(--transition-speed), box-shadow var(--transition-speed);
-      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
+      transition: all var(--transition-speed);
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
     }
 
     .btn:hover {
-      opacity: 0.9;
+      opacity: 0.92;
       box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+      transform: translateY(-1px);
     }
 
     .btn:active {
       transform: scale(0.98);
     }
 
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    /* Live Job Tracker Box */
+    .job-tracker {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .job-tracker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .job-status-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-PENDING { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-SCRAPING { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status-NORMALIZING { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .status-DOWNLOADING_ASSETS { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+    .status-READY { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-FAILED { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .status-IMPORTED { background: rgba(52, 211, 153, 0.25); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.4); }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a855f7, #6366f1);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      text-align: center;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .stat-num {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
     /* Album Draft Cards List */
     .drafts-list {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
 
-    @media (min-width: 600px) {
+    @media (min-width: 640px) {
       .drafts-list {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       }
     }
 
     .album-card {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 16px;
       overflow: hidden;
       cursor: pointer;
@@ -185,15 +306,15 @@
     }
 
     .album-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--accent-color);
-      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.15);
+      transform: translateY(-4px);
+      border-color: var(--accent-purple);
+      box-shadow: 0 10px 25px rgba(168, 85, 247, 0.2);
     }
 
     .album-cover-container {
       width: 100%;
       aspect-ratio: 1;
-      background: #181424;
+      background: #110c1f;
       position: relative;
     }
 
@@ -204,11 +325,11 @@
     }
 
     .album-info {
-      padding: 1.25rem;
+      padding: 1rem;
     }
 
     .album-title-text {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
       margin-bottom: 0.25rem;
       white-space: nowrap;
@@ -219,16 +340,16 @@
     .album-genres {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.75rem;
+      gap: 0.3rem;
+      margin-top: 0.5rem;
     }
 
     .genre-badge {
       background: rgba(168, 85, 247, 0.15);
-      color: #d8b4fe;
+      color: #e9d5ff;
       border: 1px solid rgba(168, 85, 247, 0.3);
-      font-size: 0.75rem;
-      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
       border-radius: 99px;
       text-transform: capitalize;
     }
@@ -236,37 +357,32 @@
     /* Modal review panel styling */
     .modal-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(10, 8, 18, 0.85);
-      backdrop-filter: blur(12px);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(8, 6, 16, 0.85);
+      backdrop-filter: blur(14px);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 1000;
       padding: 1rem;
-      animation: fadeIn 0.25s ease-out;
     }
 
     .modal {
-      background: #161226;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 24px;
-      max-width: 850px;
+      background: #130e24;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      max-width: 820px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
-      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .modal-header {
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1.25rem 1.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -276,30 +392,28 @@
       background: none;
       border: none;
       color: var(--text-sub);
-      font-size: 1.8rem;
+      font-size: 1.75rem;
       cursor: pointer;
       transition: color var(--transition-speed);
     }
 
-    .modal-close-btn:hover {
-      color: var(--text-main);
-    }
+    .modal-close-btn:hover { color: var(--text-main); }
 
     .modal-content {
-      padding: 2rem;
+      padding: 1.75rem;
       overflow-y: auto;
     }
 
     .album-review-header {
       display: flex;
-      gap: 2rem;
-      margin-bottom: 2rem;
+      gap: 1.5rem;
+      margin-bottom: 1.75rem;
       flex-wrap: wrap;
     }
 
     .review-cover-img {
-      width: 150px;
-      height: 150px;
+      width: 140px;
+      height: 140px;
       border-radius: 12px;
       object-fit: cover;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -311,157 +425,165 @@
     }
 
     .review-meta h2 {
-      font-size: 1.8rem;
-      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+      margin-bottom: 0.4rem;
     }
 
     .review-meta p {
       color: var(--text-sub);
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.9rem;
     }
 
     /* Tracklist table styling */
     .tracks-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1.5rem;
+      margin-top: 1.25rem;
     }
 
     .tracks-table th {
       text-align: left;
       color: var(--text-sub);
-      font-size: 0.9rem;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       font-weight: 500;
     }
 
     .tracks-table td {
-      padding: 1rem;
+      padding: 0.85rem 0.8rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
     }
 
-    .track-num {
-      color: var(--text-sub);
-      width: 40px;
-    }
+    .track-num { color: var(--text-sub); width: 35px; }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.8rem;
+      gap: 0.3rem;
+      font-size: 0.75rem;
       font-weight: 500;
-      padding: 0.2rem 0.6rem;
+      padding: 0.2rem 0.5rem;
       border-radius: 99px;
     }
 
-    .status-missing {
-      background: rgba(239, 68, 68, 0.12);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.25);
-    }
-
-    .status-ready {
-      background: rgba(16, 185, 129, 0.12);
-      color: #a7f3d0;
-      border: 1px solid rgba(16, 185, 129, 0.25);
-    }
+    .status-missing { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.25); }
+    .status-ready { background: rgba(16, 185, 129, 0.15); color: #a7f3d0; border: 1px solid rgba(16, 185, 129, 0.25); }
 
     .track-action-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text-main);
-      padding: 0.4rem 0.8rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 8px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       cursor: pointer;
       font-weight: 500;
       transition: all var(--transition-speed);
     }
 
     .track-action-btn:hover {
-      background: var(--accent-color);
-      border-color: var(--accent-color);
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
     }
 
     .modal-footer {
-      padding: 1.5rem 2rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1.25rem 1.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       justify-content: flex-end;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
-    /* Alerts and Status Messages */
+    /* Alerts */
     .alert {
-      padding: 1rem 1.25rem;
+      padding: 0.85rem 1.1rem;
       border-radius: 12px;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
       font-weight: 500;
       display: none;
-      animation: slideIn var(--transition-speed);
     }
 
-    .alert-success {
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .alert-danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(30px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    @keyframes slideIn {
-      from { transform: translateX(30px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    .alert-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .alert-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .alert-info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>ResetMusic</h1>
-      <p>Artist Ingestion & Migration Dashboard</p>
+      <p>Catalog Migration & Ingestion Testing Suite</p>
     </header>
 
+    <!-- Global API Configuration -->
+    <div class="config-bar">
+      <div class="config-group">
+        <label for="cfg-workspace">Workspace Context ID:</label>
+        <input type="text" id="cfg-workspace" class="config-input" placeholder="e.g. 65cb75f643f8e563065b2100">
+      </div>
+      <div class="config-group">
+        <label for="cfg-token">Authorization Header (Bearer / Token):</label>
+        <input type="text" id="cfg-token" class="config-input" placeholder="Bearer eyJhbGciOi...">
+      </div>
+    </div>
+
     <div class="dashboard-grid">
-      <!-- Left sidebar: Ingest new URLs -->
+      <!-- Left sidebar: Ingest URL -->
       <div class="panel">
-        <h2 class="panel-title">🚀 Launch Migration</h2>
+        <h2 class="panel-title">🚀 Launch Migration Job</h2>
         <div id="migration-alert" class="alert"></div>
         <form id="migration-form">
           <div class="form-group">
-            <label for="bandcamp-url">Artist Profile URL (Bandcamp or Spotify)</label>
-            <input type="url" id="bandcamp-url" class="form-control" placeholder="https://artist.bandcamp.com or https://open.spotify.com/artist/..." required>
+            <label for="provider-select">Source Platform</label>
+            <select id="provider-select" class="form-control">
+              <option value="bandcamp">Bandcamp</option>
+              <option value="spotify">Spotify</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="workspace-id">Workspace ID (Optional)</label>
-            <input type="text" id="workspace-id" class="form-control" placeholder="e.g. 65cb75f643f8e563065b2100">
+            <label for="artist-url">Artist / Discography URL</label>
+            <input type="url" id="artist-url" class="form-control" placeholder="https://artist.bandcamp.com or https://open.spotify.com/artist/..." required>
           </div>
           <button type="submit" id="submit-btn" class="btn">Start Migration Job</button>
         </form>
+
+        <!-- Live Job Progress Tracker -->
+        <div id="job-tracker" class="job-tracker">
+          <div class="job-tracker-header">
+            <span style="font-weight:600; font-size:0.9rem;">Job Progress</span>
+            <span id="tracker-status-badge" class="job-status-badge status-PENDING">PENDING</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="tracker-progress-fill" class="progress-bar-fill"></div>
+          </div>
+          <p id="tracker-step-msg" style="font-size:0.8rem; color:var(--text-sub); margin-bottom:0.5rem;">Initializing...</p>
+          <div class="stat-row">
+            <div>
+              <div id="stat-albums" class="stat-num">0</div>
+              <div>Albums</div>
+            </div>
+            <div>
+              <div id="stat-tracks" class="stat-num">0</div>
+              <div>Tracks</div>
+            </div>
+            <div>
+              <div id="stat-assets" class="stat-num">0</div>
+              <div>Assets</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Right Main Panel: Staged Drafts list -->
       <div class="panel">
-        <h2 class="panel-title">🎵 Staged Draft Albums</h2>
+        <div class="panel-title">
+          <span>🎵 Staged Draft Albums</span>
+          <button class="btn btn-secondary" style="width:auto; padding: 0.4rem 0.8rem; font-size:0.8rem;" onclick="loadDraftAlbums()">↻ Refresh List</button>
+        </div>
         <div id="general-alert" class="alert"></div>
         <div id="drafts-container" class="drafts-list">
           <!-- Populated dynamically -->
@@ -474,7 +596,7 @@
   <div id="review-modal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h3 id="modal-album-title" style="font-weight:600;">Album Details</h3>
+        <h3 id="modal-album-title" style="font-weight:600;">Draft Album Details</h3>
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
       </div>
       <div class="modal-content">
@@ -483,21 +605,21 @@
           <img id="modal-cover-img" class="review-cover-img" src="" alt="Album Cover">
           <div class="review-meta">
             <h2 id="modal-title-header">Album Title</h2>
-            <p id="modal-artist">Artist: -</p>
+            <p id="modal-artist">Artist ID: -</p>
             <p id="modal-release-date">Release Date: -</p>
             <p id="modal-genres">Genres: -</p>
-            <p id="modal-desc" style="margin-top: 1rem; color: var(--text-sub); line-height: 1.5;"></p>
+            <p id="modal-desc" style="margin-top: 0.5rem; color: var(--text-sub); line-height: 1.4;"></p>
           </div>
         </div>
 
-        <h4 style="font-weight:600; margin-top:2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">Tracklist & Audio Files</h4>
+        <h4 style="font-weight:600; margin-top:1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.4rem;">Tracklist & Audio Audio Upload Status</h4>
         <table class="tracks-table">
           <thead>
             <tr>
               <th class="track-num">#</th>
               <th>Track Title</th>
               <th>Duration</th>
-              <th>Audio Status</th>
+              <th>Status</th>
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
@@ -507,72 +629,161 @@
         </table>
       </div>
       <div class="modal-footer">
-        <button class="track-action-btn" onclick="closeModal()">Cancel</button>
-        <button id="modal-publish-btn" class="btn" style="width:auto; padding: 0.8rem 2rem;">Publish Album</button>
+        <button class="btn btn-secondary" style="width:auto; padding: 0.6rem 1.25rem;" onclick="closeModal()">Close</button>
+        <button id="modal-publish-btn" class="btn" style="width:auto; padding: 0.6rem 1.5rem;">Publish to Production</button>
       </div>
     </div>
   </div>
 
   <script>
     let activeAlbumId = null;
+    let pollInterval = null;
 
-    // Load drafts on page boot
-    document.addEventListener("DOMContentLoaded", loadDraftAlbums);
+    // Load saved workspace context from localStorage or set default for testing
+    document.addEventListener("DOMContentLoaded", () => {
+      let savedWorkspace = localStorage.getItem("reset_workspace_id");
+      let savedToken = localStorage.getItem("reset_auth_token");
+      
+      const defaultToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhOWZlMTc1NWQ1NjYwNDAxNzAzNDZkYiIsInJvbGUiOiJhcnRpc3QiLCJhcnRpc3RJZCI6IjZhYTE0NzQ2YzkzNTRjMWJkZjQ3NTQ4OCIsInJvbGVWZXJzaW9uIjoyLCJpYXQiOjE3ODk0NjYzMjIsImV4cCI6MTc5MjA1ODMyMn0.h2H9d3WBgpF4S350oAgLTB6IJQuuSJt38M0KBEI8iK4";
 
-    // Form submission to trigger migration
+      if (!savedWorkspace || savedWorkspace === "65cb75f643f8e563065b2100") {
+        savedWorkspace = "69c248f3bdcc35b70cdd00ff"; // Hardcoded testing workspace ID
+        localStorage.setItem("reset_workspace_id", savedWorkspace);
+      }
+      
+      if (!savedToken) {
+        savedToken = defaultToken;
+        localStorage.setItem("reset_auth_token", savedToken);
+      }
+      
+      document.getElementById("cfg-workspace").value = savedWorkspace;
+      document.getElementById("cfg-token").value = savedToken;
+
+      document.getElementById("cfg-workspace").addEventListener("input", (e) => {
+        localStorage.setItem("reset_workspace_id", e.target.value.trim());
+      });
+      document.getElementById("cfg-token").addEventListener("input", (e) => {
+        localStorage.setItem("reset_auth_token", e.target.value.trim());
+      });
+
+      loadDraftAlbums();
+    });
+
+    // Helper for API headers
+    function getApiHeaders() {
+      const headers = { "Content-Type": "application/json" };
+      const workspaceId = document.getElementById("cfg-workspace").value.trim();
+      const token = document.getElementById("cfg-token").value.trim();
+      if (workspaceId) headers["x-workspace-id"] = workspaceId;
+      if (token) headers["Authorization"] = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+      return headers;
+    }
+
+    // Launch Migration Form Submission
     document.getElementById("migration-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const urlInput = document.getElementById("bandcamp-url");
-      const workspaceInput = document.getElementById("workspace-id");
+      const provider = document.getElementById("provider-select").value;
+      const urlInput = document.getElementById("artist-url");
       const submitBtn = document.getElementById("submit-btn");
       const alertBox = document.getElementById("migration-alert");
 
-      const body = { url: urlInput.value.trim() };
-      if (workspaceInput.value.trim()) {
-        body.workspaceId = workspaceInput.value.trim();
-      }
+      const body = { url: urlInput.value.trim(), source: provider };
+      const workspaceId = document.getElementById("cfg-workspace").value.trim();
+      if (workspaceId) body.workspaceId = workspaceId;
 
       submitBtn.disabled = true;
-      submitBtn.textContent = "Launching Job...";
+      submitBtn.textContent = "Initiating Scrape Job...";
       showAlert(alertBox, "");
 
       try {
-        const res = await fetch("/migration/bandcamp", {
+        const endpoint = "/api/migration/bandcamp";
+        const res = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getApiHeaders(),
           body: JSON.stringify(body)
         });
         const result = await res.json();
         
         if (result.success) {
-          showAlert(alertBox, "success", `Migration Job created successfully! ID: ${result.data._id}`);
-          urlInput.value = "";
-          setTimeout(loadDraftAlbums, 2000);
+          showAlert(alertBox, "success", `Migration Job created! ID: ${result.data._id}`);
+          startJobPolling(result.data._id);
         } else {
-          showAlert(alertBox, "danger", result.message || "Failed to create job.");
+          showAlert(alertBox, "danger", result.message || "Failed to launch migration job.");
         }
       } catch (err) {
-        showAlert(alertBox, "danger", "Network error starting migration.");
+        showAlert(alertBox, "danger", "Network error starting migration job.");
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Start Migration Job";
       }
     });
 
-    // Fetch Draft Albums
+    // Poll Migration Job Status
+    function startJobPolling(jobId) {
+      const trackerBox = document.getElementById("job-tracker");
+      trackerBox.style.display = "block";
+
+      if (pollInterval) clearInterval(pollInterval);
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/migration/${jobId}`, { headers: getApiHeaders() });
+          const result = await res.json();
+
+          if (!res.ok || !result.success) {
+            console.warn("Polling error response:", result);
+            if (res.status === 401 || res.status === 403 || res.status === 404 || result.code === "ROLE_CHANGED") {
+              const alertBox = document.getElementById("migration-alert");
+              showAlert(alertBox, "danger", result.message || "Authentication session expired. Please update token.");
+              clearInterval(pollInterval);
+              pollInterval = null;
+              return;
+            }
+          }
+
+          if (result.success && result.data) {
+            const job = result.data;
+            
+            // Update UI components
+            const badge = document.getElementById("tracker-status-badge");
+            badge.className = `job-status-badge status-${job.status}`;
+            badge.textContent = job.status;
+
+            document.getElementById("tracker-progress-fill").style.width = `${job.progress || 0}%`;
+            document.getElementById("tracker-step-msg").textContent = job.currentStep || "Processing...";
+
+            if (job.statistics) {
+              document.getElementById("stat-albums").textContent = job.statistics.albumsCount || 0;
+              document.getElementById("stat-tracks").textContent = job.statistics.tracksCount || 0;
+              document.getElementById("stat-assets").textContent = job.statistics.assetsCount || 0;
+            }
+
+            if (job.status === "READY" || job.status === "FAILED" || job.status === "IMPORTED") {
+              clearInterval(pollInterval);
+              pollInterval = null;
+              setTimeout(loadDraftAlbums, 1500);
+            }
+          }
+        } catch (err) {
+          console.error("Error polling job status:", err);
+        }
+      }, 2000);
+    }
+
+    // Fetch Staged Draft Albums
     async function loadDraftAlbums() {
       const container = document.getElementById("drafts-container");
       const alertBox = document.getElementById("general-alert");
-      container.innerHTML = "<p style='color: var(--text-sub);'>Loading draft albums...</p>";
+      container.innerHTML = "<p style='color: var(--text-sub);'>Fetching draft albums...</p>";
 
       try {
-        const res = await fetch("/migration/drafts/albums");
+        const res = await fetch("/api/migration/drafts/albums", { headers: getApiHeaders() });
         const result = await res.json();
 
         if (result.success) {
           container.innerHTML = "";
           if (result.data.length === 0) {
-            container.innerHTML = "<p style='color: var(--text-sub); grid-column: 1/-1;'>No staging draft albums found. Launch a migration to populate drafts!</p>";
+            container.innerHTML = "<p style='color: var(--text-sub); grid-column: 1/-1;'>No staged draft albums found. Launch a migration job!</p>";
             return;
           }
           result.data.forEach(album => {
@@ -580,16 +791,15 @@
             card.className = "album-card";
             card.onclick = () => openAlbumReview(album._id);
             
-            const coverImage = album.coverImage ? "https://reset-streaming.s3.ap-south-1.amazonaws.com/" + album.coverImage : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400";
+            const coverImage = album.coverImage ? (album.coverImage.startsWith("http") ? album.coverImage : "https://reset-streaming.s3.ap-south-1.amazonaws.com/" + album.coverImage) : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400";
             const genresHtml = (album.genres || [])
               .slice(0, 3)
               .map(g => `<span class="genre-badge">${g}</span>`)
               .join("");
-              console.log("Genres HTML:", coverImage); // Debugging line to check genresHtml content
 
             card.innerHTML = `
               <div class="album-cover-container">
-                <img class="album-cover-img" src="${coverImage}" alt="${album.title}">
+                <img class="album-cover-img" src="${coverImage}" alt="${album.title}" onerror="this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400'">
               </div>
               <div class="album-info">
                 <div class="album-title-text" title="${album.title}">${album.title}</div>
@@ -599,10 +809,10 @@
             container.appendChild(card);
           });
         } else {
-          showAlert(alertBox, "danger", "Failed to retrieve draft albums.");
+          showAlert(alertBox, "danger", result.message || "Failed to retrieve draft albums.");
         }
       } catch (err) {
-        showAlert(alertBox, "danger", "Error communicating with the database.");
+        showAlert(alertBox, "danger", "Error connecting to migration service.");
       }
     }
 
@@ -625,14 +835,14 @@
       modal.style.display = "flex";
 
       try {
-        const res = await fetch(`/migration/drafts/albums/${albumId}`);
+        const res = await fetch(`/api/migration/drafts/albums/${albumId}`, { headers: getApiHeaders() });
         const result = await res.json();
 
         if (result.success) {
           const { album, tracks } = result.data;
           titleHeader.textContent = album.title;
-          coverImg.src = album.coverImage ? "https://reset-streaming.s3.ap-south-1.amazonaws.com/" + album.coverImage : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400";
-          artistP.innerHTML = `<strong>Artist ID Reference:</strong> ${album.artistId}`;
+          coverImg.src = album.coverImage ? (album.coverImage.startsWith("http") ? album.coverImage : "https://reset-streaming.s3.ap-south-1.amazonaws.com/" + album.coverImage) : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400";
+          artistP.innerHTML = `<strong>Artist ID:</strong> ${album.artistId}`;
           releaseDateP.innerHTML = `<strong>Release Date:</strong> ${album.releaseDate ? new Date(album.releaseDate).toLocaleDateString() : 'N/A'}`;
           genresP.innerHTML = `<strong>Genres:</strong> ${(album.genres || []).join(", ") || 'None'}`;
           descP.textContent = album.description || "No description provided.";
@@ -642,16 +852,14 @@
             const tr = document.createElement("tr");
             const isReady = !!track.audioKey;
             
-            const minutes = Math.floor(track.duration / 60);
-            const seconds = Math.floor(track.duration % 60).toString().padStart(2, "0");
+            const minutes = Math.floor((track.duration || 0) / 60);
+            const seconds = Math.floor((track.duration || 0) % 60).toString().padStart(2, "0");
             const durationFormatted = track.duration ? `${minutes}:${seconds}` : "--:--";
 
             const statusClass = isReady ? "status-ready" : "status-missing";
-            const statusLabel = isReady ? "● Ready" : "○ Missing Audio";
+            const statusLabel = isReady ? "● Audio Attached" : "○ Audio Missing";
 
-            const actionBtn = isReady 
-              ? `<button class="track-action-btn" onclick="mockAudioUpload('${track._id}', event)">Replace Mock Audio</button>`
-              : `<button class="track-action-btn" onclick="mockAudioUpload('${track._id}', event)">Mock Audio Upload</button>`;
+            const actionBtn = `<button class="track-action-btn" onclick="attachAudio('${track._id}', event)">${isReady ? 'Replace Audio' : 'Attach Mock Audio'}</button>`;
 
             tr.innerHTML = `
               <td class="track-num">${track.trackNumber}</td>
@@ -663,86 +871,83 @@
             tracksBody.appendChild(tr);
           });
 
-          // Setup publish button event listener
           publishBtn.onclick = () => publishAlbum(albumId);
         } else {
-          showAlert(modalAlert, "danger", "Failed to retrieve album details.");
+          showAlert(modalAlert, "danger", result.message || "Failed to retrieve album details.");
         }
       } catch (err) {
         showAlert(modalAlert, "danger", "Network error fetching tracks.");
       }
     }
 
-    // Mock Audio upload
-    async function mockAudioUpload(trackId, event) {
+    // Attach Mock Audio Key to Draft Track
+    async function attachAudio(trackId, event) {
       event.stopPropagation();
       const modalAlert = document.getElementById("modal-alert");
       showAlert(modalAlert, "");
 
-      // Generate a mock S3 key to simulate successful client file upload
-      const mockKey = `songs/audio/${trackId}-mock-upload.mp3`;
+      const mockKey = `songs/audio/${trackId}-sample-upload.mp3`;
 
       try {
-        const res = await fetch(`/migration/drafts/tracks/${trackId}`, {
+        const res = await fetch(`/api/migration/drafts/tracks/${trackId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: getApiHeaders(),
           body: JSON.stringify({ audioKey: mockKey })
         });
         const result = await res.json();
 
         if (result.success) {
-          showAlert(modalAlert, "success", `Mock Audio uploaded for track: "${result.data.title}"`);
-          // Reload the details view
+          showAlert(modalAlert, "success", `Attached audio file to track "${result.data.title}"`);
           openAlbumReview(activeAlbumId);
         } else {
-          showAlert(modalAlert, "danger", result.message || "Failed to upload audio.");
+          showAlert(modalAlert, "danger", result.message || "Failed to attach audio.");
         }
       } catch (err) {
         showAlert(modalAlert, "danger", "Network error updating track audio.");
       }
     }
 
-    // Publish Album
+    // Publish Draft Album to Production
     async function publishAlbum(albumId) {
       const modalAlert = document.getElementById("modal-alert");
       const publishBtn = document.getElementById("modal-publish-btn");
 
       publishBtn.disabled = true;
-      publishBtn.textContent = "Publishing...";
+      publishBtn.textContent = "Publishing to Production...";
       showAlert(modalAlert, "");
 
       try {
-        const res = await fetch(`/migration/drafts/albums/${albumId}/publish`, {
+        const res = await fetch(`/api/migration/drafts/albums/${albumId}/publish`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: "65cb75f643f8e563065b2105" }) // Mock User ID
+          headers: getApiHeaders(),
+          body: JSON.stringify({})
         });
         const result = await res.json();
 
         if (result.success) {
-          showAlert(modalAlert, "success", "🎉 Album published to production successfully!");
+          showAlert(modalAlert, "success", "🎉 Album successfully published to production!");
           setTimeout(() => {
             closeModal();
             loadDraftAlbums();
-          }, 3000);
+          }, 2500);
         } else {
           showAlert(modalAlert, "danger", result.message || "Failed to publish album.");
         }
       } catch (err) {
-        showAlert(modalAlert, "danger", "Network error during publishing.");
+        showAlert(modalAlert, "danger", "Network error during album publishing.");
       } finally {
         publishBtn.disabled = false;
-        publishBtn.textContent = "Publish Album";
+        publishBtn.textContent = "Publish to Production";
       }
     }
 
-    // Close modal
+    // Close Modal
     function closeModal() {
       document.getElementById("review-modal").style.display = "none";
       activeAlbumId = null;
     }
 
-    // Helper to show custom alerts
+    // Helper to show alert messages
     function showAlert(alertEl, type, message = "") {
       if (!type) {
         alertEl.style.display = "none";

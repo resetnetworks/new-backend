@@ -149,6 +149,42 @@ const songSchema = new mongoose.Schema(
     },
 
     /* ======================================================
+       VERIFICATION & AUDD COPYRIGHT MODERATION
+       ====================================================== */
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    isPublished: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+
+    copyrightCheck: {
+      checked: { type: Boolean, default: false },
+      status: {
+        type: String,
+        enum: ["pending", "clean", "match_found", "error", "takedown"],
+        default: "pending",
+      },
+      matchedTitle: { type: String, default: "" },
+      matchedArtist: { type: String, default: "" },
+      matchedIsrc: { type: String, default: "" },
+      matchScore: { type: Number, default: 0 },
+      rawResponse: { type: mongoose.Schema.Types.Mixed },
+      checkedAt: { type: Date },
+    },
+
+    verifiedAt: { type: Date },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    takedownReason: { type: String },
+    takedownAt: { type: Date },
+
+    /* ======================================================
        SOFT DELETE
        ====================================================== */
 

@@ -9,6 +9,20 @@ import { Transaction } from "../models/Transaction.js";
 
 
 export const canStreamSong = async (userId, song) => {
+  // If song is unpublished/taken down, only Admins or the owning Artist can stream it
+  if (song.isPublished === false) {
+    if (!userId) return false;
+    const user = await User.findById(userId).select("role artistId").lean();
+    if (!user) return false;
+    if (isAdmin(user)) return true;
+    if (
+      user.role === "artist" &&
+      user.artistId &&
+      String(song.artist) === String(user.artistId)
+    ) return true;
+    return false;
+  }
+
   if (song.accessType === "free") return true;
 
   const user = await User.findById(userId)
@@ -28,7 +42,7 @@ export const canStreamSong = async (userId, song) => {
     return await Subscription.exists({
       userId,
       artistId: song.artist,
-      status: { $in: ["active", "cancelled"] },
+      status: { $in: ["active", "trialing", "cancelled"] },
       validUntil: { $gt: new Date() },
     });
   }
@@ -73,7 +87,7 @@ export const canStreamAlbum = async (userId, albumId) => {
     const sub = await Subscription.findOne({
       userId,
       artistId: album.artist._id,
-      status: "active",
+      status: { $in: ["active", "trialing", "cancelled"] },
       validUntil: { $gte: new Date() },
     });
 

@@ -377,11 +377,12 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         }
       }
 
-      // ✅ Upsert subscription
+      // ✅ Upsert subscription (transitions trialing to active on first paid charge)
       await Subscription.findOneAndUpdate(
         { userId: transaction.userId, artistId: transaction.artistId },
         {
           status: "active",
+          isTrial: false,
           validUntil,
           isRecurring: true,
           gateway: transaction.gateway,

@@ -18,10 +18,11 @@ import { convertCurrencies } from "../../../utils/convertCurrencies.js";
 
 
 export const createMigration = async (workspaceId, url, source = "bandcamp") => {
-  const duplicate = await migrationJobRepository.findDuplicate(url, workspaceId);
-  if (duplicate) {
-    throw new Error(`A migration job for URL ${url} is already in progress (Status: ${duplicate.status})`);
-  }
+  // Duplicate check temporarily disabled for testing:
+  // const duplicate = await migrationJobRepository.findDuplicate(url, workspaceId);
+  // if (duplicate) {
+  //   throw new Error(`A migration job for URL ${url} is already in progress (Status: ${duplicate.status})`);
+  // }
 
   const job = await migrationJobRepository.create({
     source,
