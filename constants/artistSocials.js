@@ -7,4 +7,6 @@ export const ARTIST_SOCIAL_PROVIDERS = [
   "facebook",
   "tiktok",
   "bandcamp",
+  "apple",
+  "portfolio",
 ];
