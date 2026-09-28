@@ -22,6 +22,7 @@ export const artistApplicationDTO = (app) => {
     adminNotes:app.adminNotes || null,
     contact: app.contact || {},
     country: app.country || null,
+    portfolioLink: app.portfolioLink || null,
     socials: Array.isArray(app.socials)
       ? app.socials.map((s) => ({
           provider: s.provider,
@@ -63,6 +64,7 @@ export const artistApplicationPublicDTO = (doc) => {
     slug: doc.slug,
     bio: doc.bio,
     contact: doc.contact,
+    portfolioLink: doc.portfolioLink || null,
     socials: doc.socials,
     documents: doc.documents,
     adminNotes: doc.adminNotes,
