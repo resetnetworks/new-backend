@@ -105,10 +105,6 @@ const socialSchema = new mongoose.Schema(
       trim: true,
       maxlength: 500,
     },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
   },
   { _id: false }
 );
