@@ -16,7 +16,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
     if (typeof socials === "string") {
       try {
         socials = JSON.parse(socials);
-      } catch (_) {}
+      } catch (_) { }
     }
     if (!Array.isArray(socials)) {
       socials = [];
@@ -29,11 +29,13 @@ export const submitArtistApplicationController = async (req, res, next) => {
       contact: req.body.contact,
       portfolioLink,
       socials,
-      documents: [],
+      documents: req.body.documents || [],
       samples: req.body.samples,
       country: req.body.country,
     };
-    payload.documents.push({url:req.files.documents[0].location, filename:req.files.documents[0].key, docType:"gov_id"})
+
+    //@deprecated TODO: remove this
+    // payload.documents.push({ url: req.files.documents[0].location, filename: req.files.documents[0].key, docType: "gov_id" })
 
     // Business logic handled in service
     const application = await artistApplicationService.submit(userId, payload);
@@ -44,7 +46,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
       if (typeof parsedContact === "string") {
         try {
           parsedContact = JSON.parse(parsedContact);
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const adminEmails = ["info@reset93.net", "info@musicreset.com"];
@@ -115,7 +117,7 @@ export const updateMyArtistApplicationController = async (req, res, next) => {
     if (typeof socials === "string") {
       try {
         socials = JSON.parse(socials);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const updates = {
