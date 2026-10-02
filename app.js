@@ -144,7 +144,7 @@ app.use("/api/v2/webhooks", webhookRoutesv2);
 
 app.use(rateLimit({ windowMs: 5 * 60 * 1000, max: 300 }));
 app.use(helmet());
-app.use(httpLogger);
+// app.use(httpLogger);
 
 
 

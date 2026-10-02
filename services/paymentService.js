@@ -362,14 +362,25 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         transaction.razorpayOrderId ??
         "unknown";
 
-      // 🧠 Optionally enrich with Stripe's actual period
+      // 🧠 Enrich with Stripe's actual period and trial state
+      let subStatus = "active";
+      let isTrial = false;
+      let trialStartedAt = null;
+      let trialEndsAt = null;
+
       if (transaction.stripeSubscriptionId) {
         try {
           const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
           const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
-          // console.log("🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 🔄 Stripe subscription details:", stripeSub);
 
-          if (!existingSub && stripeSub?.current_period_end) {
+          if (stripeSub?.status === "trialing") {
+            subStatus = "trialing";
+            isTrial = true;
+            trialStartedAt = new Date(stripeSub.trial_start ? stripeSub.trial_start * 1000 : Date.now());
+            const trialDays = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
+            trialEndsAt = new Date(stripeSub.trial_end ? stripeSub.trial_end * 1000 : Date.now() + trialDays * 86400 * 1000);
+            validUntil = trialEndsAt;
+          } else if (!existingSub && stripeSub?.current_period_end) {
             validUntil = new Date(stripeSub.current_period_end * 1000);
           }
         } catch (err) {
@@ -377,12 +388,13 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
         }
       }
 
-      // ✅ Upsert subscription (transitions trialing to active on first paid charge)
+      // ✅ Upsert subscription (preserves trialing on trial, transitions to active on first paid charge)
       await Subscription.findOneAndUpdate(
         { userId: transaction.userId, artistId: transaction.artistId },
         {
-          status: "active",
-          isTrial: false,
+          status: subStatus,
+          isTrial,
+          ...(isTrial ? { trialStartedAt, trialEndsAt, isTrialUsed: true } : {}),
           validUntil,
           isRecurring: true,
           gateway: transaction.gateway,

@@ -17,11 +17,12 @@ import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
+export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const initiateArtistSubscription = async (req, res) => {
   const userId = req.user._id;
-  const { paymentMethodId, gateway, isTrial = false, trialDays = 30 } = req.body;
+  const { paymentMethodId, gateway, trialDays = DEFAULT_TRIAL_DAYS } = req.body;
   const { artistId } = req.params;
   const {line1, city, state, postal_code, country} = req.body
   const address = {
@@ -36,20 +37,6 @@ export const initiateArtistSubscription = async (req, res) => {
     return res.status(400).json({ message: 'Invalid gateway' });
   }
 
-  // ✅ Check if trial was already used for this artist by this user
-  if (isTrial) {
-    const existingTrial = await Subscription.findOne({
-      userId,
-      artistId,
-      isTrialUsed: true,
-    });
-    if (existingTrial) {
-      return res.status(400).json({
-        message: 'Free trial already claimed for this artist. Please choose a paid subscription.',
-      });
-    }
-  }
-
   // ✅ Check if subscription is already in process or active
   const existingActiveSub = await Subscription.findOne({
     userId,
@@ -60,6 +47,24 @@ export const initiateArtistSubscription = async (req, res) => {
 
   if (existingActiveSub) {
     return res.status(400).json({ message: 'Subscription already active or in trial.' });
+  }
+
+  // ✅ Check if trial was already used for this artist by this user
+  const existingTrial = await Subscription.findOne({
+    userId,
+    artistId,
+    isTrialUsed: true,
+  });
+
+  // 🎯 First time subscribing to this artist -> ALWAYS free trial
+  // After trial period ends, user will be auto-charged by Stripe.
+  let isTrial = false;
+  if (!existingTrial) {
+    isTrial = true;
+  } else if (req.body.isTrial) {
+    return res.status(400).json({
+      message: 'Free trial already claimed for this artist. Please choose a paid subscription.',
+    });
   }
 
   const [user, artist] = await Promise.all([
@@ -294,7 +299,7 @@ const PLAN_DURATION_MAP = {
 export const createRazorpaySubscription = async (req, res) => {
   try {
     const { artistId } = req.params;
-    const { cycle, isTrial = false, trialDays = 30 } = req.body; // "1m", "3m", "6m", "12m"
+    const { cycle, trialDays = DEFAULT_TRIAL_DAYS } = req.body; // "1m", "3m", "6m", "12m"
     const user = req.user;
 
     // Validate cycle
@@ -303,25 +308,31 @@ export const createRazorpaySubscription = async (req, res) => {
       throw new BadRequestError("Invalid subscription cycle. Use 1m, 3m, 6m, or 12m.");
     }
 
-    if (isTrial) {
-      const existingTrial = await Subscription.findOne({
-        userId: user._id,
-        artistId,
-        isTrialUsed: true,
-      });
-      if (existingTrial) {
-        throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
-      }
+    // ✅ Check if subscription is already active or in trial
+    const existingActiveSub = await Subscription.findOne({
+      userId: user._id,
+      artistId,
+      status: { $in: ["active", "trialing"] },
+      validUntil: { $gt: new Date() },
+    });
+    if (existingActiveSub) {
+      throw new BadRequestError("Subscription already active or in trial.");
+    }
 
-      const existingActiveSub = await Subscription.findOne({
-        userId: user._id,
-        artistId,
-        status: { $in: ["active", "trialing"] },
-        validUntil: { $gt: new Date() },
-      });
-      if (existingActiveSub) {
-        throw new BadRequestError("Subscription already active or in trial.");
-      }
+    // ✅ Check if trial was already used for this artist by this user
+    const existingTrial = await Subscription.findOne({
+      userId: user._id,
+      artistId,
+      isTrialUsed: true,
+    });
+
+    // 🎯 First time subscribing to this artist -> ALWAYS free trial
+    // After trial period ends, user will be auto-charged by Razorpay on start_at.
+    let isTrial = false;
+    if (!existingTrial) {
+      isTrial = true;
+    } else if (req.body.isTrial) {
+      throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
     }
 
     // ✅ Fetch artist and the correct plan
@@ -358,7 +369,7 @@ export const createRazorpaySubscription = async (req, res) => {
 
     // ✅ Create Razorpay subscription
     const subscription = await razorpay.subscriptions.create(subParams);
-
+console.log("-------------------------------------Hello")
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
     const artistShare = amount - platformFee;
 
@@ -444,18 +455,34 @@ export const createRazorpaySubscription = async (req, res) => {
 
 export const createPaypalSubscription = async (req, res) => {
   const { artistId } = req.params;
-  const { cycle, currency = "USD", isTrial = false, trialDays = 30 } = req.body;
+  const { cycle, currency = "USD", trialDays = DEFAULT_TRIAL_DAYS } = req.body;
   const user = req.user;
 
-  if (isTrial) {
-    const existingTrial = await Subscription.findOne({
-      userId: user._id,
-      artistId,
-      isTrialUsed: true,
-    });
-    if (existingTrial) {
-      throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
-    }
+  // ✅ Check if subscription is already active or in trial
+  const existingActiveSub = await Subscription.findOne({
+    userId: user._id,
+    artistId,
+    status: { $in: ["active", "trialing"] },
+    validUntil: { $gt: new Date() },
+  });
+  if (existingActiveSub) {
+    throw new BadRequestError("Subscription already active or in trial.");
+  }
+
+  // ✅ Check if trial was already used for this artist by this user
+  const existingTrial = await Subscription.findOne({
+    userId: user._id,
+    artistId,
+    isTrialUsed: true,
+  });
+
+  // 🎯 First time subscribing to this artist -> ALWAYS free trial
+  // After trial period ends, user will be auto-charged by PayPal on start_time.
+  let isTrial = false;
+  if (!existingTrial) {
+    isTrial = true;
+  } else if (req.body.isTrial) {
+    throw new BadRequestError("Free trial already claimed for this artist. Please choose a paid subscription.");
   }
 
   const artist = await Artist.findById(artistId).select("subscriptionPlans name");

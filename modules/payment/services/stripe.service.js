@@ -66,8 +66,6 @@ export const createCheckoutSession = async ({
 
 
 export const createSubscriptionCheckoutSession = async ({
-  // amount,
-  // currency,
   userId,
   artistId,
   cycle,
@@ -75,6 +73,8 @@ export const createSubscriptionCheckoutSession = async ({
   stripeCustomerId,
   stripePriceId,
   customReturnUrl,
+  isTrial = false,
+  trialDays = 1,
 }) => {
   const returnBaseUrl = customReturnUrl
     ? customReturnUrl
@@ -83,43 +83,44 @@ export const createSubscriptionCheckoutSession = async ({
     : `${process.env.FRONTEND_URL}/subscription`;
 
   const separator = returnBaseUrl.includes("?") ? "&" : "?";
-  const returnUrl = `${returnBaseUrl}${separator}subscription=return&session_id={CHECKOUT_SESSION_ID}`;
+  const successUrl = `${returnBaseUrl}${separator}subscription=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${returnBaseUrl}${separator}subscription=cancel`;
 
-  // 2️⃣ Create checkout session
-  return stripe.checkout.sessions.create({
-    ui_mode: "embedded",
+  const sessionParams = {
     mode: "subscription",
-
-    // payment_method_types: ["card"], // Stripe auto-detects available methods for the customer, so this is optional
     customer: stripeCustomerId,
-
     line_items: [
       {
-        // price: price.id,
-        price: stripePriceId, // Use the ID passed from the controller
+        price: stripePriceId,
         quantity: 1,
       },
     ],
-
     metadata: {
       transactionId,
       userId,
       artistId,
       cycle,
       itemType: "artist-subscription",
+      isTrial: isTrial ? "true" : "false",
     },
-
     subscription_data: {
       metadata: {
         transactionId,
         userId,
         artistId,
         cycle,
+        isTrial: isTrial ? "true" : "false",
       },
     },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  };
 
-    return_url: returnUrl,
-  });
+  if (isTrial) {
+    sessionParams.subscription_data.trial_period_days = trialDays;
+  }
+
+  return stripe.checkout.sessions.create(sessionParams);
 };
 
 export const retrieveCheckoutSession = async (sessionId) => {

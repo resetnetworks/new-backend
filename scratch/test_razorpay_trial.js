@@ -12,7 +12,7 @@ async function verifyRazorpayTrial() {
   console.log('🔄 Connecting to MongoDB...');
   await mongoose.connect(process.env.MONGO_URL);
 
-  const trialDays = 15;
+  const trialDays = 1;
   const startAt = Math.floor(Date.now() / 1000) + (trialDays * 86400);
   const trialEndsAt = new Date(startAt * 1000);
 
