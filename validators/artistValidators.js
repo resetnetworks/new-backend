@@ -94,3 +94,32 @@ export const updateArtistValidator = [
 export const artistIdValidator = [
   param("id").isMongoId().withMessage("Invalid artist ID"),
 ];
+
+export const updateArtistPricingValidator = [
+  body("price")
+    .exists({ checkFalsy: true })
+    .withMessage("Price is required")
+    .isObject()
+    .withMessage("Price must be an object"),
+
+  body("price.currency")
+    .exists({ checkFalsy: true })
+    .withMessage("Currency is required")
+    .isString()
+    .trim()
+    .isLength({ min: 3, max: 3 })
+    .withMessage("Currency must be a valid 3-letter ISO code"),
+
+  body("price.amount")
+    .exists({ checkFalsy: true })
+    .withMessage("Amount is required")
+    .isNumeric()
+    .custom((value) => Number(value) > 0)
+    .withMessage("Price amount must be greater than zero"),
+
+  body("cycle")
+    .optional()
+    .isString()
+    .isIn(["1m", "3m", "6m", "12m"])
+    .withMessage("Invalid cycle. Must be one of: 1m, 3m, 6m, 12m"),
+];

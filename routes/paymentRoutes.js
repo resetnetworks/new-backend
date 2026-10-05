@@ -15,8 +15,8 @@ router.post("/stripe/create-payment", authenticateUser, createStripePayment);
 // Create Razorpay Order
 router.post("/razorpay/create-order", authenticateUser, createRazorpayOrder);
 
-router.post("/paypal/create-order", authenticateUser, createPaypalOrder);
+// router.post("/paypal/create-order", authenticateUser, createPaypalOrder);
 
-router.post("/paypal/capture-order", capturePaypalOrder);
+// router.post("/paypal/capture-order", capturePaypalOrder);
 
 export default router;

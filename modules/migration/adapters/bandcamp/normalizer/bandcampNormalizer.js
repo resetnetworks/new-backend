@@ -39,7 +39,9 @@ export function normalizeData(parsedData, migrationJobId) {
         trackNumber: track.trackNumber || 1,
         lyrics: track.lyrics || "",
         credits: track.credits || "",
-        audioStatus: "MISSING",
+        audioUrl: track.audioUrl || null,
+        audioKey: track.audioUrl || null,
+        audioStatus: track.audioUrl ? "READY" : "MISSING",
         artwork: album.coverImage || null,
       })),
     };

@@ -35,8 +35,26 @@ const subscriptionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "expired", "cancelled"],
+      enum: ["active", "trialing", "expired", "cancelled"],
       default: "active",
+    },
+
+    isTrial: {
+      type: Boolean,
+      default: false,
+    },
+
+    trialStartedAt: {
+      type: Date,
+    },
+
+    trialEndsAt: {
+      type: Date,
+    },
+
+    isTrialUsed: {
+      type: Boolean,
+      default: false,
     },
 
     isRecurring: {

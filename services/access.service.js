@@ -4,6 +4,20 @@ import { Transaction } from "../models/Transaction.js";
 import { isAdmin } from "../utils/authHelper.js";
 
 export const canAccessSong = async (userId, song) => {
+  // If song is unpublished/taken down, only Admins or the owning Artist can access it
+  if (song.isPublished === false) {
+    if (!userId) return false;
+    const user = await User.findById(userId).select("role artistId").lean();
+    if (!user) return false;
+    if (isAdmin(user)) return true;
+    if (
+      user.role === "artist" &&
+      user.artistId &&
+      song.artist &&
+      song.artist.equals(user.artistId)
+    ) return true;
+    return false;
+  }
 
   // Free songs are accessible to everyone
   if (song.accessType === "free") {
@@ -32,7 +46,7 @@ export const canAccessSong = async (userId, song) => {
     const subscriptionExists = await Subscription.exists({
       userId,
       artistId: song.artist,
-      status: { $in: ["active", "cancelled"] },
+      status: { $in: ["active", "trialing", "cancelled"] },
       validUntil: { $gt: new Date() }
     });
 

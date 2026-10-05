@@ -1,10 +1,37 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-const TIMEOUT_MS = 15_000;
-const HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-};
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+  "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0",
+];
+
+function getRandomUserAgent() {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+async function fetchHtmlWithRetry(url, headers, retries = 3, delayMs = 2000) {
+  try {
+    const res = await axios.get(url, { timeout: TIMEOUT_MS, headers });
+    return res.data;
+  } catch (err) {
+    const status = err.response?.status;
+    if ((status === 429 || status === 503 || status === 403 || !status) && retries > 0) {
+      const retryAfterHeader = err.response?.headers?.["retry-after"];
+      const waitTime = retryAfterHeader
+        ? parseInt(retryAfterHeader, 10) * 1000
+        : delayMs * (4 - retries) + Math.floor(Math.random() * 1000);
+
+      console.warn(
+        `[SpotifyClient] Request failed or rate limited (Status: ${status || "Network Error"}). Retrying ${url} in ${Math.round(waitTime)}ms... (${retries} retries left)`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      return fetchHtmlWithRetry(url, headers, retries - 1, delayMs * 1.5);
+    }
+    throw err;
+  }
+}
 
 /**
  * Fetch HTML of a Spotify URL. Supports local mocking for testing.
@@ -67,8 +94,14 @@ export async function fetchHtml(url) {
     }
   }
 
-  const res = await axios.get(url, { timeout: TIMEOUT_MS, headers: HEADERS });
-  return res.data;
+  const headers = {
+    "User-Agent": getRandomUserAgent(),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+  };
+
+  return fetchHtmlWithRetry(url, headers);
 }
 
 /**

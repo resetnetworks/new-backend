@@ -16,6 +16,7 @@ import validate from "../middleware/validate.js";
 import {
   updateArtistValidator,
   artistIdValidator,
+  updateArtistPricingValidator,
 } from "../validators/artistValidators.js";
 
 /* =======================
@@ -27,6 +28,7 @@ import {
   getAllArtistsWithoutPagination,
   getArtistById,
   getArtistProfile,
+  updateArtistPricing,
 } from "../controllers/artistController.js";
 
 const router = express.Router();
@@ -45,6 +47,17 @@ router.patch(
   updateArtistValidator,
   validate,
   updateArtistProfile
+);
+
+// Update artist pricing (artist only)
+router.patch(
+  "/me/pricing",
+  authenticateUser,
+  injectWorkspaceContext("manageTeam"),
+  authorizeRoles("artist"),
+  updateArtistPricingValidator,
+  validate,
+  updateArtistPricing
 );
 
 

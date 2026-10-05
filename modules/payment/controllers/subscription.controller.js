@@ -22,18 +22,39 @@ export const createSubscriptionCheckout = async (req, res) => {
       });
     }
 
-    // 1️⃣ Prevent duplicate active subscription
+    // 1️⃣ Prevent duplicate active/trialing subscription
     const existingSubscription = await Subscription.findOne({
       userId: user._id,
       artistId,
-      status: "active",
+      status: { $in: ["active", "trialing"] },
+      validUntil: { $gt: new Date() },
     });
 
     if (existingSubscription) {
       return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "You already have an active subscription for this artist",
+        message: "Subscription already active or in trial.",
       });
     }
+
+    // ✅ Check if trial was already used for this artist by this user
+    const existingTrial = await Subscription.findOne({
+      userId: user._id,
+      artistId,
+      isTrialUsed: true,
+    });
+
+    // 🎯 First time subscribing to this artist -> ALWAYS free trial (2 days)
+    // After trial period ends, user will be auto-charged by Stripe.
+    let isTrial = false;
+    if (!existingTrial) {
+      isTrial = true;
+    } else if (req.body.isTrial) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Free trial already claimed for this artist. Please choose a paid subscription.",
+      });
+    }
+
+    const trialDays = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
 
     const artist = await Artist.findById(artistId);
 
@@ -54,31 +75,22 @@ export const createSubscriptionCheckout = async (req, res) => {
       });
     }
 
-    // ✅ SIMPLIFIED CURRENCY LOGIC
-    const selectedCurrency = currency.toUpperCase();
-
-    if (!ALLOWED_CURRENCIES.includes(selectedCurrency)) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "Currency not supported",
-      });
-    }
+    // ✅ SIMPLIFIED CURRENCY LOGIC WITH FALLBACK
+    const requestedCurrency = currency.toUpperCase();
+    let selectedCurrency = ALLOWED_CURRENCIES.includes(requestedCurrency) ? requestedCurrency : plan.basePrice.currency;
 
     // Find matching price in DB
-    const priceEntry =
+    let priceEntry =
       selectedCurrency === plan.basePrice.currency
         ? plan.basePrice
-        : plan.convertedPrices?.find(
-          (p) => p.currency === selectedCurrency
-        );
+        : plan.convertedPrices?.find((p) => p.currency === selectedCurrency);
 
     if (!priceEntry) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "Price not available in selected currency",
-      });
+      selectedCurrency = plan.basePrice.currency;
+      priceEntry = plan.basePrice;
     }
 
     const amount = priceEntry.amount;
-    const normalizedCurrency = selectedCurrency.toLowerCase();
 
     // 3️⃣ Calculate platform fee
     const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(selectedCurrency);
@@ -89,8 +101,7 @@ export const createSubscriptionCheckout = async (req, res) => {
     if (isZeroDecimal) {
       platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
       artistShare = amount - platformFee;
-    }
-    else {
+    } else {
       platformFee = Number((amount * PLATFORM_FEE_PERCENT).toFixed(2));
       artistShare = Number((amount - platformFee).toFixed(2));
     }
@@ -99,56 +110,36 @@ export const createSubscriptionCheckout = async (req, res) => {
     const transaction = await Transaction.create({
       userId: user._id,
       artistId,
-      itemId: artistId,  // for subscription, itemId can be artistId or planId based on your design, remove it afterwards
+      itemId: artistId,
       itemType: "artist-subscription",
       gateway: "stripe",
-      amount,
+      amount: isTrial ? 0 : amount,
       currency: selectedCurrency,
-      status: "pending", // 🔥 IMPORTANT
-      platformFee,
-      artistShare,
+      status: "pending",
+      platformFee: isTrial ? 0 : platformFee,
+      artistShare: isTrial ? 0 : artistShare,
+      isTrialPeriod: isTrial,
     });
-
-
-    let promotionCodeId = null;
-
-    // if (couponCode) {
-    //   const promotionCodes =
-    //     await stripe.promotionCodes.list({
-    //       code: couponCode.toUpperCase(),
-    //       active: true,
-    //       limit: 1,
-    //     });
-
-    //   if (!promotionCodes.data.length) {
-    //     return res.status(400).json({
-    //       message: "Invalid coupon code",
-    //     });
-    //   }
-
-    //   promotionCodeId =
-    //     promotionCodes.data[0].id;
-    // }
-
 
     // 5️⃣ Get Stripe customer
     const stripeCustomerId = await getOrCreateStripeCustomer(user);
 
-    // 👉 Find matching stripe plan for the selected currency
-    const stripePlan = plan.stripePlans?.find((sp) => sp.currency === selectedCurrency);
+    // 👉 Find matching stripe plan for the selected currency or fallback
+    let stripePlan = plan.stripePlans?.find((sp) => sp.currency === selectedCurrency);
+    if (!stripePlan || !stripePlan.stripePriceId) {
+      stripePlan = plan.stripePlans?.find((sp) => sp.currency === plan.basePrice.currency) || plan.stripePlans?.[0];
+    }
 
     if (!stripePlan || !stripePlan.stripePriceId) {
       return res.status(StatusCodes.BAD_REQUEST).json({
-        message: "Stripe plan not available in selected currency",
+        message: "Stripe plan not available for this artist",
       });
     }
 
     const exactStripePriceId = stripePlan.stripePriceId;
 
-    // 6️⃣ Create Checkout session (embedded subscription mode)
+    // 6️⃣ Create Checkout session
     const session = await createSubscriptionCheckoutSession({
-      // amount,
-      // currency: normalizedCurrency,
       userId: user._id.toString(),
       artistId,
       cycle,
@@ -156,16 +147,22 @@ export const createSubscriptionCheckout = async (req, res) => {
       stripeCustomerId,
       stripePriceId: exactStripePriceId,
       customReturnUrl: returnUrl,
+      isTrial,
+      trialDays,
     });
 
     transaction.metadata = {
       checkoutSessionId: session.id,
+      isTrial: isTrial ? "true" : "false",
     };
     await transaction.save();
 
     return res.status(StatusCodes.OK).json({
+      checkoutUrl: session.url,
       clientSecret: session.client_secret,
       checkoutSessionId: session.id,
+      isTrial,
+      trialDays,
     });
 
   } catch (error) {

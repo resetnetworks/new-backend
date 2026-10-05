@@ -123,9 +123,9 @@ export const handleStripeWebhook = async (req, res) => {
         }
 
         // ===================================================
-        // ✅ FIRST SUBSCRIPTION PAYMENT
+        // ✅ FIRST SUBSCRIPTION PAYMENT OR TRIAL ACTIVATION
         // ===================================================
-        if (session.mode === "subscription" && session.payment_status === "paid") {
+        if (session.mode === "subscription" && (session.payment_status === "paid" || session.payment_status === "no_payment_required")) {
 
           const transactionId = session.metadata.transactionId;
           const stripeSubscriptionId = session.subscription;

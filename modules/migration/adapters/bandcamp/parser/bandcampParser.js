@@ -83,12 +83,17 @@ export function parseAlbumHtml(html, albumUrl) {
 
   if (tralbum && tralbum.length > 0) {
     tralbum.forEach((t, idx) => {
+      let audioUrl = null;
+      if (t.file && typeof t.file === "object") {
+        audioUrl = t.file["mp3-128"] || t.file["mp3-v0"] || Object.values(t.file)[0] || null;
+      }
       tracks.push({
         title: t.title || t.name || null,
         trackNumber: t.track_num || t.trackNum || idx + 1,
-        duration: typeof t.duration === "number" ? t.duration : null,
+        duration: typeof t.duration === "number" ? Math.round(t.duration) : null,
         lyrics: t.lyrics || null,
         credits: t.credits || null,
+        audioUrl,
       });
     });
   } else {

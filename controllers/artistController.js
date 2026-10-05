@@ -5,6 +5,7 @@ import {
   getArtistByIdService,
   getArtistProfileService,
   getAllArtistsWithoutPaginationService,
+  updateArtistPricingService,
 } from "../services/index.js";
 import { shapeArtistResponse } from "../dto/artist.dto.js";
 import { getCached, setCached } from "../utils/redisClient.js";
@@ -33,6 +34,8 @@ export const updateArtistProfile = async (req, res) => {
 export const getAllArtistsController = async (req, res) => {
   const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
   const limit = Number(req.query.limit) > 0 ? Number(req.query.limit) : 10;
+  
+ 
 
   const cacheKey = `artists:list:page=${page}:limit=${limit}`;
 
@@ -64,6 +67,8 @@ export const getAllArtistsController = async (req, res) => {
 
 
 export const getArtistById = async (req, res) => {
+  
+  
   const identifier = req.params.id;
 
   const cacheKey = `artist:detail:${identifier}`;
@@ -108,6 +113,8 @@ export const getArtistProfile = async (req, res) => {
 
 export const getAllArtistsWithoutPagination = async (req, res) => {
   // logger.info("Get all artists without pagination");
+  
+   
 
   const artists = await getAllArtistsWithoutPaginationService();
 
@@ -116,5 +123,25 @@ export const getAllArtistsWithoutPagination = async (req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     data: shapedArtists,
+  });
+};
+
+export const updateArtistPricing = async (req, res) => {
+  const artistId = req.user.artistId;
+  const userId = req.user._id;
+  const { price, cycle } = req.body;
+
+  logger.info("Update artist pricing", { artistId, userId, price, cycle });
+
+  const updatedArtist = await updateArtistPricingService({
+    artistId,
+    userId,
+    price,
+    cycle,
+  });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: shapeArtistResponse(updatedArtist),
   });
 };

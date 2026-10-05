@@ -49,6 +49,7 @@ export const saveNormalizedData = async (migrationJobId, normalizedData) => {
         lyrics: track.lyrics,
         credits: track.credits,
         audioStatus: track.audioStatus,
+        audioKey: track.audioKey || track.audioUrl || null,
         artwork: track.artwork,
       });
       createdTracks.push(trackRecord);

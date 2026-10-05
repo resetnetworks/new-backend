@@ -9,7 +9,7 @@ import MigrationTrack from "../models/migrationTrack.model.js";
 
 export const postBandcampMigration = async (req, res) => {
   const { url } = req.body;
-  const workspaceId = req.user?.workspaceId || req.body.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"] || req.body.workspaceId;
 
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
@@ -112,7 +112,7 @@ export const postImportMigration = async (req, res) => {
 };
 
 export const getDraftAlbums = async (req, res) => {
-  const workspaceId = req.user?.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"];
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -139,7 +139,7 @@ export const getDraftAlbums = async (req, res) => {
 
 export const getDraftAlbumDetails = async (req, res) => {
   const { id } = req.params;
-  const workspaceId = req.user?.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"];
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -182,7 +182,7 @@ export const getDraftAlbumDetails = async (req, res) => {
 
 export const patchDraftAlbum = async (req, res) => {
   const { id } = req.params;
-  const workspaceId = req.user?.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"];
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -223,7 +223,7 @@ export const patchDraftAlbum = async (req, res) => {
 
 export const patchDraftTrack = async (req, res) => {
   const { id } = req.params;
-  const workspaceId = req.user?.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"];
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -277,7 +277,7 @@ export const patchDraftTrack = async (req, res) => {
 
 export const publishDraftAlbum = async (req, res) => {
   const { id } = req.params;
-  const workspaceId = req.user?.workspaceId;
+  const workspaceId = req.user?.workspaceId || req.headers["x-workspace-id"];
   const userId = req.user?._id || req.user?.id;
   if (!workspaceId) {
     return res.status(StatusCodes.BAD_REQUEST).json({

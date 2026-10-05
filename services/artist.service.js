@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import {Song} from "../models/song.model.js";
 import { Album } from "../models/album.model.js";
 import { convertCurrencies } from "../utils/convertCurrencies.js";
+import { cycleToInterval } from "../utils/cycleToInterval.js";
 
 
 export const createArtistService = async ({ name, bio, location, imageUrl, basePrice, cycle, createdBy }) => {
@@ -32,9 +33,6 @@ export const createArtistService = async ({ name, bio, location, imageUrl, baseP
   return shapeArtistResponse(artist.toObject());
 };
 
-/**
- * Artist self-service profile update
- */
 export const updateArtistProfileService = async ({
   artistId,
   userId,
@@ -154,9 +152,7 @@ export const getAllArtistsService = async ({ page, limit }) => {
 
   return { artists, total };
 };
-/**
- * Fetch artist by _id or slug with song/album counts
- */
+
 export const getArtistByIdService = async (identifier) => {
   const query = mongoose.Types.ObjectId.isValid(identifier)
     ? { _id: identifier }
@@ -251,6 +247,48 @@ export const getAllArtistsWithoutPaginationService = async () => {
       },
     },
   ]);
+};
+
+export const updateArtistPricingService = async ({ artistId, userId, price, cycle }) => {
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    throw new BadRequestError("Invalid artist ID");
+  }
+
+  const artist = await Artist.findOne({
+    _id: artistId,
+    createdBy: userId,
+    isDeleted: { $ne: true },
+  });
+
+  if (!artist) {
+    throw new NotFoundError("Artist profile not found");
+  }
+
+  if (!artist.subscriptionPlans || artist.subscriptionPlans.length === 0) {
+    throw new BadRequestError("No subscription plans found to update");
+  }
+
+  // Calculate conversions for the new base price
+  const convertedPrices = await convertCurrencies(price.currency, price.amount);
+
+  // If cycle is provided, get intervals. Otherwise, default to existing cycle.
+  let intervals = null;
+  if (cycle) {
+    intervals = cycleToInterval(cycle);
+  }
+
+  const updatedPlan = await updateSubscriptionPlans(
+    artist,
+    price,
+    intervals,
+    cycle,
+    convertedPrices
+  );
+
+  artist.subscriptionPlans = [updatedPlan];
+  await artist.save();
+
+  return artist.toObject();
 };
 
 
