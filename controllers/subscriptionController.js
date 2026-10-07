@@ -17,7 +17,7 @@ import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
-export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
+export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 14;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const initiateArtistSubscription = async (req, res) => {
@@ -144,7 +144,7 @@ export const initiateArtistSubscription = async (req, res) => {
         cycle: "1m",
         startedAt: new Date(),
         validUntil: trialEndsAt,
-        status: "trialing",
+        status: "active",
         isTrial: true,
         trialStartedAt: new Date(),
         trialEndsAt: trialEndsAt,
@@ -369,7 +369,6 @@ export const createRazorpaySubscription = async (req, res) => {
 
     // ✅ Create Razorpay subscription
     const subscription = await razorpay.subscriptions.create(subParams);
-console.log("-------------------------------------Hello")
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
     const artistShare = amount - platformFee;
 
@@ -382,7 +381,7 @@ console.log("-------------------------------------Hello")
           cycle,
           startedAt: new Date(),
           validUntil: trialEndsAt,
-          status: "trialing",
+          status: "active",
           isTrial: true,
           trialStartedAt: new Date(),
           trialEndsAt,
@@ -541,7 +540,7 @@ export const createPaypalSubscription = async (req, res) => {
         cycle,
         startedAt: new Date(),
         validUntil: trialEndsAt,
-        status: "trialing",
+        status: "active",
         isTrial: true,
         trialStartedAt: new Date(),
         trialEndsAt,
