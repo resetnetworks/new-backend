@@ -15,6 +15,7 @@ import {
   sendArtistApplicationApprovedNotification,
   sendArtistApplicationRejectedNotification,
 } from "../../notification-service/notification.service.js";
+import { ArtistReferral } from "../../referral-program/models/artist-referral.model.js";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
@@ -114,6 +115,22 @@ const artistApplicationSchema = new mongoose.Schema(
 
 
   
+    // Referral details
+    referralCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+      index: true,
+    },
+
+    referredByArtistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Artist",
+      default: null,
+      index: true,
+    },
+
     // Application lifecycle fields
     status: {
       type: String,
@@ -208,7 +225,8 @@ artistApplicationSchema.methods.approveAndCreateArtist = async function (
       socials: [],
       country: application.country || null,
       email: application.contact?.email || null,
-      website: application.contact?.website || null
+      website: application.contact?.website || null,
+      referredBy: application.referredByArtistId || null
     }
   ],
   { session }
@@ -276,6 +294,21 @@ const workspaceDoc = workspace[0];
     await user.save({ session });
 
     console.log("Updated user to artist role:", user);
+
+    // 7️⃣ Update referral stage 2 if applicant was referred
+    if (application.referredByArtistId) {
+      await ArtistReferral.findOneAndUpdate(
+        { refereeUserId: application.userId },
+        {
+          $set: {
+            refereeArtistId: artistDoc._id,
+            "stage2_artistApproved.status": true,
+            "stage2_artistApproved.completedAt": new Date(),
+          },
+        },
+        { session }
+      );
+    }
 
     await session.commitTransaction();
     session.endSession();
@@ -345,6 +378,14 @@ artistApplicationSchema.methods.markRejected = async function (
       },
       { new: true, session }
     );
+
+    if (application.referredByArtistId) {
+      await ArtistReferral.findOneAndUpdate(
+        { refereeUserId: application.userId },
+        { $set: { status: "rejected" } },
+        { session }
+      );
+    }
 
     await session.commitTransaction();
     session.endSession();

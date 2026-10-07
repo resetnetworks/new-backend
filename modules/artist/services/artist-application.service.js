@@ -1,6 +1,7 @@
 import { artistApplicationRepository } from "../repositories/artist-application.repository.js";
 import { Artist } from "../models/artist.model.js";
 import { User } from "../../../models/User.js";
+import { ArtistReferral } from "../../referral-program/models/artist-referral.model.js";
 
 /**
  * Artist Application Service (Business Logic)
@@ -30,6 +31,7 @@ class ArtistApplicationService {
       samples,
       taxInfo,
       country,
+      referralCode,
     } = payload;
 
     // -----------------------------------
@@ -92,6 +94,39 @@ class ArtistApplicationService {
     }
 
     // -----------------------------------
+    // Validate Referral Code (Optional)
+    // -----------------------------------
+    let referrerArtist = null;
+    let cleanReferralCode = null;
+
+    if (referralCode && typeof referralCode === "string" && referralCode.trim()) {
+      cleanReferralCode = referralCode.trim().toUpperCase();
+
+      referrerArtist = await Artist.findOne({
+        referralCode: cleanReferralCode,
+        isDeleted: false,
+      });
+
+      if (!referrerArtist) {
+        throw new Error("Invalid referral code. No matching artist found.");
+      }
+
+      if (referrerArtist.approvalStatus !== "approved") {
+        throw new Error("This referral code is not currently active.");
+      }
+
+      // Prevent self-referral
+      if (referrerArtist.createdBy.toString() === userId.toString()) {
+        throw new Error("You cannot use your own referral code.");
+      }
+
+      const existingReferral = await ArtistReferral.findOne({ refereeUserId: userId });
+      if (existingReferral) {
+        throw new Error("You have already used a referral code.");
+      }
+    }
+
+    // -----------------------------------
     // 3. No previous app → create new one
     // -----------------------------------
     const newApp = await artistApplicationRepository.createApplication({
@@ -108,13 +143,27 @@ class ArtistApplicationService {
       status: "pending",
       country,
       attemptCount: 1,
+      referralCode: cleanReferralCode || null,
+      referredByArtistId: referrerArtist ? referrerArtist._id : null,
     });
 
-     // Update user role to artist-pending if not already
+    // Create referral tracking record if referred
+    if (referrerArtist) {
+      await ArtistReferral.create({
+        referrerArtistId: referrerArtist._id,
+        referrerUserId: referrerArtist.createdBy,
+        refereeUserId: userId,
+        refereeApplicationId: newApp._id,
+        refereeArtistId: null,
+        referralCode: cleanReferralCode,
+        status: "in_progress",
+      });
+    }
 
-      const updatedUser = await User.findByIdAndUpdate(userId, { role: "artist-pending" });
-      console.log("Updated user role to artist-pending:", updatedUser);
-   console.log("newApp", newApp);
+    // Update user role to artist-pending if not already
+    const updatedUser = await User.findByIdAndUpdate(userId, { role: "artist-pending" });
+    console.log("Updated user role to artist-pending:", updatedUser);
+    console.log("newApp", newApp);
     return newApp;
   }
 

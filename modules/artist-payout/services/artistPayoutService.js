@@ -51,6 +51,7 @@ export const requestArtistPayout = async ({
           amountUSD: amount,
           amount,
           currency,
+          description: `Payout to ${paypalEmail}`,
         },
       ],
       { session }

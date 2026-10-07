@@ -374,7 +374,7 @@ export const updateUserAfterPurchase = async (transaction, paymentId) => {
           const stripeSub = await stripe.subscriptions.retrieve(transaction.stripeSubscriptionId);
 
           if (stripeSub?.status === "trialing") {
-            subStatus = "trialing";
+            subStatus = "active";
             isTrial = true;
             trialStartedAt = new Date(stripeSub.trial_start ? stripeSub.trial_start * 1000 : Date.now());
             const trialDays = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
