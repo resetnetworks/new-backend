@@ -277,6 +277,22 @@ const artistSchema = new mongoose.Schema(
       default: 5 * 1024 * 1024 * 1024, // 5 GB
     },
 
+    /* ---------- Referral Program ---------- */
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
+
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Artist",
+      default: null,
+      index: true,
+    },
+
     /* ---------- Soft Delete ---------- */
     isDeleted: {
       type: Boolean,
@@ -313,6 +329,7 @@ artistSchema.index({ createdBy: 1 });
 artistSchema.index({ accountType: 1 });
 artistSchema.index({ roles: 1 });
 artistSchema.index({ payoutProfileId: 1 }, { sparse: true });
+artistSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 artistSchema.index({ createdAt: -1 });
 
 /* ===========================

@@ -32,6 +32,7 @@ export const submitArtistApplicationController = async (req, res, next) => {
       documents: req.body.documents || [],
       samples: req.body.samples,
       country: req.body.country,
+      referralCode: req.body.referralCode || req.query.ref || null,
     };
 
     //@deprecated TODO: remove this

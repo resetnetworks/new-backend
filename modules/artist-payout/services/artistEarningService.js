@@ -12,8 +12,9 @@ export const creditArtistEarnings = async ({
   transactionId,
   amount,
   currency ,
-  source, // "song" | "album" | "subscription"
+  source, // "song" | "album" | "subscription" | "referral"
   amountUSD,
+  description = "",
 }) => {
 
   if (typeof amountUSD !== "number") {
@@ -47,6 +48,7 @@ export const creditArtistEarnings = async ({
           amount,
           currency,
           amountUSD,
+          description,
         },
       ],
       { session }
