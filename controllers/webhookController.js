@@ -23,6 +23,7 @@ import {
   sendNewArtistSubscriberNotification,
   sendArtistSubscriptionSuccessNotification,
 } from "../modules/notification-service/notification.service.js";
+import { eventDispatcher, EVENT_TYPES } from "../modules/analytics/index.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -252,6 +253,18 @@ export const razorpayWebhook = async (req, res) => {
               subscriberId: transaction.userId,
               itemId: transaction.itemId,
             });
+
+            // Non-blocking dispatch to analytics pipeline
+            eventDispatcher.publish({
+              eventName: EVENT_TYPES.SUBSCRIPTION_STARTED,
+              userId: transaction.userId,
+              artistId: transaction.artistId,
+              properties: {
+                transactionId: transaction._id,
+                externalSubscriptionId: razorpaySubscriptionId,
+                gateway: "razorpay",
+              },
+            });
           } catch (emailErr) {
             console.error("⚠️ Failed to dispatch subscription email/notification:", emailErr.message);
           }
@@ -275,6 +288,22 @@ export const razorpayWebhook = async (req, res) => {
         if (transaction) {
           await updateUserAfterPurchase(transaction, paymentId);
           console.log("✅ One-time purchase completed:", type, itemId);
+
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.PURCHASE_COMPLETED,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            properties: {
+              transactionId: transaction._id,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+              amount: transaction.amount,
+              amountCents: Math.round(Number(transaction.amount || 0) * 100),
+              currency: transaction.currency || "INR",
+              gateway: "razorpay",
+            },
+          });
 
           // 📧 Send One-Time Invoice via EmailService Queue
           // await processAndSendInvoice(transaction);
@@ -358,6 +387,17 @@ export const razorpayWebhook = async (req, res) => {
           console.log("❌ Subscription cancelled/halted:", subId);
 
           if (subscriptionData) {
+            // Non-blocking dispatch to analytics pipeline
+            eventDispatcher.publish({
+              eventName: EVENT_TYPES.SUBSCRIPTION_CANCELLED,
+              userId: subscriptionData.userId,
+              artistId: subscriptionData.artistId,
+              properties: {
+                externalSubscriptionId: subId,
+                gateway: "razorpay",
+              },
+            });
+
             try {
               const userEmail = await getUserEmailById(subscriptionData.userId);
               await EmailService.sendSubscriptionCancelled({
@@ -658,6 +698,20 @@ export const paypalWebhook = async (req, res) => {
       if (transaction) {
         await updateUserAfterPurchase(transaction, subscriptionId);
         await processAndSendInvoice(transaction);
+
+        // Non-blocking dispatch to analytics pipeline
+        eventDispatcher.publish({
+          eventName: eventType === "BILLING.SUBSCRIPTION.ACTIVATED" ? EVENT_TYPES.SUBSCRIPTION_STARTED : EVENT_TYPES.SUBSCRIPTION_RENEWED,
+          userId: transaction.userId,
+          artistId: transaction.artistId,
+          properties: {
+            transactionId: transaction._id,
+            externalSubscriptionId: subscriptionId,
+            gateway: "paypal",
+            amount: transaction.amount,
+          },
+        });
+
         console.log(":white_tick: PayPal subscription activated/renewed");
       }
       return res.status(200).json({ status: "subscription processed" });
@@ -689,6 +743,23 @@ export const paypalWebhook = async (req, res) => {
       if (transaction) {
         await updateUserAfterPurchase(transaction, paymentId);
         await processAndSendInvoice(transaction);
+
+        // Non-blocking dispatch to analytics pipeline
+        eventDispatcher.publish({
+          eventName: EVENT_TYPES.PURCHASE_COMPLETED,
+          userId: transaction.userId,
+          artistId: transaction.artistId,
+          properties: {
+            transactionId: transaction._id,
+            itemId: transaction.itemId,
+            itemType: transaction.itemType,
+            amount: transaction.amount,
+            amountCents: Math.round(Number(transaction.amount || 0) * 100),
+            currency: transaction.currency || "USD",
+            gateway: "paypal",
+          },
+        });
+
         console.log("white_tick: One-time PayPal purchase completed:", type, itemId);
       }
       return res.status(200).json({ status: "purchase processed" });
@@ -696,10 +767,24 @@ export const paypalWebhook = async (req, res) => {
      // :small_blue_diamond: Step 3: Invoice service
     // :x: Subscription ended/cancelled
     if (eventType === "BILLING.SUBSCRIPTION.CANCELLED" || eventType === "BILLING.SUBSCRIPTION.EXPIRED") {
-      await Subscription.findOneAndUpdate(
+      const sub = await Subscription.findOneAndUpdate(
         { externalSubscriptionId: webhookEvent.resource.id },
         { status: "cancelled" }
       );
+
+      if (sub) {
+        // Non-blocking dispatch to analytics pipeline
+        eventDispatcher.publish({
+          eventName: EVENT_TYPES.SUBSCRIPTION_CANCELLED,
+          userId: sub.userId,
+          artistId: sub.artistId,
+          properties: {
+            externalSubscriptionId: webhookEvent.resource.id,
+            gateway: "paypal",
+          },
+        });
+      }
+
       console.log(":x: PayPal subscription cancelled/expired.");
       return res.status(200).json({ status: "ok" });
     }

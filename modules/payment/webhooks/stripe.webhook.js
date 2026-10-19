@@ -15,6 +15,8 @@ import {
   sendArtistSubscriptionSuccessNotification
 } from "../../notification-service/notification.service.js";
 
+import { eventDispatcher, EVENT_TYPES } from "../../analytics/index.js";
+
 const PLATFORM_FEE_PERCENT = 0.15;
 
 export const handleStripeWebhook = async (req, res) => {
@@ -119,6 +121,22 @@ export const handleStripeWebhook = async (req, res) => {
             itemType: transaction.itemType,
           });
 
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.PURCHASE_COMPLETED,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            properties: {
+              transactionId: transaction._id,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+              amount: transaction.amount,
+              amountCents: Math.round(Number(transaction.amount || 0) * 100),
+              currency: transaction.currency,
+              gateway: "stripe",
+            },
+          });
+
           console.log("✅ One-time payment successful:", transactionId);
         }
 
@@ -186,6 +204,20 @@ export const handleStripeWebhook = async (req, res) => {
             artistId: transaction.artistId,
             subscriberId: transaction.userId,
             itemId: transaction.itemId,
+          });
+
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.SUBSCRIPTION_STARTED,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            properties: {
+              transactionId: transaction._id,
+              externalSubscriptionId: stripeSubscriptionId,
+              gateway: "stripe",
+              cycle: session.metadata?.cycle || "monthly",
+              isTrial: session.payment_status === "no_payment_required",
+            },
           });
 
           console.log("✅ First subscription fully processed:", transaction._id);
@@ -309,6 +341,21 @@ export const handleStripeWebhook = async (req, res) => {
 
         console.log("🔁 Subscription renewed:", stripeSubscriptionId);
 
+        // Non-blocking dispatch to analytics pipeline
+        eventDispatcher.publish({
+          eventName: EVENT_TYPES.SUBSCRIPTION_RENEWED,
+          userId: paidTransaction.userId,
+          artistId: paidTransaction.artistId,
+          properties: {
+            transactionId: paidTransaction._id,
+            externalSubscriptionId: stripeSubscriptionId,
+            gateway: "stripe",
+            amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+            amountCents: invoice.amount_paid || 0,
+            currency: invoice.currency,
+          },
+        });
+
         // 🔥 Update subscription period properly
         // subscription.status = "active";
         // subscription.validUntil = validUntil;
@@ -356,6 +403,16 @@ export const handleStripeWebhook = async (req, res) => {
 
         // only run side-effects if DB record exists (no early break)
         if (subscriptionData) {
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.SUBSCRIPTION_CANCELLED,
+            userId: subscriptionData.userId,
+            artistId: subscriptionData.artistId,
+            properties: {
+              externalSubscriptionId: subscription.id,
+              gateway: "stripe",
+            },
+          });
 
           const userEmail = await getUserEmailById(subscriptionData.userId);
           await EmailService.sendSubscriptionCancelled({

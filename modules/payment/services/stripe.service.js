@@ -87,6 +87,7 @@ export const createSubscriptionCheckoutSession = async ({
   const cancelUrl = `${returnBaseUrl}${separator}subscription=cancel`;
 
   const sessionParams = {
+     ui_mode: "embedded",
     mode: "subscription",
     customer: stripeCustomerId,
     line_items: [

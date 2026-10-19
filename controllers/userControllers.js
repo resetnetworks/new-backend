@@ -13,6 +13,8 @@ import { EmailService } from "../modules/email-services/email.service.js";
 
 import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
 import redis, { setCached, getCached } from "../utils/redisClient.js";
+import { Song } from "../models/song.model.js";
+import { eventDispatcher, EVENT_TYPES } from "../modules/analytics/index.js";
 
 
 
@@ -363,6 +365,17 @@ export const likeSong = async (req, res) => {
   if (isAlreadyLiked) {
     user.likedsong = user.likedsong.filter(id => !id.equals(songId));
     await user.save();
+
+    // Non-blocking dispatch to analytics pipeline
+    Song.findById(songId).select("artist").lean().then(song => {
+      eventDispatcher.publish({
+        eventName: EVENT_TYPES.SONG_UNLIKED,
+        userId: req.user._id,
+        songId,
+        artistId: song?.artist,
+      });
+    }).catch(() => {});
+
     return res.status(StatusCodes.OK).json({
       message: "Song removed from liked songs",
       liked: false,
@@ -370,6 +383,17 @@ export const likeSong = async (req, res) => {
   }
   user.likedsong.unshift(songId);
   await user.save();
+
+  // Non-blocking dispatch to analytics pipeline
+  Song.findById(songId).select("artist").lean().then(song => {
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.SONG_LIKED,
+      userId: req.user._id,
+      songId,
+      artistId: song?.artist,
+    });
+  }).catch(() => {});
+
   return res.status(StatusCodes.OK).json({
     message: "Song added to liked songs",
     liked: true,

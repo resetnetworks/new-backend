@@ -2,6 +2,8 @@ import { PlaybackEvent } from "../../models/PlaybackEvent.js";
 import { PlaybackSession } from "../../models/PlaybackSession.js";
 import { NotFoundError } from "../../errors/index.js";
 import { updateRecentlyPlayed } from "./recentlyPlayed.service.js";
+import { Song } from "../../models/song.model.js";
+import { eventDispatcher, EVENT_TYPES } from "../analytics/index.js";
 
 export const playbackStartedService = async ({ sessionId, userId, songId }) => {
 
@@ -18,8 +20,29 @@ export const playbackStartedService = async ({ sessionId, userId, songId }) => {
     eventType: "playback_started"
   });
 
-   // async update recently played
+  // async update recently played
   updateRecentlyPlayed({ userId, songId });
+
+  // Non-blocking dispatch to analytics pipeline
+  Song.findById(songId)
+    .select("artist album")
+    .lean()
+    .then((song) => {
+      eventDispatcher.publish({
+        eventName: EVENT_TYPES.PLAYBACK_STARTED,
+        sessionId,
+        userId: userId || session.userId || null,
+        songId,
+        artistId: song?.artist || null,
+        albumId: song?.album || null,
+        properties: {
+          source: "stream_service",
+        },
+      });
+    })
+    .catch((err) => {
+      console.warn("[PlaybackService] Analytics dispatch failed:", err.message);
+    });
 
   return { success: true };
 };
