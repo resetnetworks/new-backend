@@ -2,9 +2,10 @@
 import { Worker } from "bullmq";
 import mongoose from "mongoose";
 import { redisConnection } from "../../../queue/connection.js";
-import { ANALYTICS_QUEUE_NAME } from "../domain/analytics.constants.js";
+import { ANALYTICS_QUEUE_NAME, ABANDONMENT_CHECK_JOB } from "../domain/analytics.constants.js";
 import { analyticsRepository } from "./analytics.repository.js";
 import { eventRouter } from "../application/event-router.js";
+import { analyticsService } from "../application/analytics.service.js";
 import { Album } from "../../../models/album.model.js";
 import { Song } from "../../../models/song.model.js";
 import { Artist } from "../../artist/models/artist.model.js";
@@ -13,7 +14,7 @@ import { Artist } from "../../artist/models/artist.model.js";
  * Resolves missing songId, albumId, artistId using slugs if provided in properties
  */
 export const enrichEntityIds = async (eventData) => {
-  const { properties = {} } = eventData;
+  const properties = eventData.properties || eventData.metadata || {};
 
   try {
     // 1. Resolve Album and its Artist
@@ -79,23 +80,35 @@ export const enrichEntityIds = async (eventData) => {
 export const analyticsWorker = new Worker(
   ANALYTICS_QUEUE_NAME,
   async (job) => {
-    let eventData = job.data;
+    try {
+      if (job.name === ABANDONMENT_CHECK_JOB) {
+        const { attemptId } = job.data;
+        console.log(`[AnalyticsWorker] Running abandonment check for attempt: ${attemptId}`);
+        await analyticsService.checkAndAbandonPayment(attemptId);
+        return { success: true, processed: "abandonment_check", attemptId };
+      }
 
-    // 1. Automatically enrich missing entity IDs from slugs if present
-    eventData = await enrichEntityIds(eventData);
+      let eventData = job.data;
 
-    // 2. Idempotent raw storage
-    const { isDuplicate } = await analyticsRepository.saveRawEvent(eventData);
+      // 1. Automatically enrich missing entity IDs from slugs if present
+      eventData = await enrichEntityIds(eventData);
 
-    if (isDuplicate) {
-      // Event was already processed — skip side effects to prevent double counting
-      return { status: "duplicate_skipped", eventId: eventData.eventId };
+      // 2. Idempotent raw storage
+      const { isDuplicate } = await analyticsRepository.saveRawEvent(eventData);
+
+      if (isDuplicate) {
+        // Event was already processed — skip side effects to prevent double counting
+        return { status: "duplicate_skipped", eventId: eventData.eventId };
+      }
+
+      // 3. Route derived analytics (Recently Played, Daily aggregations, Funnels)
+      await eventRouter.route(eventData);
+
+      return { status: "processed", eventId: eventData.eventId };
+    } catch (err) {
+      console.error(`[AnalyticsWorker] Failed processing job ${job.id} (${job.name}):`, err.message);
+      throw err;
     }
-
-    // 3. Route derived analytics (Recently Played, Daily aggregations)
-    await eventRouter.route(eventData);
-
-    return { status: "processed", eventId: eventData.eventId };
   },
   {
     connection: redisConnection,
@@ -103,11 +116,12 @@ export const analyticsWorker = new Worker(
   }
 );
 
-
 analyticsWorker.on("completed", (job) => {
-  // Silent in production or debug logging
+  // Debug log on successful processing
 });
 
 analyticsWorker.on("failed", (job, err) => {
-  console.error(`[AnalyticsWorker] Job ${job?.id} (${job?.name}) failed:`, err.message);
+  console.error(`[AnalyticsWorker] Job ${job?.id} (${job?.name}) failed:`, err?.message);
 });
+
+export default analyticsWorker;

@@ -1,8 +1,10 @@
 // modules/analytics/interfaces/analytics.controller.js
-import crypto from "crypto";
+import crypto, { randomUUID } from "crypto";
+import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { eventDispatcher } from "../application/eventDispatcher.js";
 import { analyticsService } from "../application/analytics.service.js";
+import { analyticsRepository } from "../infrastructure/analytics.repository.js";
 import { MAX_BATCH_EVENT_SIZE } from "../domain/analytics.constants.js";
 
 /**
@@ -45,7 +47,110 @@ const hashIp = (ip = "") => {
   return crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
 };
 
+export const trackClientEvent = async (req, res) => {
+  try {
+    const { eventId, eventType, eventName, funnelId, artistId, planId, metadata, properties } = req.body;
+
+    const resolvedEventType = eventType || eventName;
+    const userId = req.user?._id ? req.user._id.toString() : null;
+    const isValidArtistId = artistId && mongoose.Types.ObjectId.isValid(artistId);
+
+    const eventPayload = {
+      eventId: eventId || randomUUID(),
+      funnelId: funnelId || randomUUID(),
+      eventType: resolvedEventType,
+      eventName: resolvedEventType,
+      userId,
+      artistId: isValidArtistId ? artistId : null,
+      planId: planId || null,
+      metadata: {
+        ...(metadata || properties || {}),
+        ...(!isValidArtistId && artistId ? { rawArtistIdentifier: artistId } : {}),
+      },
+      properties: {
+        ...(properties || metadata || {}),
+        ...(!isValidArtistId && artistId ? { rawArtistIdentifier: artistId } : {}),
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    };
+
+    await analyticsService.trackEvent(eventPayload);
+
+    return res.status(StatusCodes.ACCEPTED).json({
+      success: true,
+      eventId: eventPayload.eventId,
+      funnelId: eventPayload.funnelId,
+    });
+  } catch (error) {
+    console.error("[AnalyticsController] trackClientEvent error:", error);
+    return res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: error.message || "Failed to process analytics event",
+    });
+  }
+};
+
+export const getFunnelAnalytics = async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const metrics = await analyticsService.getFunnelMetrics({
+      artistId: artistId === "all" ? null : artistId,
+      startDate,
+      endDate,
+    });
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: metrics,
+    });
+  } catch (error) {
+    console.error("[AnalyticsController] getFunnelAnalytics error:", error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to retrieve funnel analytics",
+    });
+  }
+};
+
+export const getFunnelJourney = async (req, res) => {
+  try {
+    const { funnelId } = req.params;
+
+    if (!funnelId) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "funnelId is required",
+      });
+    }
+
+    const events = await analyticsRepository.getEventsByFunnelId(funnelId);
+    const attempt = await analyticsRepository.findCheckoutAttemptByFunnelId(funnelId);
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        funnelId,
+        attempt,
+        events,
+      },
+    });
+  } catch (error) {
+    console.error("[AnalyticsController] getFunnelJourney error:", error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to retrieve funnel journey",
+    });
+  }
+};
+
 export const analyticsController = {
+  trackClientEvent,
+  getFunnelAnalytics,
+  getFunnelJourney,
+
   /**
    * POST /api/v1/analytics/events
    * Accepts a single event or a batch: { events: [...] }
@@ -54,7 +159,7 @@ export const analyticsController = {
     try {
       const rawEvents = Array.isArray(req.body.events)
         ? req.body.events
-        : req.body.eventName
+        : (req.body.eventName || req.body.eventType)
         ? [req.body]
         : [];
 
@@ -86,9 +191,12 @@ export const analyticsController = {
       // Enrich events with server-side context where missing
       const enrichedEvents = rawEvents.map((ev) => {
         const existingContext = ev.context || {};
-        const existingProperties = ev.properties || {};
+        const existingProperties = ev.properties || ev.metadata || {};
+        const resolvedEventName = ev.eventName || ev.eventType;
         return {
           ...ev,
+          eventName: resolvedEventName,
+          eventType: resolvedEventName,
           userId: ev.userId || authenticatedUserId,
           anonymousId: ev.anonymousId || headerAnonymousId || null,
           sessionId: ev.sessionId || headerSessionId || null,
@@ -212,7 +320,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/artist/overview
-   * Scoped to current artist (or artist specified by admin via query param)
    */
   async getArtistOverview(req, res) {
     try {
@@ -237,7 +344,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/artist/timeseries
-   * Returns continuous date-by-date metrics for artist dashboard charts
    */
   async getArtistTimeseries(req, res) {
     try {
@@ -262,7 +368,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/artist/top-songs
-   * Returns top performing songs for the artist
    */
   async getArtistTopSongs(req, res) {
     try {
@@ -287,7 +392,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/admin/overview
-   * Platform-wide high-level metrics
    */
   async getAdminOverview(req, res) {
     try {
@@ -304,7 +408,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/admin/artists-summary
-   * Platform-wide artist rankings and breakdowns
    */
   async getAdminArtistsSummary(req, res) {
     try {
@@ -321,7 +424,6 @@ export const analyticsController = {
 
   /**
    * GET /api/v1/analytics/admin/timeseries
-   * Platform-wide continuous date-by-date timeseries for admin charts
    */
   async getAdminTimeseries(req, res) {
     try {
@@ -336,3 +438,5 @@ export const analyticsController = {
     }
   },
 };
+
+export default analyticsController;

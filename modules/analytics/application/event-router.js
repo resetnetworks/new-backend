@@ -1,22 +1,25 @@
 // modules/analytics/application/event-router.js
 import { EVENT_TYPES } from "../domain/event.types.js";
+import { ANALYTICS_EVENTS } from "../domain/analytics.constants.js";
 import { analyticsRepository, getDayString } from "../infrastructure/analytics.repository.js";
 import { recentlyPlayedService } from "../../playback/recentlyPlayed.service.js";
 
 /**
  * Event Router
- * Routes raw events to derived analytical tasks (Recently Played, Daily Aggregates).
+ * Routes raw events to derived analytical tasks (Recently Played, Daily Aggregates, Funnel tracking).
  */
 export const eventRouter = {
   async route(event) {
-    const { eventName, userId, anonymousId, songId, artistId, occurredAt, properties = {} } = event;
-    const dateStr = getDayString(occurredAt);
+    const eventName = event.eventName || event.eventType;
+    const { userId, anonymousId, songId, artistId, funnelId, occurredAt, timestamp, properties = {}, metadata = {} } = event;
+    const mergedProps = { ...properties, ...metadata };
+    const dateStr = getDayString(occurredAt || timestamp);
     const listenerId = userId ? String(userId) : anonymousId ? String(anonymousId) : null;
 
+    // Route to derived daily rollups and side-effects
     switch (eventName) {
-      // 1. Playback Started
+      // --- Playback Started ---
       case EVENT_TYPES.PLAYBACK_STARTED: {
-        // Update Recently Played if user is authenticated
         if (userId && songId) {
           try {
             await recentlyPlayedService.updateRecentlyPlayed({ userId, songId });
@@ -25,7 +28,6 @@ export const eventRouter = {
           }
         }
 
-        // Daily play stats
         await Promise.all([
           analyticsRepository.updateSongDailyStats({
             songId,
@@ -46,7 +48,7 @@ export const eventRouter = {
         break;
       }
 
-      // 2. Playback 30s (Qualified play)
+      // --- Playback 30s (Qualified play) ---
       case EVENT_TYPES.PLAYBACK_30S: {
         await Promise.all([
           analyticsRepository.updateSongDailyStats({
@@ -59,6 +61,7 @@ export const eventRouter = {
             ? analyticsRepository.updateArtistDailyStats({
                 artistId,
                 dateStr,
+                listenerId,
                 increments: { qualifiedPlays: 1 },
               })
             : Promise.resolve(),
@@ -66,7 +69,7 @@ export const eventRouter = {
         break;
       }
 
-      // 3. Playback Completed
+      // --- Playback Completed ---
       case EVENT_TYPES.PLAYBACK_COMPLETED: {
         await analyticsRepository.updateSongDailyStats({
           songId,
@@ -77,7 +80,7 @@ export const eventRouter = {
         break;
       }
 
-      // 4. Playback Skipped
+      // --- Playback Skipped ---
       case EVENT_TYPES.PLAYBACK_SKIPPED: {
         await analyticsRepository.updateSongDailyStats({
           songId,
@@ -88,7 +91,7 @@ export const eventRouter = {
         break;
       }
 
-      // 5. Likes & Unlikes
+      // --- Likes & Follows ---
       case EVENT_TYPES.SONG_LIKED: {
         await Promise.all([
           analyticsRepository.updateSongDailyStats({ songId, artistId, dateStr, increments: { likes: 1 } }),
@@ -103,8 +106,6 @@ export const eventRouter = {
         ]);
         break;
       }
-
-      // 6. Follows & Unfollows
       case EVENT_TYPES.ARTIST_FOLLOWED: {
         if (artistId) {
           await analyticsRepository.updateArtistDailyStats({ artistId, dateStr, increments: { followers: 1 } });
@@ -118,8 +119,46 @@ export const eventRouter = {
         break;
       }
 
-      // 7. Monetization
+      // --- Subscription & Monetization Funnel Events ---
+      case ANALYTICS_EVENTS.SUBSCRIPTION_CLICKED:
+        console.log(`[Analytics] Funnel ${funnelId || "N/A"}: Subscribe clicked for artist ${artistId}`);
+        break;
+
+      case ANALYTICS_EVENTS.CHECKOUT_STARTED:
+        console.log(`[Analytics] Funnel ${funnelId || "N/A"}: Checkout session started (${mergedProps.checkoutSessionId || ""})`);
+        break;
+
+      case ANALYTICS_EVENTS.PAYMENT_INITIATED:
+        console.log(`[Analytics] Funnel ${funnelId || "N/A"}: Payment initiated for artist ${artistId}`);
+        break;
+
+      case ANALYTICS_EVENTS.PAYMENT_COMPLETED: {
+        console.log(`[Analytics] Funnel ${funnelId || "N/A"}: Payment completed`);
+        if (artistId) {
+          const revenueCents = Number(mergedProps.amountCents) || (Number(mergedProps.amount) ? Math.round(Number(mergedProps.amount) * 100) : 0);
+          await analyticsRepository.updateArtistDailyStats({
+            artistId,
+            dateStr,
+            increments: {
+              purchasesCompleted: 1,
+              revenueCents,
+            },
+          });
+        }
+        break;
+      }
+
+      case ANALYTICS_EVENTS.PAYMENT_FAILED:
+        console.warn(`[Analytics] Funnel ${funnelId || "N/A"}: Payment failed (${mergedProps.reason || "unknown"})`);
+        break;
+
+      case ANALYTICS_EVENTS.PAYMENT_ABANDONED:
+        console.warn(`[Analytics] Funnel ${funnelId || "N/A"}: Payment abandoned`);
+        break;
+
+      case ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVATED:
       case EVENT_TYPES.SUBSCRIPTION_STARTED: {
+        console.log(`[Analytics] Funnel ${funnelId || "N/A"}: Subscription activated for user ${userId}`);
         if (artistId) {
           await analyticsRepository.updateArtistDailyStats({
             artistId,
@@ -129,6 +168,7 @@ export const eventRouter = {
         }
         break;
       }
+
       case EVENT_TYPES.SUBSCRIPTION_RENEWED: {
         if (artistId) {
           await analyticsRepository.updateArtistDailyStats({
@@ -139,9 +179,10 @@ export const eventRouter = {
         }
         break;
       }
+
       case EVENT_TYPES.PURCHASE_COMPLETED: {
         if (artistId) {
-          const revenueCents = Number(properties.amountCents) || (Number(properties.amount) ? Math.round(Number(properties.amount) * 100) : 0);
+          const revenueCents = Number(mergedProps.amountCents) || (Number(mergedProps.amount) ? Math.round(Number(mergedProps.amount) * 100) : 0);
           await analyticsRepository.updateArtistDailyStats({
             artistId,
             dateStr,
@@ -155,8 +196,11 @@ export const eventRouter = {
       }
 
       default:
-        // Raw events are stored; no derived rollups needed for this event type
         break;
     }
+
+    return true;
   },
 };
+
+export default eventRouter;

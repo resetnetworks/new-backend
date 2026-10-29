@@ -1,6 +1,15 @@
 // modules/analytics/application/analytics.service.js
+import { randomUUID } from "crypto";
 import mongoose from "mongoose";
 import { eventDispatcher } from "./eventDispatcher.js";
+import { analyticsProducer } from "../infrastructure/analytics.producer.js";
+import { analyticsRepository } from "../infrastructure/analytics.repository.js";
+import { validateAnalyticsEvent } from "./event-validator.js";
+import {
+  ANALYTICS_EVENTS,
+  CHECKOUT_ATTEMPT_STATUS,
+  DEFAULT_ABANDON_TIMEOUT_MS,
+} from "../domain/analytics.constants.js";
 import { SongDailyStats } from "../domain/models/SongDailyStats.js";
 import { ArtistDailyStats } from "../domain/models/ArtistDailyStats.js";
 import { AnalyticsEvent } from "../domain/models/AnalyticsEvent.js";
@@ -18,10 +27,318 @@ export const analyticsService = {
   },
 
   /**
+   * Track an event: validates and enqueues to BullMQ worker (supports funnel / legacy event format)
+   */
+  async trackEvent(eventData) {
+    const enrichedEvent = {
+      ...eventData,
+      eventId: eventData.eventId || randomUUID(),
+      timestamp: eventData.timestamp || eventData.occurredAt || new Date(),
+      occurredAt: eventData.occurredAt || eventData.timestamp || new Date(),
+    };
+
+    const validation = validateAnalyticsEvent(enrichedEvent);
+    if (!validation.isValid) {
+      const err = new Error(`Invalid analytics event: ${validation.errors.join("; ")}`);
+      err.status = 400;
+      throw err;
+    }
+
+    await analyticsProducer.publishEvent(enrichedEvent);
+    return enrichedEvent;
+  },
+
+  /**
    * Tracks multiple events in batch
    */
   async trackBatch(events = []) {
     return eventDispatcher.publishBatch(events);
+  },
+
+  /**
+   * Directly record event to database (for fast-path or sync fallback)
+   */
+  async recordEventDirect(eventData) {
+    const enrichedEvent = {
+      ...eventData,
+      eventId: eventData.eventId || randomUUID(),
+      timestamp: eventData.timestamp || eventData.occurredAt || new Date(),
+      occurredAt: eventData.occurredAt || eventData.timestamp || new Date(),
+    };
+
+    const validation = validateAnalyticsEvent(enrichedEvent);
+    if (!validation.isValid) {
+      throw new Error(`Invalid analytics event: ${validation.errors.join("; ")}`);
+    }
+
+    await analyticsRepository.upsertEvent(enrichedEvent);
+    return enrichedEvent;
+  },
+
+  /**
+   * Start a checkout attempt funnel:
+   * 1. Creates authoritative CheckoutAttempt record with status "pending"
+   * 2. Schedules BullMQ delayed job for detecting abandoned payment
+   * 3. Publishes checkout_started and payment_initiated events
+   */
+  async startCheckoutFunnel({
+    funnelId,
+    userId,
+    artistId,
+    planId,
+    cycle,
+    gateway,
+    gatewaySessionId,
+    transactionId,
+    amount,
+    currency,
+    metadata = {},
+    abandonTimeoutMs = DEFAULT_ABANDON_TIMEOUT_MS,
+  }) {
+    const expiresAt = new Date(Date.now() + abandonTimeoutMs);
+
+    // 1. Authoritative CheckoutAttempt record
+    const attempt = await analyticsRepository.createCheckoutAttempt({
+      funnelId,
+      userId,
+      artistId,
+      planId,
+      cycle,
+      gateway,
+      gatewaySessionId,
+      transactionId,
+      amount,
+      currency,
+      status: CHECKOUT_ATTEMPT_STATUS.PENDING,
+      expiresAt,
+      metadata,
+    });
+
+    // 2. Schedule delayed check for abandoned payment
+    try {
+      await analyticsProducer.scheduleAbandonmentCheck(attempt._id, abandonTimeoutMs);
+    } catch (schedErr) {
+      console.warn("[Analytics] Failed to schedule abandonment check:", schedErr.message);
+    }
+
+    // 3. Emit checkout_started event
+    await analyticsProducer.publishEvent({
+      eventId: `checkout:${gatewaySessionId || attempt._id.toString()}`,
+      funnelId,
+      eventName: ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      eventType: ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      userId,
+      artistId,
+      planId,
+      metadata: {
+        checkoutSessionId: gatewaySessionId,
+        cycle,
+        amount,
+        currency,
+        gateway,
+        transactionId,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+
+    // 4. Emit payment_initiated event
+    await analyticsProducer.publishEvent({
+      eventId: `payment_init:${attempt._id.toString()}`,
+      funnelId,
+      eventName: ANALYTICS_EVENTS.PAYMENT_INITIATED,
+      eventType: ANALYTICS_EVENTS.PAYMENT_INITIATED,
+      userId,
+      artistId,
+      planId,
+      metadata: {
+        attemptId: attempt._id.toString(),
+        gateway,
+        amount,
+        currency,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+
+    return attempt;
+  },
+
+  /**
+   * Reconcile and mark checkout as abandoned if still pending when timeout job fires
+   */
+  async checkAndAbandonPayment(attemptId) {
+    const attempt = await analyticsRepository.findCheckoutAttemptById(attemptId);
+    if (!attempt) {
+      console.warn(`[Analytics] Abandonment check: Attempt ${attemptId} not found`);
+      return null;
+    }
+
+    if (attempt.status !== CHECKOUT_ATTEMPT_STATUS.PENDING) {
+      console.log(`[Analytics] Attempt ${attemptId} already in status '${attempt.status}', skipping abandonment`);
+      return attempt;
+    }
+
+    const updatedAttempt = await analyticsRepository.updateCheckoutAttemptStatus(attempt._id, {
+      status: CHECKOUT_ATTEMPT_STATUS.ABANDONED,
+      abandonedAt: new Date(),
+      failureReason: "checkout_timeout_no_payment",
+    });
+
+    await analyticsProducer.publishEvent({
+      eventId: `payment_abandoned:${attempt._id.toString()}`,
+      funnelId: attempt.funnelId,
+      eventName: ANALYTICS_EVENTS.PAYMENT_ABANDONED,
+      eventType: ANALYTICS_EVENTS.PAYMENT_ABANDONED,
+      userId: attempt.userId,
+      artistId: attempt.artistId,
+      planId: attempt.planId || attempt.cycle,
+      metadata: {
+        attemptId: attempt._id.toString(),
+        gatewaySessionId: attempt.gatewaySessionId,
+        gateway: attempt.gateway,
+        timeoutMs: DEFAULT_ABANDON_TIMEOUT_MS,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+
+    console.warn(`[Analytics] Funnel ${attempt.funnelId}: Marked checkout attempt ${attempt._id} as abandoned`);
+    return updatedAttempt;
+  },
+
+  /**
+   * Reconcile payment completion from webhook
+   */
+  async completePaymentFunnel({
+    funnelId,
+    gatewaySessionId,
+    userId,
+    artistId,
+    planId,
+    transactionId,
+    amount,
+    currency,
+    gateway = "stripe",
+    metadata = {},
+  }) {
+    if (funnelId) {
+      await analyticsRepository.updateCheckoutAttemptStatus(funnelId, {
+        status: CHECKOUT_ATTEMPT_STATUS.COMPLETED,
+        completedAt: new Date(),
+      });
+    }
+
+    const eventId = `payment_completed:${gatewaySessionId || transactionId || randomUUID()}`;
+
+    await analyticsProducer.publishEvent({
+      eventId,
+      funnelId: funnelId || `funnel_${transactionId}`,
+      eventName: ANALYTICS_EVENTS.PAYMENT_COMPLETED,
+      eventType: ANALYTICS_EVENTS.PAYMENT_COMPLETED,
+      userId,
+      artistId,
+      planId,
+      metadata: {
+        transactionId,
+        gatewaySessionId,
+        amount,
+        currency,
+        gateway,
+        ...metadata,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+  },
+
+  /**
+   * Reconcile payment failure from webhook
+   */
+  async failPaymentFunnel({
+    funnelId,
+    gatewaySessionId,
+    userId,
+    artistId,
+    planId,
+    reason,
+    gateway = "stripe",
+    metadata = {},
+  }) {
+    if (funnelId) {
+      await analyticsRepository.updateCheckoutAttemptStatus(funnelId, {
+        status: CHECKOUT_ATTEMPT_STATUS.FAILED,
+        failedAt: new Date(),
+        failureReason: reason,
+      });
+    }
+
+    const eventId = `payment_failed:${gatewaySessionId || randomUUID()}`;
+
+    await analyticsProducer.publishEvent({
+      eventId,
+      funnelId: funnelId || `funnel_${randomUUID()}`,
+      eventName: ANALYTICS_EVENTS.PAYMENT_FAILED,
+      eventType: ANALYTICS_EVENTS.PAYMENT_FAILED,
+      userId,
+      artistId,
+      planId,
+      metadata: {
+        gatewaySessionId,
+        reason,
+        gateway,
+        ...metadata,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+  },
+
+  /**
+   * Record subscription activation event
+   */
+  async recordSubscriptionActivated({
+    funnelId,
+    subscriptionId,
+    externalSubscriptionId,
+    userId,
+    artistId,
+    cycle,
+    validUntil,
+  }) {
+    const eventId = `sub_activated:${externalSubscriptionId || subscriptionId || randomUUID()}`;
+
+    await analyticsProducer.publishEvent({
+      eventId,
+      funnelId: funnelId || `sub_${subscriptionId}`,
+      eventName: ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVATED,
+      eventType: ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVATED,
+      userId,
+      artistId,
+      planId: cycle,
+      metadata: {
+        subscriptionId,
+        externalSubscriptionId,
+        cycle,
+        validUntil,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+  },
+
+  /**
+   * Fetch aggregate funnel metrics
+   */
+  async getFunnelMetrics({ artistId, startDate, endDate }) {
+    return analyticsRepository.getFunnelStats({ artistId, startDate, endDate });
+  },
+
+  /**
+   * Fetch events by funnel ID
+   */
+  async getEventsByFunnelId(funnelId) {
+    return analyticsRepository.getEventsByFunnelId(funnelId);
   },
 
   /**
@@ -118,13 +435,16 @@ export const analyticsService = {
       {
         $match: {
           artistId: artistObjectId,
-          eventName: { $in: ["artist_viewed", "album_viewed", "song_viewed"] },
+          $or: [
+            { eventName: { $in: ["artist_viewed", "album_viewed", "song_viewed"] } },
+            { eventType: { $in: ["artist_viewed", "album_viewed", "song_viewed"] } },
+          ],
           occurredAt: { $gte: startDateTime, $lte: endDateTime },
         },
       },
       {
         $group: {
-          _id: "$eventName",
+          _id: { $ifNull: ["$eventName", "$eventType"] },
           count: { $sum: 1 },
           uniqueVisitors: { $addToSet: { $ifNull: ["$userId", "$anonymousId"] } },
         },
@@ -205,7 +525,6 @@ export const analyticsService = {
     const { startDate, endDate, startDateTime, endDateTime } = parseDateRange(query);
     const artistObjectId = new mongoose.Types.ObjectId(artistId);
 
-    // 1. Daily artist stats (plays, qualifiedPlays, revenue, followers, likes)
     const dailyStats = await ArtistDailyStats.find({
       artistId: artistObjectId,
       date: { $gte: startDate, $lte: endDate },
@@ -216,7 +535,6 @@ export const analyticsService = {
       dailyStatsMap.set(stat.date, stat);
     }
 
-    // 2. Daily completions & skips from SongDailyStats
     const dailySongStats = await SongDailyStats.aggregate([
       {
         $match: {
@@ -238,12 +556,14 @@ export const analyticsService = {
       dailySongStatsMap.set(item._id, item);
     }
 
-    // 3. Daily traffic events (views)
     const dailyTrafficEvents = await AnalyticsEvent.aggregate([
       {
         $match: {
           artistId: artistObjectId,
-          eventName: { $in: ["artist_viewed", "album_viewed", "song_viewed"] },
+          $or: [
+            { eventName: { $in: ["artist_viewed", "album_viewed", "song_viewed"] } },
+            { eventType: { $in: ["artist_viewed", "album_viewed", "song_viewed"] } },
+          ],
           occurredAt: { $gte: startDateTime, $lte: endDateTime },
         },
       },
@@ -251,7 +571,7 @@ export const analyticsService = {
         $group: {
           _id: {
             date: { $dateToString: { format: "%Y-%m-%d", date: "$occurredAt" } },
-            eventName: "$eventName",
+            eventName: { $ifNull: ["$eventName", "$eventType"] },
           },
           count: { $sum: 1 },
         },
@@ -263,7 +583,6 @@ export const analyticsService = {
       trafficMap.set(`${item._id.date}:${item._id.eventName}`, item.count);
     }
 
-    // Generate unbroken sequence of dates
     const dateList = generateDateList(startDate, endDate);
 
     const timeseries = dateList.map((date) => {
@@ -375,27 +694,43 @@ export const analyticsService = {
   async getAdminOverview(query = {}) {
     const { startDate, endDate, startDateTime, endDateTime } = parseDateRange(query);
 
-    // 1. Platform-wide traffic & funnel events
     const platformEventsAgg = await AnalyticsEvent.aggregate([
       {
         $match: {
-          eventName: {
-            $in: [
-              "landing_page_viewed",
-              "home_page_viewed",
-              "search_performed",
-              "search_result_clicked",
-              "signup_started",
-              "signup_completed",
-              "login_completed",
-            ],
-          },
+          $or: [
+            {
+              eventName: {
+                $in: [
+                  "landing_page_viewed",
+                  "home_page_viewed",
+                  "search_performed",
+                  "search_result_clicked",
+                  "signup_started",
+                  "signup_completed",
+                  "login_completed",
+                ],
+              },
+            },
+            {
+              eventType: {
+                $in: [
+                  "landing_page_viewed",
+                  "home_page_viewed",
+                  "search_performed",
+                  "search_result_clicked",
+                  "signup_started",
+                  "signup_completed",
+                  "login_completed",
+                ],
+              },
+            },
+          ],
           occurredAt: { $gte: startDateTime, $lte: endDateTime },
         },
       },
       {
         $group: {
-          _id: "$eventName",
+          _id: { $ifNull: ["$eventName", "$eventType"] },
           count: { $sum: 1 },
           uniqueUsers: { $addToSet: { $ifNull: ["$userId", "$anonymousId"] } },
         },
@@ -410,7 +745,6 @@ export const analyticsService = {
       };
     }
 
-    // 2. Platform-wide playback metrics
     const [playbackAgg] = await SongDailyStats.aggregate([
       {
         $match: {
@@ -429,7 +763,6 @@ export const analyticsService = {
       },
     ]);
 
-    // 3. Platform-wide monetization metrics
     const [monetizationAgg] = await ArtistDailyStats.aggregate([
       {
         $match: {
@@ -448,7 +781,6 @@ export const analyticsService = {
       },
     ]);
 
-    // 4. Platform entity totals
     const [totalUsers, totalArtists, totalSongs] = await Promise.all([
       User.countDocuments(),
       Artist.countDocuments(),
@@ -601,7 +933,6 @@ export const analyticsService = {
   async getAdminTimeseries(query = {}) {
     const { startDate, endDate, startDateTime, endDateTime } = parseDateRange(query);
 
-    // 1. Daily streaming volume from SongDailyStats
     const dailyPlays = await SongDailyStats.aggregate([
       {
         $match: {
@@ -624,7 +955,6 @@ export const analyticsService = {
       dailyPlaysMap.set(item._id, item);
     }
 
-    // 2. Daily monetization from ArtistDailyStats
     const dailyMonetization = await ArtistDailyStats.aggregate([
       {
         $match: {
@@ -646,13 +976,13 @@ export const analyticsService = {
       dailyMonetizationMap.set(item._id, item);
     }
 
-    // 3. Daily traffic & signups from AnalyticsEvent
     const dailyEvents = await AnalyticsEvent.aggregate([
       {
         $match: {
-          eventName: {
-            $in: ["landing_page_viewed", "home_page_viewed", "signup_completed"],
-          },
+          $or: [
+            { eventName: { $in: ["landing_page_viewed", "home_page_viewed", "signup_completed"] } },
+            { eventType: { $in: ["landing_page_viewed", "home_page_viewed", "signup_completed"] } },
+          ],
           occurredAt: { $gte: startDateTime, $lte: endDateTime },
         },
       },
@@ -660,7 +990,7 @@ export const analyticsService = {
         $group: {
           _id: {
             date: { $dateToString: { format: "%Y-%m-%d", date: "$occurredAt" } },
-            eventName: "$eventName",
+            eventName: { $ifNull: ["$eventName", "$eventType"] },
           },
           count: { $sum: 1 },
         },
@@ -672,7 +1002,6 @@ export const analyticsService = {
       eventsMap.set(`${item._id.date}:${item._id.eventName}`, item.count);
     }
 
-    // Unbroken sequence of dates
     const dateList = generateDateList(startDate, endDate);
 
     const timeseries = dateList.map((date) => {
@@ -699,3 +1028,4 @@ export const analyticsService = {
   },
 };
 
+export default analyticsService;

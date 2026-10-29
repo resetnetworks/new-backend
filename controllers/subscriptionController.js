@@ -15,6 +15,8 @@ import paypal from "@paypal/checkout-server-sdk";
 import  {paypalClient}  from "../utils/paypalClient.js";
 import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
+import { randomUUID } from "crypto";
+import { analyticsService } from "../modules/analytics/application/analytics.service.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
@@ -299,7 +301,8 @@ const PLAN_DURATION_MAP = {
 export const createRazorpaySubscription = async (req, res) => {
   try {
     const { artistId } = req.params;
-    const { cycle, trialDays = DEFAULT_TRIAL_DAYS } = req.body; // "1m", "3m", "6m", "12m"
+    const { cycle, trialDays = DEFAULT_TRIAL_DAYS, funnelId: clientFunnelId } = req.body; // "1m", "3m", "6m", "12m"
+    const funnelId = clientFunnelId || randomUUID();
     const user = req.user;
 
     // Validate cycle
@@ -357,6 +360,7 @@ export const createRazorpaySubscription = async (req, res) => {
         artistId: artistId.toString(),
         cycle,
         isTrial: isTrial ? "true" : "false",
+        funnelId,
       },
     };
 
@@ -424,7 +428,7 @@ console.log("-------------------------------------Hello")
     }
 
     // ✅ Save transaction as pending for regular sub
-    await Transaction.create({
+    const transaction = await Transaction.create({
       userId: user._id,
       itemType: "artist-subscription",
       itemId: artistId,
@@ -438,13 +442,37 @@ console.log("-------------------------------------Hello")
       metadata: {
         razorpaySubscriptionId: subscription.id,
         cycle,
+        funnelId,
       },
     });
+
+    // 🚀 Track checkout attempt in analytics pipeline
+    try {
+      await analyticsService.startCheckoutFunnel({
+        funnelId,
+        userId: user._id,
+        artistId,
+        planId: plan._id || cycle,
+        cycle,
+        gateway: "razorpay",
+        gatewaySessionId: subscription.id,
+        transactionId: transaction._id,
+        amount,
+        currency: "INR",
+        metadata: {
+          razorpaySubscriptionId: subscription.id,
+          cycle,
+        },
+      });
+    } catch (analyticsErr) {
+      console.error("[Analytics] Error tracking Razorpay checkout funnel:", analyticsErr.message);
+    }
 
     res.status(201).json({
       success: true,
       subscriptionId: subscription.id,
       cycle,
+      funnelId,
     });
   } catch (error) {
     console.log("❌ Error creating Razorpay subscription:", error);
@@ -455,7 +483,8 @@ console.log("-------------------------------------Hello")
 
 export const createPaypalSubscription = async (req, res) => {
   const { artistId } = req.params;
-  const { cycle, currency = "USD", trialDays = DEFAULT_TRIAL_DAYS } = req.body;
+  const { cycle, currency = "USD", trialDays = DEFAULT_TRIAL_DAYS, funnelId: clientFunnelId } = req.body;
+  const funnelId = clientFunnelId || randomUUID();
   const user = req.user;
 
   // ✅ Check if subscription is already active or in trial
@@ -599,14 +628,38 @@ export const createPaypalSubscription = async (req, res) => {
       paypalSubscriptionId: subscription.id,
       cycle,
       paypalPlanId: paypalPlan.paypalPlanId,
+      funnelId,
     },
   });
   console.log("transaction", transaction);
+
+  // 🚀 Track checkout attempt in analytics pipeline
+  try {
+    await analyticsService.startCheckoutFunnel({
+      funnelId,
+      userId: user._id,
+      artistId,
+      planId: plan._id || cycle,
+      cycle,
+      gateway: "paypal",
+      gatewaySessionId: subscription.id,
+      transactionId: transaction._id,
+      amount,
+      currency,
+      metadata: {
+        paypalSubscriptionId: subscription.id,
+        cycle,
+      },
+    });
+  } catch (analyticsErr) {
+    console.error("[Analytics] Error tracking PayPal checkout funnel:", analyticsErr.message);
+  }
 
   res.json({
     success: true,
     subscriptionId: subscription.id,
     approveUrl: approveLink,
+    funnelId,
   });
 };
 

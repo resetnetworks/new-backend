@@ -2,6 +2,8 @@
 import mongoose from "mongoose";
 import { ALLOWED_DEVICE_TYPES, ALLOWED_PLATFORMS, DEFAULT_EVENT_VERSION } from "./analytics.constants.js";
 import { isValidEventName } from "./event.types.js";
+import { AnalyticsEvent } from "./models/AnalyticsEvent.js";
+import { CheckoutAttempt } from "./models/CheckoutAttempt.js";
 
 /**
  * Validates a single analytics event payload against system contracts.
@@ -15,28 +17,35 @@ export const validateAnalyticsEvent = (event) => {
   }
 
   // 1. eventId
-  if (!event.eventId || typeof event.eventId !== "string" || event.eventId.trim().length === 0) {
-    errors.push("eventId is required and must be a non-empty string");
+  let eventId = event.eventId;
+  if (!eventId || typeof eventId !== "string" || eventId.trim().length === 0) {
+    eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  } else {
+    eventId = String(eventId).trim();
   }
 
-  // 2. eventName
-  if (!event.eventName || !isValidEventName(event.eventName)) {
-    errors.push(`Invalid eventName: "${event.eventName}". Must be one of registered event types.`);
+  // 2. eventName / eventType
+  const resolvedEventName = event.eventName || event.eventType;
+  if (!resolvedEventName || !isValidEventName(resolvedEventName)) {
+    errors.push(`Invalid eventName/eventType: "${resolvedEventName}". Must be one of registered event types.`);
   }
 
-  // 3. occurredAt
-  let occurredAt = event.occurredAt ? new Date(event.occurredAt) : new Date();
+  // 3. occurredAt / timestamp
+  let occurredAt = event.occurredAt || event.timestamp ? new Date(event.occurredAt || event.timestamp) : new Date();
   if (isNaN(occurredAt.getTime())) {
-    errors.push("occurredAt must be a valid date or timestamp");
+    errors.push("occurredAt/timestamp must be a valid date or timestamp");
     occurredAt = new Date();
   }
 
-  // 4. Identity - Must have at least userId or anonymousId (or sessionId fallback)
+  // 4. Identity - Must have at least userId or anonymousId or sessionId or funnelId
   let anonymousId = event.anonymousId ? String(event.anonymousId).trim() : null;
   const hasUser = event.userId && mongoose.Types.ObjectId.isValid(event.userId);
 
   if (!hasUser && !anonymousId && event.sessionId) {
     anonymousId = `sess_${String(event.sessionId).trim()}`;
+  }
+  if (!hasUser && !anonymousId && event.funnelId) {
+    anonymousId = `fnl_${String(event.funnelId).trim()}`;
   }
   const hasAnon = Boolean(anonymousId && anonymousId.length > 0);
 
@@ -71,29 +80,35 @@ export const validateAnalyticsEvent = (event) => {
     ipHash: typeof rawContext.ipHash === "string" ? rawContext.ipHash : null,
   };
 
-  // 7. Properties sanitization (prevent arbitrary deeply nested structures or prototype pollution)
+  // 7. Properties & Metadata sanitization
   let properties = {};
-  if (event.properties && typeof event.properties === "object" && !Array.isArray(event.properties)) {
+  const rawProps = event.properties || event.metadata || {};
+  if (rawProps && typeof rawProps === "object" && !Array.isArray(rawProps)) {
     try {
-      properties = JSON.parse(JSON.stringify(event.properties));
+      properties = JSON.parse(JSON.stringify(rawProps));
     } catch {
       properties = {};
     }
   }
 
   const sanitized = {
-    eventId: event.eventId ? String(event.eventId).trim() : undefined,
-    eventName: event.eventName,
+    eventId,
+    funnelId: event.funnelId ? String(event.funnelId).trim() : null,
+    eventName: resolvedEventName,
+    eventType: resolvedEventName,
     eventVersion: Number(event.eventVersion) || DEFAULT_EVENT_VERSION,
     occurredAt,
+    timestamp: occurredAt,
     anonymousId,
     userId,
     sessionId: event.sessionId ? String(event.sessionId).trim() : null,
     songId,
     albumId,
     artistId,
+    planId: event.planId || null,
     context,
     properties,
+    metadata: properties,
   };
 
   return {
@@ -101,4 +116,11 @@ export const validateAnalyticsEvent = (event) => {
     errors,
     sanitized,
   };
+};
+
+export { AnalyticsEvent, CheckoutAttempt };
+export default {
+  AnalyticsEvent,
+  CheckoutAttempt,
+  validateAnalyticsEvent,
 };

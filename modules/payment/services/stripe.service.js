@@ -75,6 +75,7 @@ export const createSubscriptionCheckoutSession = async ({
   customReturnUrl,
   isTrial = false,
   trialDays = 1,
+  funnelId,
 }) => {
   const returnBaseUrl = customReturnUrl
     ? customReturnUrl
@@ -101,6 +102,7 @@ export const createSubscriptionCheckoutSession = async ({
       userId,
       artistId,
       cycle,
+      funnelId: funnelId || "",
       itemType: "artist-subscription",
       isTrial: isTrial ? "true" : "false",
     },
@@ -110,6 +112,7 @@ export const createSubscriptionCheckoutSession = async ({
         userId,
         artistId,
         cycle,
+        funnelId: funnelId || "",
         isTrial: isTrial ? "true" : "false",
       },
     },

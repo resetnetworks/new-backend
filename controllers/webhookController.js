@@ -23,7 +23,7 @@ import {
   sendNewArtistSubscriberNotification,
   sendArtistSubscriptionSuccessNotification,
 } from "../modules/notification-service/notification.service.js";
-import { eventDispatcher, EVENT_TYPES } from "../modules/analytics/index.js";
+import { eventDispatcher, EVENT_TYPES, analyticsService } from "../modules/analytics/index.js";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -265,8 +265,31 @@ export const razorpayWebhook = async (req, res) => {
                 gateway: "razorpay",
               },
             });
+
+            if (transaction.metadata?.funnelId) {
+              await analyticsService.completePaymentFunnel({
+                funnelId: transaction.metadata.funnelId,
+                gatewaySessionId: subscriptionId,
+                userId: transaction.userId,
+                artistId: transaction.artistId,
+                planId: transaction.metadata?.cycle,
+                transactionId: transaction._id,
+                amount: transaction.amount,
+                currency: transaction.currency || "INR",
+                gateway: "razorpay",
+              });
+
+              await analyticsService.recordSubscriptionActivated({
+                funnelId: transaction.metadata.funnelId,
+                subscriptionId: transaction._id,
+                externalSubscriptionId: subscriptionId,
+                userId: transaction.userId,
+                artistId: transaction.artistId,
+                cycle: transaction.metadata?.cycle,
+              });
+            }
           } catch (emailErr) {
-            console.error("⚠️ Failed to dispatch subscription email/notification:", emailErr.message);
+            console.error("⚠️ Failed to dispatch subscription email/notification/analytics:", emailErr.message);
           }
         }
 
@@ -712,7 +735,36 @@ export const paypalWebhook = async (req, res) => {
           },
         });
 
-        console.log(":white_tick: PayPal subscription activated/renewed");
+        console.log("✅ PayPal subscription activated/renewed");
+
+        try {
+          const funnelId = transaction.metadata?.funnelId;
+          await analyticsService.completePaymentFunnel({
+            funnelId,
+            gatewaySessionId: subscriptionId,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            planId: transaction.metadata?.cycle,
+            transactionId: transaction._id,
+            amount: transaction.amount,
+            currency: transaction.currency || "USD",
+            gateway: "paypal",
+            metadata: {
+              paypalSubscriptionId: subscriptionId,
+            },
+          });
+
+          await analyticsService.recordSubscriptionActivated({
+            funnelId,
+            subscriptionId: transaction._id,
+            externalSubscriptionId: subscriptionId,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            cycle: transaction.metadata?.cycle,
+          });
+        } catch (analyticsErr) {
+          console.error("[Analytics] Error in PayPal webhook analytics:", analyticsErr.message);
+        }
       }
       return res.status(200).json({ status: "subscription processed" });
     }

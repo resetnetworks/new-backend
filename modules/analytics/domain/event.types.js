@@ -1,4 +1,5 @@
 // modules/analytics/domain/event.types.js
+import { ALL_ANALYTICS_EVENTS } from "./analytics.constants.js";
 
 export const EVENT_CATEGORIES = {
   ACQUISITION: "acquisition",
@@ -42,7 +43,14 @@ export const EVENT_TYPES = {
   PLAYLIST_CREATED: "playlist_created",
   SONG_ADDED_TO_PLAYLIST: "song_added_to_playlist",
 
-  // Monetization
+  // Monetization & Subscription Funnel
+  SUBSCRIPTION_CLICKED: "subscription_clicked",
+  CHECKOUT_STARTED: "checkout_started",
+  PAYMENT_INITIATED: "payment_initiated",
+  PAYMENT_COMPLETED: "payment_completed",
+  PAYMENT_FAILED: "payment_failed",
+  PAYMENT_ABANDONED: "payment_abandoned",
+  SUBSCRIPTION_ACTIVATED: "subscription_activated",
   SUBSCRIPTION_STARTED: "subscription_started",
   SUBSCRIPTION_CANCELLED: "subscription_cancelled",
   SUBSCRIPTION_RENEWED: "subscription_renewed",
@@ -52,6 +60,49 @@ export const EVENT_TYPES = {
   COUPON_APPLIED: "coupon_applied",
 };
 
-export const ALLOWED_EVENT_NAMES = Object.values(EVENT_TYPES);
+export const ALLOWED_EVENT_NAMES = Array.from(
+  new Set([...Object.values(EVENT_TYPES), ...ALL_ANALYTICS_EVENTS])
+);
 
 export const isValidEventName = (name) => ALLOWED_EVENT_NAMES.includes(name);
+export const isValidEventType = (eventType) => isValidEventName(eventType);
+
+/**
+ * Factory to build standard event payload with consistent shape
+ */
+export const createEventPayload = ({
+  eventId,
+  funnelId = null,
+  eventType,
+  eventName,
+  userId = null,
+  artistId = null,
+  songId = null,
+  albumId = null,
+  planId = null,
+  metadata = {},
+  properties = {},
+  context = {},
+  timestamp = new Date(),
+}) => {
+  const resolvedEventName = eventType || eventName;
+  const mergedProps = { ...metadata, ...properties };
+  const dateObj = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+  return {
+    eventId,
+    funnelId,
+    eventName: resolvedEventName,
+    eventType: resolvedEventName,
+    userId,
+    artistId,
+    songId,
+    albumId,
+    planId,
+    metadata: mergedProps,
+    properties: mergedProps,
+    context,
+    timestamp: dateObj,
+    occurredAt: dateObj,
+  };
+};

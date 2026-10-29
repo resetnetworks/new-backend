@@ -1,8 +1,14 @@
+// modules/analytics/interfaces/analytics.routes.js
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { authenticateUser } from "../../../middleware/authenticate.js";
 import { authorizeRoles } from "../../../middleware/authorize.js";
-import { analyticsController } from "./analytics.controller.js";
+import {
+  analyticsController,
+  trackClientEvent,
+  getFunnelAnalytics,
+  getFunnelJourney,
+} from "./analytics.controller.js";
 
 const router = express.Router();
 
@@ -21,10 +27,24 @@ const analyticsLimiter = rateLimit({
 
 /**
  * @route   POST /api/v1/analytics/events
- * @desc    Ingest single or batch analytics events
+ * @desc    Ingest single or batch analytics events (playback & funnel events)
  * @access  Public / Optional Auth (Supports anonymous and authenticated events)
  */
 router.post("/events", analyticsLimiter, authenticateUser, analyticsController.ingestEvents);
+
+/**
+ * @route   GET /api/v1/analytics/funnel/:artistId
+ * @desc    Funnel analytics & conversion drop-off metrics for an artist or platform
+ * @access  Private
+ */
+router.get("/funnel/:artistId", authenticateUser, getFunnelAnalytics);
+
+/**
+ * @route   GET /api/v1/analytics/journey/:funnelId
+ * @desc    Inspect end-to-end event journey for a specific checkout funnelId
+ * @access  Private
+ */
+router.get("/journey/:funnelId", authenticateUser, getFunnelJourney);
 
 /**
  * @route   GET /api/v1/analytics/songs/:songId/stats
@@ -121,4 +141,3 @@ router.get(
 );
 
 export default router;
-
