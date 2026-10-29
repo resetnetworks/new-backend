@@ -41,6 +41,13 @@ export const songUpload = multer({
   { name: "coverImage", maxCount: 1 },
   { name: "documents", maxCount: 1 },
 ]);
+
+export const artistApplicationUpload = multer({
+  storage: dynamicSongStorage,
+}).fields([
+  { name: "documents", maxCount: 5 },
+  { name: "profileImage", maxCount: 1 },
+]);
 // Single cover image upload (for albums)
 export const singleImageUpload = multer({
   storage: multerS3({

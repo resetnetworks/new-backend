@@ -153,9 +153,9 @@ const artistApplicationSchema = new mongoose.Schema(
    ---------------------- */
 
 // Auto-generate slug from stageName if not present
-artistApplicationSchema.pre("validate", async function (next) {
+artistApplicationSchema.pre("validate", function (next) {
   if (!this.slug && this.stageName) {
-    const baseSlug = slugify(this.stageName, { lower: true, strict: true });
+    const baseSlug = slugify(this.stageName, { lower: true, strict: true }) || "artist";
     this.slug = `${baseSlug}-${nanoid()}`;
   }
   // mark docs completeness quickly (simple heuristic)

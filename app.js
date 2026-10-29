@@ -187,6 +187,7 @@ app.use("/api/user/dashboard", userDashboardRoutes);
 // --------------------
 // API V2 Routes
 // --------------------
+app.use("/api/v2/auth", userRoutes);
 app.use("/api/v2/artist", artistApplicationRoutes);
 app.use("/api/v2/admin", adminArtistRoutes);
 

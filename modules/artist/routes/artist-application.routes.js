@@ -7,7 +7,7 @@ import validateRequest from "../../../middleware/validate.js";
 // import { isAuthenticated } from "../../../middlewares/auth.middleware.js";
 import { authenticateUser } from "../../../middleware/authenticate.js";
 // adjust import path based on your project
-import { songUpload } from "../../../middleware/uploadMiddleware.js";
+import { artistApplicationUpload, songUpload } from "../../../middleware/uploadMiddleware.js";
 export const parseJsonFields = (fields = []) => {
   return (req, res, next) => {
     for (const field of fields) {
@@ -40,8 +40,7 @@ const router = express.Router();
  * @desc Submit an artist application
  * @access Authenticated users only
  */
-// router.post("/apply", authenticateUser, songUpload, submitArtistApplicationController);
-router.post("/apply", authenticateUser, submitArtistApplicationController);
+router.post("/apply", authenticateUser, artistApplicationUpload, submitArtistApplicationController);
 
 /**
  * @route GET /api/v2/artist/application/me

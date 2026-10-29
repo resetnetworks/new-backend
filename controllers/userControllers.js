@@ -321,6 +321,7 @@ export const myProfile = async (req, res) => {
     profileImage: user.profileImage || "",
     authType: user.authType || "email",
     role: user.role || "user",
+    roles: user.roles || [user.role || "user"],
 
     purchasedSongs: user.purchasedSongs || [],
     purchasedAlbums: user.purchasedAlbums || [],
@@ -333,7 +334,10 @@ export const myProfile = async (req, res) => {
     updatedAt: user.updatedAt,
   };
 
-  res.status(StatusCodes.OK).json(userResponse);
+  res.status(StatusCodes.OK).json({
+    ...userResponse,
+    user: userResponse,
+  });
 };
 
 
