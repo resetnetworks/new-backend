@@ -46,6 +46,12 @@ export const ANALYTICS_EVENTS = Object.freeze({
   PLAYBACK_STARTED: "playback_started",
   PLAYBACK_30S: "playback_30s",
   PLAYBACK_COMPLETED: "playback_completed",
+
+  // Artist Onboarding & Applications
+  ARTIST_APPLICATION_SUBMITTED: "artist_application_submitted",
+  ARTIST_APPLICATION_APPROVED: "artist_application_approved",
+  ARTIST_APPLICATION_REJECTED: "artist_application_rejected",
+  ARTIST_ONBOARDING_COMPLETED: "artist_onboarding_completed",
 });
 
 export const ALL_ANALYTICS_EVENTS = Object.values(ANALYTICS_EVENTS);

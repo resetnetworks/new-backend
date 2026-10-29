@@ -58,6 +58,12 @@ export const EVENT_TYPES = {
   PURCHASE_COMPLETED: "purchase_completed",
   PURCHASE_FAILED: "purchase_failed",
   COUPON_APPLIED: "coupon_applied",
+
+  // Artist Onboarding & Applications
+  ARTIST_APPLICATION_SUBMITTED: "artist_application_submitted",
+  ARTIST_APPLICATION_APPROVED: "artist_application_approved",
+  ARTIST_APPLICATION_REJECTED: "artist_application_rejected",
+  ARTIST_ONBOARDING_COMPLETED: "artist_onboarding_completed",
 };
 
 export const ALLOWED_EVENT_NAMES = Array.from(

@@ -2,6 +2,7 @@ import { artistApplicationService } from "../services/artist-application.service
 import { artistApplicationDTO } from "../dto/artist-application.dto.js";
 import { artistApplicationPublicDTO } from "../dto/artist-application.dto.js"; // // optional
 import { EmailService } from "../../email-services/email.service.js";
+import { eventDispatcher, EVENT_TYPES } from "../../analytics/index.js";
 
 /**
  * POST /api/v2/artist/apply
@@ -74,6 +75,18 @@ export const submitArtistApplicationController = async (req, res, next) => {
     } catch (emailErr) {
       console.error("⚠️ Failed to queue artist application admin notification email:", emailErr);
     }
+
+    // 📊 Non-blocking analytics: ARTIST_APPLICATION_SUBMITTED
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.ARTIST_APPLICATION_SUBMITTED,
+      userId,
+      properties: {
+        applicationId: application._id,
+        stageName: payload.stageName,
+        legalName: payload.legalName,
+        country: payload.country,
+      },
+    });
 
     return res.status(201).json({
       success: true,
