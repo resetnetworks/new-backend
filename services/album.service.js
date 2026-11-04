@@ -7,7 +7,7 @@ import { getCached, setCached } from "../utils/redisClient.js";
 
 // ─── randomized_system_v2 ────────────────────────────────────────────────────
 const RANDOMIZED_IDS_KEY = "randomized_system_v2:album_ids";
-const RANDOMIZED_FEED_TTL = 20*60; // 20MIN
+const RANDOMIZED_FEED_TTL = 20 * 60; // 20MIN
 
 // Fisher-Yates shuffle — O(n), in-place
 const shuffleArray = (arr) => {
@@ -361,4 +361,5 @@ export const getAllAlbumsWithoutPaginationService = async () => {
     },
   ]);
 };
+
 

@@ -6,14 +6,14 @@ import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { createRazorpayOrder } from "../utils/razorpay.js";
 import { getOrCreateStripeCustomer } from "../utils/stripe.js";
 import Stripe from "stripe";
-import {User} from "../models/User.js";
+import { User } from "../models/User.js";
 import Razorpay from "razorpay";
 import { createRazorpayPlan } from "../utils/razorpay.js";
 import { razorpay } from "../utils/razorpay.js";
-import {getPayPalAccessToken} from "../utils/getPaypalAccessToken.js";
+import { getPayPalAccessToken } from "../utils/getPaypalAccessToken.js";
 import paypal from "@paypal/checkout-server-sdk";
-import  {paypalClient}  from "../utils/paypalClient.js";
-import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
+import { paypalClient } from "../utils/paypalClient.js";
+import { PAYPAL_API } from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
 import { randomUUID } from "crypto";
 import { analyticsService } from "../modules/analytics/application/analytics.service.js";
@@ -26,7 +26,7 @@ export const initiateArtistSubscription = async (req, res) => {
   const userId = req.user._id;
   const { paymentMethodId, gateway, trialDays = DEFAULT_TRIAL_DAYS } = req.body;
   const { artistId } = req.params;
-  const {line1, city, state, postal_code, country} = req.body
+  const { line1, city, state, postal_code, country } = req.body
   const address = {
     line1,
     city,
@@ -373,7 +373,7 @@ export const createRazorpaySubscription = async (req, res) => {
 
     // ✅ Create Razorpay subscription
     const subscription = await razorpay.subscriptions.create(subParams);
-console.log("-------------------------------------Hello")
+
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
     const artistShare = amount - platformFee;
 
@@ -757,13 +757,13 @@ export const cancelArtistSubscription = async (req, res) => {
       }
       gatewayResponse = await response.text();
 
-    } 
+    }
 
     // =========================================================
     //               STRIPE
     // =========================================================
     else if (subscription.gateway === "stripe") {
-      console.log("👉👉👉👉👉👉👉👉👉👉 INSIDE STRIPE NOW: " );
+      console.log("👉👉👉👉👉👉👉👉👉👉 INSIDE STRIPE NOW: ");
 
       const stripeSub = await stripe.subscriptions.update(
         subscription.externalSubscriptionId,
@@ -773,7 +773,7 @@ export const cancelArtistSubscription = async (req, res) => {
       );
       gatewayResponse = stripeSub;
     }
-    
+
     else {
       throw new BadRequestError(`Unsupported gateway: ${subscription.gateway}`);
     }
@@ -782,7 +782,7 @@ export const cancelArtistSubscription = async (req, res) => {
     subscription.status = "cancelled";
     subscription.cancelledAt = new Date();
     subscription.isRecurring = false;
-    
+
     if (!subscription.cycle) {
       const txn = await Transaction.findOne({
         userId: user._id,

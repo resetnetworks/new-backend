@@ -5,6 +5,7 @@ import { CheckoutAttempt } from "../domain/models/CheckoutAttempt.js";
 import { SongDailyStats } from "../domain/models/SongDailyStats.js";
 import { ArtistDailyStats } from "../domain/models/ArtistDailyStats.js";
 import { ANALYTICS_EVENTS } from "../domain/analytics.constants.js";
+import { parseDateRange } from "../utils/date-range.helper.js";
 
 /**
  * Format a Date object to "YYYY-MM-DD"
@@ -68,10 +69,10 @@ export const analyticsRepository = {
           funnelId: funnelId || null,
           eventName: resolvedEventName,
           eventType: resolvedEventName,
-          userId: userId ? new mongoose.Types.ObjectId(userId) : null,
-          artistId: artistId ? new mongoose.Types.ObjectId(artistId) : null,
-          songId: songId ? new mongoose.Types.ObjectId(songId) : null,
-          albumId: albumId ? new mongoose.Types.ObjectId(albumId) : null,
+          userId: userId && mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null,
+          artistId: artistId && mongoose.Types.ObjectId.isValid(artistId) ? new mongoose.Types.ObjectId(artistId) : null,
+          songId: songId && mongoose.Types.ObjectId.isValid(songId) ? new mongoose.Types.ObjectId(songId) : null,
+          albumId: albumId && mongoose.Types.ObjectId.isValid(albumId) ? new mongoose.Types.ObjectId(albumId) : null,
           planId: planId || null,
           metadata: metadata || properties || {},
           properties: properties || metadata || {},
@@ -134,17 +135,29 @@ export const analyticsRepository = {
   /**
    * Aggregate funnel stats for an artist (or platform-wide if artistId is null)
    */
-  async getFunnelStats({ artistId, startDate, endDate }) {
+  async getFunnelStats({ artistId, startDate, endDate, range } = {}) {
     const matchFilter = {};
 
-    if (artistId) {
-      matchFilter.artistId = new mongoose.Types.ObjectId(artistId);
+    const isValidArtistId = artistId && artistId !== "all" && artistId !== "platform" && mongoose.Types.ObjectId.isValid(artistId);
+    if (isValidArtistId) {
+      const artistOid = new mongoose.Types.ObjectId(artistId);
+      matchFilter.$or = [
+        { artistId: artistOid },
+        { artistId: String(artistId) },
+      ];
     }
 
-    if (startDate || endDate) {
-      matchFilter.occurredAt = {};
-      if (startDate) matchFilter.occurredAt.$gte = new Date(startDate);
-      if (endDate) matchFilter.occurredAt.$lte = new Date(endDate);
+    let startIso = startDate || null;
+    let endIso = endDate || null;
+
+    if (range || startDate || endDate) {
+      const parsed = parseDateRange({ range, startDate, endDate });
+      matchFilter.occurredAt = {
+        $gte: parsed.startDateTime,
+        $lte: parsed.endDateTime,
+      };
+      startIso = parsed.startDate;
+      endIso = parsed.endDate;
     }
 
     const countsByEvent = await AnalyticsEvent.aggregate([
@@ -152,15 +165,41 @@ export const analyticsRepository = {
       {
         $group: {
           _id: { $ifNull: ["$eventType", "$eventName"] },
-          count: { $sum: 1 },
-          uniqueFunnels: { $addToSet: "$funnelId" },
-          uniqueUsers: { $addToSet: "$userId" },
+          totalEvents: { $sum: 1 },
+          uniqueFunnels: {
+            $addToSet: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$funnelId", null] },
+                    { $ne: ["$funnelId", ""] },
+                  ],
+                },
+                "$funnelId",
+                "$$REMOVE",
+              ],
+            },
+          },
+          uniqueUsers: {
+            $addToSet: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$userId", null] },
+                    { $ne: ["$userId", ""] },
+                  ],
+                },
+                "$userId",
+                "$$REMOVE",
+              ],
+            },
+          },
         },
       },
       {
         $project: {
           _id: 1,
-          count: 1,
+          totalEvents: 1,
           uniqueFunnelsCount: { $size: "$uniqueFunnels" },
           uniqueUsersCount: { $size: "$uniqueUsers" },
         },
@@ -172,50 +211,85 @@ export const analyticsRepository = {
     for (const item of countsByEvent) {
       if (item._id) {
         eventCounts[item._id] = {
-          totalEvents: item.count,
+          totalEvents: item.totalEvents,
           uniqueFunnels: item.uniqueFunnelsCount,
           uniqueUsers: item.uniqueUsersCount,
         };
       }
     }
 
-    const clicks = eventCounts[ANALYTICS_EVENTS.SUBSCRIPTION_CLICKED]?.uniqueFunnels || 0;
-    const checkoutStarted = eventCounts[ANALYTICS_EVENTS.CHECKOUT_STARTED]?.uniqueFunnels || 0;
-    const paymentInitiated = eventCounts[ANALYTICS_EVENTS.PAYMENT_INITIATED]?.uniqueFunnels || 0;
-    const paymentCompleted = eventCounts[ANALYTICS_EVENTS.PAYMENT_COMPLETED]?.uniqueFunnels || 0;
-    const paymentFailed = eventCounts[ANALYTICS_EVENTS.PAYMENT_FAILED]?.uniqueFunnels || 0;
-    const paymentAbandoned = eventCounts[ANALYTICS_EVENTS.PAYMENT_ABANDONED]?.uniqueFunnels || 0;
-    const subscriptionActivated = eventCounts[ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVATED]?.uniqueFunnels || 0;
+    const getStageCounts = (eventName) => {
+      const stage = eventCounts[eventName] || { totalEvents: 0, uniqueFunnels: 0, uniqueUsers: 0 };
+      return {
+        total: stage.totalEvents || 0,
+        unique: stage.uniqueFunnels || 0,
+        uniqueUsers: stage.uniqueUsers || 0,
+      };
+    };
+
+    const clicks = getStageCounts(ANALYTICS_EVENTS.SUBSCRIPTION_CLICKED);
+    const checkoutStarted = getStageCounts(ANALYTICS_EVENTS.CHECKOUT_STARTED);
+    const paymentInitiated = getStageCounts(ANALYTICS_EVENTS.PAYMENT_INITIATED);
+    const paymentCompleted = getStageCounts(ANALYTICS_EVENTS.PAYMENT_COMPLETED);
+    const paymentFailed = getStageCounts(ANALYTICS_EVENTS.PAYMENT_FAILED);
+    const paymentAbandoned = getStageCounts(ANALYTICS_EVENTS.PAYMENT_ABANDONED);
+    const subscriptionActivated = getStageCounts(ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVATED);
 
     const calcRate = (numerator, denominator) =>
       denominator > 0 ? Number(((numerator / denominator) * 100).toFixed(2)) : 0;
 
+    const effectiveClicks = clicks.total || clicks.unique;
+    const effectiveCheckout = checkoutStarted.total || checkoutStarted.unique;
+    const effectiveInitiated = paymentInitiated.total || paymentInitiated.unique;
+    const effectiveCompleted = paymentCompleted.total || paymentCompleted.unique;
+
     return {
-      artistId: artistId || "platform",
+      artistId: isValidArtistId ? artistId : "platform",
       period: {
-        startDate: startDate || null,
-        endDate: endDate || null,
+        startDate: startIso,
+        endDate: endIso,
       },
       funnelCounts: {
-        subscription_clicked: clicks,
-        checkout_started: checkoutStarted,
-        payment_initiated: paymentInitiated,
-        payment_completed: paymentCompleted,
-        payment_failed: paymentFailed,
-        payment_abandoned: paymentAbandoned,
-        subscription_activated: subscriptionActivated,
+        subscription_clicked: clicks.total,
+        checkout_started: checkoutStarted.total,
+        payment_initiated: paymentInitiated.total,
+        payment_completed: paymentCompleted.total,
+        payment_failed: paymentFailed.total,
+        payment_abandoned: paymentAbandoned.total,
+        subscription_activated: subscriptionActivated.total,
       },
+      uniqueCounts: {
+        subscription_clicked: clicks.unique,
+        checkout_started: checkoutStarted.unique,
+        payment_initiated: paymentInitiated.unique,
+        payment_completed: paymentCompleted.unique,
+        payment_failed: paymentFailed.unique,
+        payment_abandoned: paymentAbandoned.unique,
+        subscription_activated: subscriptionActivated.unique,
+      },
+      totalCounts: {
+        subscription_clicked: clicks.total,
+        checkout_started: checkoutStarted.total,
+        payment_initiated: paymentInitiated.total,
+        payment_completed: paymentCompleted.total,
+        payment_failed: paymentFailed.total,
+        payment_abandoned: paymentAbandoned.total,
+        subscription_activated: subscriptionActivated.total,
+      },
+      totalAbandoned: paymentAbandoned.total,
+      totalAbandonedEvents: paymentAbandoned.total,
       conversionRates: {
-        clickToCheckoutRate: calcRate(checkoutStarted, clicks),
-        checkoutToInitiatedRate: calcRate(paymentInitiated, checkoutStarted),
-        initiatedToCompletedRate: calcRate(paymentCompleted, paymentInitiated),
-        overallConversionRate: calcRate(paymentCompleted, clicks),
+        clickToCheckoutRate: calcRate(effectiveCheckout, effectiveClicks),
+        checkoutToInitiatedRate: calcRate(effectiveInitiated, effectiveCheckout),
+        initiatedToCompletedRate: calcRate(effectiveCompleted, effectiveInitiated),
+        overallConversionRate: calcRate(effectiveCompleted, effectiveClicks),
       },
       dropOffs: {
-        abandonedAtCheckout: Math.max(0, clicks - checkoutStarted),
-        abandonedBeforePayment: Math.max(0, checkoutStarted - paymentInitiated),
-        abandonedOrFailedDuringPayment: Math.max(0, paymentInitiated - paymentCompleted),
-        totalDropOffRate: clicks > 0 ? Number((((clicks - paymentCompleted) / clicks) * 100).toFixed(2)) : 0,
+        abandonedAtCheckout: Math.max(0, effectiveClicks - effectiveCheckout),
+        abandonedBeforePayment: Math.max(0, effectiveCheckout - effectiveInitiated),
+        abandonedOrFailedDuringPayment: Math.max(0, effectiveInitiated - effectiveCompleted),
+        paymentAbandoned: paymentAbandoned.total,
+        totalDropOffRate: effectiveClicks > 0 ? Number((((effectiveClicks - effectiveCompleted) / effectiveClicks) * 100).toFixed(2)) : 0,
       },
     };
   },

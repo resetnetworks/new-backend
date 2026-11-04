@@ -295,6 +295,48 @@ export const analyticsService = {
   },
 
   /**
+   * Reconcile payment abandonment from webhook or client cancellation
+   */
+  async abandonPaymentFunnel({
+    funnelId,
+    gatewaySessionId,
+    userId,
+    artistId,
+    planId,
+    reason = "checkout_abandoned_by_user",
+    gateway = "stripe",
+    metadata = {},
+  }) {
+    if (funnelId) {
+      await analyticsRepository.updateCheckoutAttemptStatus(funnelId, {
+        status: CHECKOUT_ATTEMPT_STATUS.ABANDONED,
+        abandonedAt: new Date(),
+        failureReason: reason,
+      });
+    }
+
+    const eventId = `payment_abandoned:${gatewaySessionId || funnelId || randomUUID()}`;
+
+    await analyticsProducer.publishEvent({
+      eventId,
+      funnelId: funnelId || `funnel_${randomUUID()}`,
+      eventName: ANALYTICS_EVENTS.PAYMENT_ABANDONED,
+      eventType: ANALYTICS_EVENTS.PAYMENT_ABANDONED,
+      userId,
+      artistId,
+      planId,
+      metadata: {
+        gatewaySessionId,
+        reason,
+        gateway,
+        ...metadata,
+      },
+      timestamp: new Date(),
+      occurredAt: new Date(),
+    });
+  },
+
+  /**
    * Record subscription activation event
    */
   async recordSubscriptionActivated({
@@ -330,8 +372,8 @@ export const analyticsService = {
   /**
    * Fetch aggregate funnel metrics
    */
-  async getFunnelMetrics({ artistId, startDate, endDate }) {
-    return analyticsRepository.getFunnelStats({ artistId, startDate, endDate });
+  async getFunnelMetrics({ artistId, startDate, endDate, range } = {}) {
+    return analyticsRepository.getFunnelStats({ artistId, startDate, endDate, range });
   },
 
   /**

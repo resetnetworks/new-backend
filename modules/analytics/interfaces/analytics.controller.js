@@ -94,12 +94,22 @@ export const trackClientEvent = async (req, res) => {
 export const getFunnelAnalytics = async (req, res) => {
   try {
     const { artistId } = req.params;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, range } = req.query;
+
+    const normalizedArtistId =
+      !artistId ||
+      artistId === "all" ||
+      artistId === "platform" ||
+      artistId === "total" ||
+      !mongoose.Types.ObjectId.isValid(artistId)
+        ? null
+        : artistId;
 
     const metrics = await analyticsService.getFunnelMetrics({
-      artistId: artistId === "all" ? null : artistId,
+      artistId: normalizedArtistId,
       startDate,
       endDate,
+      range,
     });
 
     return res.status(StatusCodes.OK).json({

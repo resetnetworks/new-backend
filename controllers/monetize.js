@@ -2,7 +2,7 @@ import { Artist } from "../models/Artist.js";
 import { isAdmin } from "../utils/authHelper.js";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError, UnauthorizedError } from "../errors/index.js";
-import { monetizeArtistService, checkArtistMonetization} from "../services/monetizeService.js";
+import { monetizeArtistService, checkArtistMonetization } from "../services/monetizeService.js";
 import { cycleToInterval } from "../utils/cycleToInterval.js";
 import { getAllArtistsService, getArtistByIdService } from '../services/artist.service.js';
 import { shapeArtistResponse } from "../dto/artist.dto.js";
@@ -20,7 +20,7 @@ export const monetizeArtist = async (req, res) => {
   const intervals = cycleToInterval(cycle);
   intervals.cycleLabel = cycle; // add label for DB
 
- 
+
   const basePrice = { currency: "USD", amount: subscriptionPrice }; // default base price
   const artist = await monetizeArtistService({
     artistId: req.user.artistId,
@@ -31,8 +31,6 @@ export const monetizeArtist = async (req, res) => {
 
   res.status(StatusCodes.CREATED).json({ success: true, artist });
 };
-
-
 
 
 export const getMyMonetizationStatus = async (req, res) => {

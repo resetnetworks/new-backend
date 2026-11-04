@@ -407,7 +407,7 @@ export const handleStripeWebhook = async (req, res) => {
 
         if (funnelId) {
           try {
-            await analyticsService.failPaymentFunnel({
+            await analyticsService.abandonPaymentFunnel({
               funnelId,
               gatewaySessionId: session.id,
               userId: session.metadata?.userId,
