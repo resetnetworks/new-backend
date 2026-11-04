@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateUser } from "../../../middleware/authenticate.js";
 import { authorizeRoles } from "../../../middleware/authorize.js";
+import { injectWorkspaceContext } from "../../../middleware/injectWorkspaceContext.js";
 import { updateGlobalPricing } from "../controllers/paymentController.js";
 
 const router = express.Router();
@@ -9,6 +10,7 @@ const router = express.Router();
 router.put(
   "/subscription-price",
   authenticateUser,
+  injectWorkspaceContext("changeSubscriptionPrice"),
   authorizeRoles("artist"),
   updateGlobalPricing
 );

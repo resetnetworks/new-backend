@@ -15,6 +15,8 @@ import {
   sendArtistSubscriptionSuccessNotification
 } from "../../notification-service/notification.service.js";
 
+import { eventDispatcher, EVENT_TYPES, analyticsService } from "../../analytics/index.js";
+
 const PLATFORM_FEE_PERCENT = 0.15;
 
 export const handleStripeWebhook = async (req, res) => {
@@ -119,6 +121,22 @@ export const handleStripeWebhook = async (req, res) => {
             itemType: transaction.itemType,
           });
 
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.PURCHASE_COMPLETED,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            properties: {
+              transactionId: transaction._id,
+              itemId: transaction.itemId,
+              itemType: transaction.itemType,
+              amount: transaction.amount,
+              amountCents: Math.round(Number(transaction.amount || 0) * 100),
+              currency: transaction.currency,
+              gateway: "stripe",
+            },
+          });
+
           console.log("✅ One-time payment successful:", transactionId);
         }
 
@@ -187,6 +205,51 @@ export const handleStripeWebhook = async (req, res) => {
             subscriberId: transaction.userId,
             itemId: transaction.itemId,
           });
+
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.SUBSCRIPTION_STARTED,
+            userId: transaction.userId,
+            artistId: transaction.artistId,
+            properties: {
+              transactionId: transaction._id,
+              externalSubscriptionId: stripeSubscriptionId,
+              gateway: "stripe",
+              cycle: session.metadata?.cycle || "monthly",
+              isTrial: session.payment_status === "no_payment_required",
+            },
+          });
+
+          const funnelId = session.metadata?.funnelId;
+          try {
+            await analyticsService.completePaymentFunnel({
+              funnelId,
+              gatewaySessionId: session.id,
+              userId: transaction.userId,
+              artistId: transaction.artistId,
+              planId: session.metadata?.cycle,
+              transactionId: transaction._id,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              gateway: "stripe",
+              metadata: {
+                stripeSubscriptionId,
+                stripeSessionId: session.id,
+                cycle: session.metadata?.cycle,
+              },
+            });
+
+            await analyticsService.recordSubscriptionActivated({
+              funnelId,
+              subscriptionId: transaction._id,
+              externalSubscriptionId: stripeSubscriptionId,
+              userId: transaction.userId,
+              artistId: transaction.artistId,
+              cycle: session.metadata?.cycle,
+            });
+          } catch (analyticsErr) {
+            console.error("[Analytics] Webhook subscription completion analytics error:", analyticsErr.message);
+          }
 
           console.log("✅ First subscription fully processed:", transaction._id);
           console.log("✅ Subscription upserted:", stripeSubscriptionId);
@@ -309,6 +372,21 @@ export const handleStripeWebhook = async (req, res) => {
 
         console.log("🔁 Subscription renewed:", stripeSubscriptionId);
 
+        // Non-blocking dispatch to analytics pipeline
+        eventDispatcher.publish({
+          eventName: EVENT_TYPES.SUBSCRIPTION_RENEWED,
+          userId: paidTransaction.userId,
+          artistId: paidTransaction.artistId,
+          properties: {
+            transactionId: paidTransaction._id,
+            externalSubscriptionId: stripeSubscriptionId,
+            gateway: "stripe",
+            amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+            amountCents: invoice.amount_paid || 0,
+            currency: invoice.currency,
+          },
+        });
+
         // 🔥 Update subscription period properly
         // subscription.status = "active";
         // subscription.validUntil = validUntil;
@@ -317,6 +395,62 @@ export const handleStripeWebhook = async (req, res) => {
         // await subscription.save();
 
         // console.log("🔁 Subscription renewed:", stripeSubscriptionId);
+        break;
+      }
+
+      // ===================================================
+      // ⌛ CHECKOUT SESSION EXPIRED (ABANDONED)
+      // ===================================================
+      case "checkout.session.expired": {
+        const session = event.data.object;
+        const funnelId = session.metadata?.funnelId;
+
+        if (funnelId) {
+          try {
+            await analyticsService.abandonPaymentFunnel({
+              funnelId,
+              gatewaySessionId: session.id,
+              userId: session.metadata?.userId,
+              artistId: session.metadata?.artistId,
+              planId: session.metadata?.cycle,
+              reason: "checkout_session_expired",
+              gateway: "stripe",
+              metadata: {
+                stripeSessionId: session.id,
+              },
+            });
+          } catch (analyticsErr) {
+            console.error("[Analytics] Error recording checkout.session.expired:", analyticsErr.message);
+          }
+        }
+        break;
+      }
+
+      // ===================================================
+      // ❌ PAYMENT INTENT FAILED
+      // ===================================================
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object;
+        const funnelId = pi.metadata?.funnelId;
+        const errorMsg = pi.last_payment_error?.message || "Payment intent failed";
+
+        try {
+          await analyticsService.failPaymentFunnel({
+            funnelId: funnelId || null,
+            gatewaySessionId: pi.id,
+            userId: pi.metadata?.userId,
+            artistId: pi.metadata?.artistId,
+            planId: pi.metadata?.cycle,
+            reason: errorMsg,
+            gateway: "stripe",
+            metadata: {
+              paymentIntentId: pi.id,
+              errorCode: pi.last_payment_error?.code,
+            },
+          });
+        } catch (analyticsErr) {
+          console.error("[Analytics] Error recording payment_intent.payment_failed:", analyticsErr.message);
+        }
         break;
       }
 
@@ -333,6 +467,25 @@ export const handleStripeWebhook = async (req, res) => {
         );
 
         console.warn("❌ Subscription payment failed:", subscriptionId);
+
+        try {
+          const sub = await Subscription.findOne({ externalSubscriptionId: subscriptionId });
+          await analyticsService.failPaymentFunnel({
+            funnelId: null,
+            gatewaySessionId: invoice.id,
+            userId: sub?.userId,
+            artistId: sub?.artistId,
+            planId: sub?.cycle,
+            reason: invoice.last_finalization_error?.message || "Invoice payment failed",
+            gateway: "stripe",
+            metadata: {
+              invoiceId: invoice.id,
+              subscriptionId,
+            },
+          });
+        } catch (analyticsErr) {
+          console.error("[Analytics] Error recording invoice.payment_failed:", analyticsErr.message);
+        }
         break;
       }
 
@@ -356,6 +509,16 @@ export const handleStripeWebhook = async (req, res) => {
 
         // only run side-effects if DB record exists (no early break)
         if (subscriptionData) {
+          // Non-blocking dispatch to analytics pipeline
+          eventDispatcher.publish({
+            eventName: EVENT_TYPES.SUBSCRIPTION_CANCELLED,
+            userId: subscriptionData.userId,
+            artistId: subscriptionData.artistId,
+            properties: {
+              externalSubscriptionId: subscription.id,
+              gateway: "stripe",
+            },
+          });
 
           const userEmail = await getUserEmailById(subscriptionData.userId);
           await EmailService.sendSubscriptionCancelled({

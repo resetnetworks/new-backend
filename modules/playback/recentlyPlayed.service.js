@@ -34,3 +34,7 @@ export const updateRecentlyPlayed = async ({ userId, songId }) => {
 
   await doc.save();
 };
+
+export const recentlyPlayedService = {
+  updateRecentlyPlayed,
+};

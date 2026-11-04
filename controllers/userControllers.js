@@ -13,6 +13,8 @@ import { EmailService } from "../modules/email-services/email.service.js";
 
 import { sendWelcomeNotification, } from "../modules/notification-service/notification.service.js";
 import redis, { setCached, getCached } from "../utils/redisClient.js";
+import { Song } from "../models/song.model.js";
+import { eventDispatcher, EVENT_TYPES } from "../modules/analytics/index.js";
 
 
 
@@ -50,6 +52,18 @@ export const registerUser = async (req, res) => {
   console.log("\n\n========================================\n");
   console.log("OTP for registration: ", otp);
   console.log("\n========================================\n\n");
+
+  // 📊 Non-blocking analytics: SIGNUP_STARTED
+  const anonId = req.headers["x-anonymous-id"] || `anon_${crypto.createHash("sha256").update(email).digest("hex").slice(0, 16)}`;
+  eventDispatcher.publish({
+    eventName: EVENT_TYPES.SIGNUP_STARTED,
+    anonymousId: anonId,
+    sessionId: req.headers["x-session-id"] || null,
+    properties: {
+      email,
+      name,
+    },
+  });
 
   res.status(StatusCodes.OK).json({
     message: "Verification OTP sent to your email",
@@ -109,6 +123,17 @@ export const verifyRegistration = async (req, res) => {
 
   // :5️⃣ Clear the OTP from Redis
   await redis.del(redisKey);
+
+  // 📊 Non-blocking analytics: SIGNUP_COMPLETED
+  eventDispatcher.publish({
+    eventName: EVENT_TYPES.SIGNUP_COMPLETED,
+    userId: user._id,
+    properties: {
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+  });
 
   // :6️⃣ Return shaped user + token
   res.status(StatusCodes.CREATED).json({
@@ -235,6 +260,17 @@ export const loginUser = async (req, res) => {
     updatedAt: user.updatedAt,
   };
 
+  // 📊 Non-blocking analytics: LOGIN_COMPLETED
+  eventDispatcher.publish({
+    eventName: EVENT_TYPES.LOGIN_COMPLETED,
+    userId: user._id,
+    properties: {
+      email: user.email,
+      role: user.role,
+      authType: user.authType || "email",
+    },
+  });
+
   // :outbox_tray: Send back token + shaped user
   res.status(StatusCodes.OK).json({
     user: userResponse,
@@ -285,6 +321,7 @@ export const myProfile = async (req, res) => {
     profileImage: user.profileImage || "",
     authType: user.authType || "email",
     role: user.role || "user",
+    roles: user.roles || [user.role || "user"],
 
     purchasedSongs: user.purchasedSongs || [],
     purchasedAlbums: user.purchasedAlbums || [],
@@ -297,7 +334,10 @@ export const myProfile = async (req, res) => {
     updatedAt: user.updatedAt,
   };
 
-  res.status(StatusCodes.OK).json(userResponse);
+  res.status(StatusCodes.OK).json({
+    ...userResponse,
+    user: userResponse,
+  });
 };
 
 
@@ -363,6 +403,17 @@ export const likeSong = async (req, res) => {
   if (isAlreadyLiked) {
     user.likedsong = user.likedsong.filter(id => !id.equals(songId));
     await user.save();
+
+    // Non-blocking dispatch to analytics pipeline
+    Song.findById(songId).select("artist").lean().then(song => {
+      eventDispatcher.publish({
+        eventName: EVENT_TYPES.SONG_UNLIKED,
+        userId: req.user._id,
+        songId,
+        artistId: song?.artist,
+      });
+    }).catch(() => {});
+
     return res.status(StatusCodes.OK).json({
       message: "Song removed from liked songs",
       liked: false,
@@ -370,6 +421,17 @@ export const likeSong = async (req, res) => {
   }
   user.likedsong.unshift(songId);
   await user.save();
+
+  // Non-blocking dispatch to analytics pipeline
+  Song.findById(songId).select("artist").lean().then(song => {
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.SONG_LIKED,
+      userId: req.user._id,
+      songId,
+      artistId: song?.artist,
+    });
+  }).catch(() => {});
+
   return res.status(StatusCodes.OK).json({
     message: "Song added to liked songs",
     liked: true,
@@ -476,6 +538,22 @@ export const googleAuthCallback = (req, res) => {
     }
     // :fire: NEW: Use same generateToken pattern as login/register
     const token = generateToken(user, res);
+
+    // 📊 Non-blocking analytics: SIGNUP_COMPLETED / LOGIN_COMPLETED
+    if (isNewUser) {
+      eventDispatcher.publish({
+        eventName: EVENT_TYPES.SIGNUP_COMPLETED,
+        userId: user._id,
+        properties: { email: user.email, name: user.name, provider: "google" },
+      });
+    } else {
+      eventDispatcher.publish({
+        eventName: EVENT_TYPES.LOGIN_COMPLETED,
+        userId: user._id,
+        properties: { email: user.email, role: user.role, provider: "google" },
+      });
+    }
+
     // :fire: NEW: Redirect to frontend callback with newUser parameter
     const redirectUrl = `${process.env.CLIENT_URL}/auth/callback?newUser=${isNewUser}`;
     res.redirect(redirectUrl);

@@ -2,6 +2,7 @@ import { artistApplicationService } from "../services/artist-application.service
 import { artistApplicationAdminDTO } from "../dto/artist-application-admin.dto.js";
 import { artistDTO } from "../dto/artist.dto.js"; // we will generate this DTO later
 import { adminActionLogService } from "../services/admin-action-log.service.js";
+import { eventDispatcher, EVENT_TYPES } from "../../analytics/index.js";
 
 /**
  * GET /api/v2/admin/artist-applications/:id
@@ -81,6 +82,18 @@ export const approveArtistApplicationController = async (req, res, next) => {
     //   notes,
     // });
 
+    // 📊 Non-blocking analytics: ARTIST_APPLICATION_APPROVED
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.ARTIST_APPLICATION_APPROVED,
+      userId: application.userId,
+      artistId: artist._id,
+      properties: {
+        applicationId,
+        adminId: adminUserId,
+        artistName: artist.name,
+      },
+    });
+
     // 5️⃣ Return correct updated application + new artist
     return res.status(200).json({
       success: true,
@@ -140,6 +153,17 @@ export const rejectArtistApplicationController = async (req, res, next) => {
     //   applicationId,
     //   notes,
     // });
+
+    // 📊 Non-blocking analytics: ARTIST_APPLICATION_REJECTED
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.ARTIST_APPLICATION_REJECTED,
+      userId: updatedApplication.userId,
+      properties: {
+        applicationId,
+        adminId: adminUserId,
+        notes,
+      },
+    });
 
     return res.status(200).json({
       success: true,

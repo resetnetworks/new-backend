@@ -4,16 +4,22 @@ import { updateGlobalArtistPricing } from "../services/pricing.service.js";
 export const updateGlobalPricing = async (req, res) => {
   try {
     const { subscriptionPrice, cycle } = req.body;
-    const artistId = req.user.artistId;
+    const artistId = req.user?.artistId || req.user?._id || req.artistId;
 
     if (!artistId) {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: "No artist profile found" });
     }
-    if (!subscriptionPrice || !cycle) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: "subscriptionPrice and cycle are required" });
+
+    const priceNum = parseFloat(subscriptionPrice);
+    if (!subscriptionPrice || isNaN(priceNum) || priceNum <= 0) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: "A valid subscriptionPrice greater than 0 is required" });
     }
 
-    const newPlans = await updateGlobalArtistPricing(artistId, subscriptionPrice, cycle);
+    if (!cycle) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: "cycle is required" });
+    }
+
+    const newPlans = await updateGlobalArtistPricing(artistId, priceNum, cycle);
 
     return res.status(StatusCodes.OK).json({
       success: true,

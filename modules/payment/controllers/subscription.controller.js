@@ -5,6 +5,8 @@ import { Subscription } from "../../../models/Subscription.js";
 import { Artist } from "../../../models/Artist.js";
 import { getOrCreateStripeCustomer } from "../../../utils/stripe.js";
 import { User } from "../../../models/User.js";
+import { randomUUID } from "crypto";
+import { analyticsService } from "../../analytics/application/analytics.service.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 const ALLOWED_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
@@ -13,7 +15,8 @@ const ZERO_DECIMAL_CURRENCIES = ["JPY", "KRW", "VND", "HUF"];
 
 export const createSubscriptionCheckout = async (req, res) => {
   try {
-    const { artistId, cycle, currency = "USD", returnUrl } = req.body;
+    const { artistId, cycle, currency = "USD", returnUrl, funnelId: clientFunnelId } = req.body;
+    const funnelId = clientFunnelId || randomUUID();
     const user = req.user;
 
     if (!artistId || !cycle) {
@@ -149,18 +152,45 @@ export const createSubscriptionCheckout = async (req, res) => {
       customReturnUrl: returnUrl,
       isTrial,
       trialDays,
+      funnelId,
     });
 
     transaction.metadata = {
       checkoutSessionId: session.id,
+      funnelId,
+      cycle,
       isTrial: isTrial ? "true" : "false",
     };
     await transaction.save();
+
+    // 7️⃣ Track checkout attempt in analytics pipeline
+    try {
+      await analyticsService.startCheckoutFunnel({
+        funnelId,
+        userId: user._id,
+        artistId,
+        planId: plan._id || cycle,
+        cycle,
+        gateway: "stripe",
+        gatewaySessionId: session.id,
+        transactionId: transaction._id,
+        amount,
+        currency: selectedCurrency,
+        metadata: {
+          stripePriceId: exactStripePriceId,
+          transactionId: transaction._id.toString(),
+          isTrial,
+        },
+      });
+    } catch (analyticsErr) {
+      console.error("[Analytics] Non-fatal error starting checkout funnel:", analyticsErr.message);
+    }
 
     return res.status(StatusCodes.OK).json({
       checkoutUrl: session.url,
       clientSecret: session.client_secret,
       checkoutSessionId: session.id,
+      funnelId,
       isTrial,
       trialDays,
     });

@@ -1,6 +1,5 @@
 import { FavoriteArtist } from "../models/FavoriteArtist.js";
-
-
+import { eventDispatcher, EVENT_TYPES } from "../modules/analytics/index.js";
 
 export const addFavoriteArtistService = async ({ userId, artistId }) => {
   // optional: validate artist exists
@@ -9,19 +8,37 @@ export const addFavoriteArtistService = async ({ userId, artistId }) => {
 
   if (existing) return existing; // idempotent
 
-  return FavoriteArtist.create({
+  const created = await FavoriteArtist.create({
     user: userId,
     artist: artistId,
   });
+
+  // Non-blocking dispatch to analytics pipeline
+  eventDispatcher.publish({
+    eventName: EVENT_TYPES.ARTIST_FOLLOWED,
+    userId,
+    artistId,
+  });
+
+  return created;
 };
 
-
-
 export const removeFavoriteArtistService = async ({ userId, artistId }) => {
-  return FavoriteArtist.findOneAndDelete({
+  const deleted = await FavoriteArtist.findOneAndDelete({
     user: userId,
     artist: artistId,
   });
+
+  if (deleted) {
+    // Non-blocking dispatch to analytics pipeline
+    eventDispatcher.publish({
+      eventName: EVENT_TYPES.ARTIST_UNFOLLOWED,
+      userId,
+      artistId,
+    });
+  }
+
+  return deleted;
 };
 
 

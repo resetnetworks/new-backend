@@ -1,7 +1,11 @@
+import slugify from "slugify";
+import { customAlphabet } from "nanoid";
 import { artistApplicationRepository } from "../repositories/artist-application.repository.js";
 import { Artist } from "../models/artist.model.js";
 import { User } from "../../../models/User.js";
 import { ArtistReferral } from "../../referral-program/models/artist-referral.model.js";
+
+const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
 /**
  * Artist Application Service (Business Logic)
@@ -22,6 +26,7 @@ class ArtistApplicationService {
   async submit(userId, payload) {
     const {
       stageName,
+      slug,
       legalName,
       bio,
       contact,
@@ -73,11 +78,18 @@ class ArtistApplicationService {
 
      
 
+      let finalSlug = slug;
+      if (!finalSlug && stageName) {
+        const baseSlug = slugify(stageName, { lower: true, strict: true }) || "artist";
+        finalSlug = `${baseSlug}-${nanoid()}`;
+      }
+
       // Re-apply logic
       const updatedApp = await artistApplicationRepository.reapply(
         existingApp._id,
         {
           stageName,
+          slug: finalSlug || existingApp.slug,
           legalName,
           bio,
           contact,
@@ -129,9 +141,16 @@ class ArtistApplicationService {
     // -----------------------------------
     // 3. No previous app → create new one
     // -----------------------------------
+    let finalSlug = slug;
+    if (!finalSlug && stageName) {
+      const baseSlug = slugify(stageName, { lower: true, strict: true }) || "artist";
+      finalSlug = `${baseSlug}-${nanoid()}`;
+    }
+
     const newApp = await artistApplicationRepository.createApplication({
       userId,
       stageName,
+      slug: finalSlug,
       legalName,
       bio,
       contact,

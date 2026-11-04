@@ -6,15 +6,17 @@ import { BadRequestError, NotFoundError } from "../errors/index.js";
 import { createRazorpayOrder } from "../utils/razorpay.js";
 import { getOrCreateStripeCustomer } from "../utils/stripe.js";
 import Stripe from "stripe";
-import {User} from "../models/User.js";
+import { User } from "../models/User.js";
 import Razorpay from "razorpay";
 import { createRazorpayPlan } from "../utils/razorpay.js";
 import { razorpay } from "../utils/razorpay.js";
-import {getPayPalAccessToken} from "../utils/getPaypalAccessToken.js";
+import { getPayPalAccessToken } from "../utils/getPaypalAccessToken.js";
 import paypal from "@paypal/checkout-server-sdk";
-import  {paypalClient}  from "../utils/paypalClient.js";
-import { PAYPAL_API} from "../utils/getPaypalAccessToken.js";
+import { paypalClient } from "../utils/paypalClient.js";
+import { PAYPAL_API } from "../utils/getPaypalAccessToken.js";
 import { getSubscriptionAmount } from "../utils/getSubscriptionAmount.js";
+import { randomUUID } from "crypto";
+import { analyticsService } from "../modules/analytics/application/analytics.service.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
 export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 14;
@@ -24,7 +26,7 @@ export const initiateArtistSubscription = async (req, res) => {
   const userId = req.user._id;
   const { paymentMethodId, gateway, trialDays = DEFAULT_TRIAL_DAYS } = req.body;
   const { artistId } = req.params;
-  const {line1, city, state, postal_code, country} = req.body
+  const { line1, city, state, postal_code, country } = req.body
   const address = {
     line1,
     city,
@@ -299,7 +301,8 @@ const PLAN_DURATION_MAP = {
 export const createRazorpaySubscription = async (req, res) => {
   try {
     const { artistId } = req.params;
-    const { cycle, trialDays = DEFAULT_TRIAL_DAYS } = req.body; // "1m", "3m", "6m", "12m"
+    const { cycle, trialDays = DEFAULT_TRIAL_DAYS, funnelId: clientFunnelId } = req.body; // "1m", "3m", "6m", "12m"
+    const funnelId = clientFunnelId || randomUUID();
     const user = req.user;
 
     // Validate cycle
@@ -357,6 +360,7 @@ export const createRazorpaySubscription = async (req, res) => {
         artistId: artistId.toString(),
         cycle,
         isTrial: isTrial ? "true" : "false",
+        funnelId,
       },
     };
 
@@ -369,6 +373,7 @@ export const createRazorpaySubscription = async (req, res) => {
 
     // ✅ Create Razorpay subscription
     const subscription = await razorpay.subscriptions.create(subParams);
+
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENT);
     const artistShare = amount - platformFee;
 
@@ -423,7 +428,7 @@ export const createRazorpaySubscription = async (req, res) => {
     }
 
     // ✅ Save transaction as pending for regular sub
-    await Transaction.create({
+    const transaction = await Transaction.create({
       userId: user._id,
       itemType: "artist-subscription",
       itemId: artistId,
@@ -437,13 +442,37 @@ export const createRazorpaySubscription = async (req, res) => {
       metadata: {
         razorpaySubscriptionId: subscription.id,
         cycle,
+        funnelId,
       },
     });
+
+    // 🚀 Track checkout attempt in analytics pipeline
+    try {
+      await analyticsService.startCheckoutFunnel({
+        funnelId,
+        userId: user._id,
+        artistId,
+        planId: plan._id || cycle,
+        cycle,
+        gateway: "razorpay",
+        gatewaySessionId: subscription.id,
+        transactionId: transaction._id,
+        amount,
+        currency: "INR",
+        metadata: {
+          razorpaySubscriptionId: subscription.id,
+          cycle,
+        },
+      });
+    } catch (analyticsErr) {
+      console.error("[Analytics] Error tracking Razorpay checkout funnel:", analyticsErr.message);
+    }
 
     res.status(201).json({
       success: true,
       subscriptionId: subscription.id,
       cycle,
+      funnelId,
     });
   } catch (error) {
     console.log("❌ Error creating Razorpay subscription:", error);
@@ -454,7 +483,8 @@ export const createRazorpaySubscription = async (req, res) => {
 
 export const createPaypalSubscription = async (req, res) => {
   const { artistId } = req.params;
-  const { cycle, currency = "USD", trialDays = DEFAULT_TRIAL_DAYS } = req.body;
+  const { cycle, currency = "USD", trialDays = DEFAULT_TRIAL_DAYS, funnelId: clientFunnelId } = req.body;
+  const funnelId = clientFunnelId || randomUUID();
   const user = req.user;
 
   // ✅ Check if subscription is already active or in trial
@@ -598,14 +628,38 @@ export const createPaypalSubscription = async (req, res) => {
       paypalSubscriptionId: subscription.id,
       cycle,
       paypalPlanId: paypalPlan.paypalPlanId,
+      funnelId,
     },
   });
   console.log("transaction", transaction);
+
+  // 🚀 Track checkout attempt in analytics pipeline
+  try {
+    await analyticsService.startCheckoutFunnel({
+      funnelId,
+      userId: user._id,
+      artistId,
+      planId: plan._id || cycle,
+      cycle,
+      gateway: "paypal",
+      gatewaySessionId: subscription.id,
+      transactionId: transaction._id,
+      amount,
+      currency,
+      metadata: {
+        paypalSubscriptionId: subscription.id,
+        cycle,
+      },
+    });
+  } catch (analyticsErr) {
+    console.error("[Analytics] Error tracking PayPal checkout funnel:", analyticsErr.message);
+  }
 
   res.json({
     success: true,
     subscriptionId: subscription.id,
     approveUrl: approveLink,
+    funnelId,
   });
 };
 
@@ -703,13 +757,13 @@ export const cancelArtistSubscription = async (req, res) => {
       }
       gatewayResponse = await response.text();
 
-    } 
+    }
 
     // =========================================================
     //               STRIPE
     // =========================================================
     else if (subscription.gateway === "stripe") {
-      console.log("👉👉👉👉👉👉👉👉👉👉 INSIDE STRIPE NOW: " );
+      console.log("👉👉👉👉👉👉👉👉👉👉 INSIDE STRIPE NOW: ");
 
       const stripeSub = await stripe.subscriptions.update(
         subscription.externalSubscriptionId,
@@ -719,7 +773,7 @@ export const cancelArtistSubscription = async (req, res) => {
       );
       gatewayResponse = stripeSub;
     }
-    
+
     else {
       throw new BadRequestError(`Unsupported gateway: ${subscription.gateway}`);
     }
@@ -728,7 +782,7 @@ export const cancelArtistSubscription = async (req, res) => {
     subscription.status = "cancelled";
     subscription.cancelledAt = new Date();
     subscription.isRecurring = false;
-    
+
     if (!subscription.cycle) {
       const txn = await Transaction.findOne({
         userId: user._id,
