@@ -74,8 +74,8 @@ export const createSubscriptionCheckoutSession = async ({
   stripePriceId,
   customReturnUrl,
   isTrial = false,
-  trialDays = 1,
   funnelId,
+  trialDays = 14,
 }) => {
   const returnBaseUrl = customReturnUrl
     ? customReturnUrl
@@ -84,8 +84,7 @@ export const createSubscriptionCheckoutSession = async ({
     : `${process.env.FRONTEND_URL}/subscription`;
 
   const separator = returnBaseUrl.includes("?") ? "&" : "?";
-  const successUrl = `${returnBaseUrl}${separator}subscription=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${returnBaseUrl}${separator}subscription=cancel`;
+  const returnUrl = `${returnBaseUrl}${separator}subscription=return&session_id={CHECKOUT_SESSION_ID}`;
 
   const sessionParams = {
      ui_mode: "embedded",
@@ -116,8 +115,7 @@ export const createSubscriptionCheckoutSession = async ({
         isTrial: isTrial ? "true" : "false",
       },
     },
-    success_url: successUrl,
-    cancel_url: cancelUrl,
+    return_url: returnUrl,
   };
 
   if (isTrial) {

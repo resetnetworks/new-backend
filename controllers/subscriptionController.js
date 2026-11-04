@@ -19,7 +19,7 @@ import { randomUUID } from "crypto";
 import { analyticsService } from "../modules/analytics/application/analytics.service.js";
 
 const PLATFORM_FEE_PERCENT = 0.15;
-export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 1;
+export const DEFAULT_TRIAL_DAYS = parseInt(process.env.DEFAULT_TRIAL_PERIOD_DAYS, 10) || 14;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export const initiateArtistSubscription = async (req, res) => {
@@ -146,7 +146,7 @@ export const initiateArtistSubscription = async (req, res) => {
         cycle: "1m",
         startedAt: new Date(),
         validUntil: trialEndsAt,
-        status: "trialing",
+        status: "active",
         isTrial: true,
         trialStartedAt: new Date(),
         trialEndsAt: trialEndsAt,
@@ -386,7 +386,7 @@ export const createRazorpaySubscription = async (req, res) => {
           cycle,
           startedAt: new Date(),
           validUntil: trialEndsAt,
-          status: "trialing",
+          status: "active",
           isTrial: true,
           trialStartedAt: new Date(),
           trialEndsAt,
@@ -570,7 +570,7 @@ export const createPaypalSubscription = async (req, res) => {
         cycle,
         startedAt: new Date(),
         validUntil: trialEndsAt,
-        status: "trialing",
+        status: "active",
         isTrial: true,
         trialStartedAt: new Date(),
         trialEndsAt,

@@ -25,6 +25,7 @@ import {
   sendSongUploadedNotification,
   enqueueNewSongReleaseEvent,
 } from "../modules/notification-service/notification.service.js";
+import { recordFirstContentUploadService } from "../modules/referral-program/services/referral.service.js";
 
 
 const ALLOWED_ACCESS_TYPES = ["free", "subscription", "purchase-only"];
@@ -325,6 +326,18 @@ export const createSongController = async (req, res) => {
   //   },
   //   "Song created"
   // );
+
+  /* -------------------- Referral Stage 3 Hook -------------------- */
+  try {
+    await recordFirstContentUploadService({
+      artistId,
+      userId: req.user?._id,
+      contentId: song._id,
+      contentType: "song",
+    });
+  } catch (refErr) {
+    console.error("⚠️ Failed to record referral content upload (song):", refErr);
+  }
 
   /* -------------------- Response -------------------- */
   res.status(StatusCodes.CREATED).json({

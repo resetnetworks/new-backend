@@ -116,6 +116,10 @@ export const submitArtistApplicationController = async (req, res, next) => {
       documents,
       samples,
       country: req.body.country?.trim()?.toUpperCase(),
+      documents: req.body.documents || [],
+      samples: req.body.samples,
+      country: req.body.country,
+      referralCode: req.body.referralCode || req.query.ref || null,
     };
 
     // Business logic handled in service

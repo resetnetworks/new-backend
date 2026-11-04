@@ -87,6 +87,7 @@ import migrationRoutes from "./modules/migration/routes/migration.routes.js";
 import priceChangeRoutes from "./modules/price-change/routes/paymentRoute.js";
 import documentVerificationRoutes from "./modules/document-verification/routes/documentVerification.routes.js";
 import { analyticsRoutes } from "./modules/analytics/index.js";
+import referralRoutes from "./modules/referral-program/routes/referral.routes.js";
 
 // --------------------
 // App Setup
@@ -214,6 +215,7 @@ app.use("/api/migration", migrationRoutes);
 
 app.use("/api/v2/payment", priceChangeRoutes);
 app.use("/api/document-verification", documentVerificationRoutes);
+app.use("/api/v2/referrals", referralRoutes);
 
 // Analytics Pipeline
 app.use("/api/v1/analytics", analyticsRoutes);

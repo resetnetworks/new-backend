@@ -17,7 +17,7 @@ const artistLedgerSchema = new mongoose.Schema(
 
     source: {
       type: String,
-      enum: ["song", "album", "subscription", "payout"],
+      enum: ["song", "album", "subscription", "payout", "referral"],
       required: true,
     },
 
@@ -50,6 +50,12 @@ const artistLedgerSchema = new mongoose.Schema(
     currency: {
       type: String,
       default: "INR",
+    },
+
+    description: {
+      type: String,
+      default: "",
+      trim: true,
     },
   },
   {

@@ -23,6 +23,7 @@ import {
   getRandomizedAlbumFeedService,
 } from "../services/index.js";
 import { buildCdnUrl } from "../utils/cdn/cdn.js";
+import { recordFirstContentUploadService } from "../modules/referral-program/services/referral.service.js";
 import logger from "../utils/logger.js";
 
 import {
@@ -105,6 +106,18 @@ export const createAlbumController = async (req, res) => {
     );
   } catch (eventErr) {
     console.error("⚠️ Failed to queue album fan-out event:", eventErr);
+  }
+
+  /* -------------------- Referral Stage 3 Hook -------------------- */
+  try {
+    await recordFirstContentUploadService({
+      artistId,
+      userId: req.user?._id,
+      contentId: album._id,
+      contentType: "album",
+    });
+  } catch (refErr) {
+    console.error("⚠️ Failed to record referral content upload (album):", refErr);
   }
 
   res.status(StatusCodes.CREATED).json({
